@@ -30,7 +30,7 @@ PORT=4123
 
    ```sh
    git clone https://github.com/thoughtspot/developer-examples.git
-   cd typescript-sdk/express-example
+   cd rest-api/typescript-sdk/express-example
    npm install
    ```
 
