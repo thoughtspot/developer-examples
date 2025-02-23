@@ -6,7 +6,7 @@ This example demonstrates how to integrate ThoughtSpot's REST API SDK (`@thought
 
 ```bash
 Node.js v20+
-pnpm
+npm
 ```
 
 ## Quick Start ⚡
