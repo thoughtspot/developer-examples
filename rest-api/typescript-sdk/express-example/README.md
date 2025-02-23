@@ -8,26 +8,15 @@ Create a `.env` file with the following variables:
 
 ```bash
 THOUGHTSPOT_HOST=https://your-thoughtspot-host
-TS_SERVICE_USERNAME=your-service-account
-TS_SERVICE_SECRET=your-service-secret-key
-PORT=3000
+SECRET_KEY=your-secret-key
+PORT=4123
 ```
 
 ## Service Account Authentication
 
 This example uses a service account with a secret key for authentication. This is more appropriate for server-side applications than username/password authentication.
 
-### Getting a Token
-
-```bash
-curl -X POST http://localhost:3000/api/auth/token
-```
-
-### Using the Token
-
-```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3000/api/thoughtspot/user
-```
+Follow this to enable: [Trusted Authentication with Secret Key](https://developers.thoughtspot.com/docs/trusted-auth-secret-key#trusted-auth-enable)
 
 ## Prerequisites
 
@@ -50,8 +39,9 @@ npm install
 
 ```bash
 # .env
+PORT=4123
 THOUGHTSPOT_HOST=https://your-thoughtspot-host
-PORT=3000
+SECRET_KEY=your-secret-key
 ```
 
 3. Start development:
@@ -62,63 +52,67 @@ npm run dev
 
 ## Authentication Examples
 
-### 1. Cookie-based Authentication
-
-```typescript
-// Get the basic client and login
-const client = getThoughtspotBasicClient();
-await client.login({ username, password });
-```
-
-See `src/clients/basicClient.ts` for implementation details.
-
-### 2. Token-based Authentication
+### 1. Token-based Authentication
 
 ```typescript
 // Initialize client with token auth
 const client = getThoughtSpotCookielessClient(authToken);
 ```
 
-See `src/clients/cookielessClient.ts` and `src/utils/tokenManager.ts` for token management implementation.
+See `src/thoughtspot-clients/authenticatedClient.ts` for token management implementation.
+
+### Getting a Token
+
+We use the above secret key to generate a full access token for the user to make calls to ThoughtSpot's APIs.
+
+```http
+POST /api/rest/2.0/auth/token/full
+```
+
+### Using the Token
+
+```typescript
+export const getAuthenticatedClient = (token: string) => {
+  const config = createBearerAuthenticationConfig(THOUGHTSPOT_HOST, async () => token);
+  return new ThoughtSpotRestApi(config);
+};
+```
+
+We pass the token to `createBearerAuthenticationConfig` from:
+
+```typescript
+import { createBearerAuthenticationConfig, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk";
+```
+
+This will give us an authenticated client that will use the provided token for all requests to ThoughtSpot.
 
 ## Project Structure
 
 ### Authentication Clients
 
-- `src/clients/basicClient.ts` - Cookie auth
-- `src/clients/cookielessClient.ts` - Token auth
-- `src/utils/tokenManager.ts` - Token management
+- `src/thoughtspot-clients/authenticatedClient.ts` - Token authentication client
+- `src/utils/tokenManager.ts` - Token management utility
 
 ### Core Routes
 
 - `src/routes/auth.ts` - Authentication endpoints
 - `src/routes/thoughtspot.ts` - ThoughtSpot data endpoints
-- `src/middleware/auth.ts` - Auth middleware
+- `src/middleware/auth.ts` - Authentication middleware
 
 ## API Endpoints
 
-### Authentication
+These are the API endpoints available:
 
-- `POST /api/auth/login` - Cookie-based login
-- `POST /api/auth/token` - Get auth token
-- `POST /api/auth/logout` - Logout
-
-### ThoughtSpot Data
-
-- `GET /api/thoughtspot/user` - Get user info
-- `GET /api/thoughtspot/metadata` - Get ThoughtSpot metadata
-- `GET /api/thoughtspot/liveboards` - Get Liveboards
-
-## Features
-
-- Multiple auth methods (Cookie/Token)
-- Auth middleware
-- Error handling
-- Token management
-- Express middleware
-- TypeScript support
+```http
+GET /api/user
+GET /api/metadata
+GET /api/answer/:answerId
+GET /api/liveboard/:liveboardId
+GET /api/search
+```
 
 ## Resources
 
 - [ThoughtSpot REST API Docs](https://developers.thoughtspot.com/docs/)
 - [REST API SDK Reference](https://developers.thoughtspot.com/docs/rest-api-sdk)
+
