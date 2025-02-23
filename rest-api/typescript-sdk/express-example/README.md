@@ -1,75 +1,98 @@
 # ThoughtSpot Express Authentication Example
 
-This example demonstrates how to integrate ThoughtSpot's REST API SDK with Express using service account authentication.
+This repository demonstrates how to integrate ThoughtSpot's REST API SDK with an Express.js application using service account authentication.
 
-## Configuration
+## 🚀 Features
 
-Create a `.env` file with the following variables:
+- Service account authentication with a secret key
+- Secure token-based authentication
+- REST API client for ThoughtSpot
+- Express.js server setup
 
-```bash
+## 📌 Prerequisites
+
+- **Node.js v20+**
+- **npm** or **yarn**
+
+## 🛠 Configuration
+
+Create a `.env` file in the project root with the following variables:
+
+```ini
 THOUGHTSPOT_HOST=https://your-thoughtspot-host
 SECRET_KEY=your-secret-key
 PORT=4123
 ```
 
-## Service Account Authentication
+## ⚡ Quick Start
 
-This example uses a service account with a secret key for authentication. This is more appropriate for server-side applications than username/password authentication.
+1. **Clone the repository and install dependencies:**
 
-Follow this to enable: [Trusted Authentication with Secret Key](https://developers.thoughtspot.com/docs/trusted-auth-secret-key#trusted-auth-enable)
+   ```sh
+   git clone <repository-url>
+   cd express-example
+   npm install
+   ```
 
-## Prerequisites
+2. **Configure environment variables:**
 
-```bash
-Node.js v20+
-npm/yarn
+   ```sh
+   # .env file
+   PORT=4123
+   THOUGHTSPOT_HOST=https://your-thoughtspot-host
+   SECRET_KEY=your-secret-key
+   ```
+
+3. **Start the development server:**
+
+   ```sh
+   npm run dev
+   ```
+
+## 🔑 Authentication Overview
+
+This example uses a service account with a secret key for authentication, which is more suitable for server-side applications than username/password authentication.
+
+To enable this authentication, follow: [Trusted Authentication with Secret Key](https://developers.thoughtspot.com/docs/trusted-auth-secret-key#trusted-auth-enable).
+
+## 🏗 Project Structure
+
+```
+developer-examples/rest-api/typescript-sdk/express-example/
+├── src/
+│   ├── thoughtspot-clients/
+│   │   ├── authenticatedClient.ts   # Token authentication client
+│   │   ├── basicClient.ts           # Unauthenticated client for login API calls
+│   ├── handlers/
+│   │   ├── thoughtspot-api.ts       # API request handlers
+│   ├── constants.ts                 # Constants and configurations
+│   ├── app.ts                       # Main server entry point
+├── .env.example                      # Environment variable template
+├── package.json
+└── README.md
 ```
 
-## Quick Start
-
-1. Clone and install dependencies:
-
-```bash
-git clone <repository-url>
-cd express-example
-npm install
-```
-
-2. Configure environment:
-
-```bash
-# .env
-PORT=4123
-THOUGHTSPOT_HOST=https://your-thoughtspot-host
-SECRET_KEY=your-secret-key
-```
-
-3. Start development:
-
-```bash
-npm run dev
-```
-
-## Authentication Examples
+## 📡 Authentication Implementation
 
 ### 1. Token-based Authentication
 
+To initialize the ThoughtSpot client using token authentication:
+
 ```typescript
-// Initialize client with token auth
 const client = getThoughtSpotCookielessClient(authToken);
 ```
 
-See `src/thoughtspot-clients/authenticatedClient.ts` for token management implementation.
+The token management implementation is in `src/thoughtspot-clients/authenticatedClient.ts`.
 
-### Getting a Token
+### 2. Getting an Authentication Token
 
-We use the above secret key to generate a full access token for the user to make calls to ThoughtSpot's APIs.
+We generate a full access token using the configured secret key.
 
 ```http
 POST /api/rest/2.0/auth/token/full
 ```
 
-### Using the Token
+### 3. Using the Token
 
 ```typescript
 export const getAuthenticatedClient = (token: string) => {
@@ -78,41 +101,32 @@ export const getAuthenticatedClient = (token: string) => {
 };
 ```
 
-We pass the token to `createBearerAuthenticationConfig` from:
+We import authentication utilities from the ThoughtSpot REST API SDK:
 
 ```typescript
 import { createBearerAuthenticationConfig, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk";
 ```
 
-This will give us an authenticated client that will use the provided token for all requests to ThoughtSpot.
+This will provide an authenticated client that uses the provided token for all API requests to ThoughtSpot.
 
-## Project Structure
+## 🌐 API Endpoints
 
-### Authentication Clients
-
-- `src/thoughtspot-clients/authenticatedClient.ts` - Token authentication client
-- `src/utils/tokenManager.ts` - Token management utility
-
-### Core Routes
-
-- `src/routes/auth.ts` - Authentication endpoints
-- `src/routes/thoughtspot.ts` - ThoughtSpot data endpoints
-- `src/middleware/auth.ts` - Authentication middleware
-
-## API Endpoints
-
-These are the API endpoints available:
+The available API endpoints:
 
 ```http
-GET /api/user
-GET /api/metadata
-GET /api/answer/:answerId
-GET /api/liveboard/:liveboardId
-GET /api/search
+GET /api/user             # Fetch user details
+GET /api/metadata         # Retrieve metadata
+GET /api/answer/:answerId # Get a specific answer
+GET /api/liveboard/:liveboardId # Get liveboard details
+GET /api/search           # Perform a search
 ```
 
-## Resources
+## 📚 Resources
 
 - [ThoughtSpot REST API Docs](https://developers.thoughtspot.com/docs/)
 - [REST API SDK Reference](https://developers.thoughtspot.com/docs/rest-api-sdk)
+
+---
+
+💡 *This project is for demonstration purposes. Ensure proper security measures when deploying in production.*
 
