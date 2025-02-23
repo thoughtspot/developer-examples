@@ -15,7 +15,7 @@ npm
 
 ```bash
 git clone https://github.com/thoughtspot/developer-examples.git
-cd typescript-sdk/react-example
+cd rest-api/typescript-sdk/react-example
 npm install
 ```
 
