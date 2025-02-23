@@ -1,22 +1,22 @@
-# ThoughtSpot React Authentication Example
+# ThoughtSpot React Authentication Example 🚀
 
-This example demonstrates how to integrate ThoughtSpot's REST API SDK (`@thoughtspot/rest-api-sdk`) with React showcasing both cookie-based and token-based authentication approaches.
+This example demonstrates how to integrate ThoughtSpot's REST API SDK (`@thoughtspot/rest-api-sdk`) with React, showcasing both cookie-based and token-based authentication approaches.
 
-## Prerequisites
+## Prerequisites 🛠
 
 ```bash
 Node.js v20+
-npm
+pnpm
 ```
 
-## Quick Start
+## Quick Start ⚡
 
 1. Clone and install dependencies:
 
 ```bash
 git clone https://github.com/thoughtspot/developer-examples.git
 cd rest-api/typescript-sdk/react-example
-npm install
+pnpm install
 ```
 
 2. Configure environment:
@@ -29,12 +29,12 @@ VITE_THOUGHTSPOT_HOST=https://your-thoughtspot-host
 3. Start development:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
-## Authentication Examples
+## Authentication Examples 🔐
 
-### 1. Cookie-based Authentication
+### 1. Cookie-based Authentication 🍪
 
 ```typescript
 // Get the basic client and login
@@ -44,7 +44,7 @@ await client.login({ username, password });
 
 See `src/thoughtspot-clients/basicClient.ts` for implementation details.
 
-### 2. Token-based Authentication
+### 2. Token-based Authentication 🔑
 
 ```typescript
 // Initialize client with token auth
@@ -52,41 +52,65 @@ initializeThoughtSpotCookielessClient({ username, password });
 const client = getThoughtSpotCookielessClient();
 ```
 
-See `src/thoughtspot-clients/cookielessClient.ts` and `src/apis/getAuthToken.ts` for token management implementation.
+See `src/thoughtspot-clients/authenticatedClient.ts` and `src/apis/getAuthToken.ts` for token management implementation.
 
-## Project Structure
+## Cookie vs. Cookieless Authentication 🔍
+
+| Feature                | Cookie-Based Authentication 🍪 | Cookieless Authentication 🔑 |
+|------------------------|--------------------------------|------------------------------|
+| **Session Handling**   | Session is automatically managed via browser cookies. | Each request requires explicit authentication handling. |
+| **Security**           | Less secure, as cookies can be hijacked. | More secure, as tokens are short-lived and manually handled. |
+| **Persistence**        | Remains logged in until session expires or is manually logged out. | Tokens must be refreshed or re-authenticated for each session. |
+| **Ease of Use**        | Easier, since the browser manages cookies. | More control over authentication flow, but requires additional handling. |
+
+## Project Structure 📂
 
 ### Authentication Clients
 
 - `src/thoughtspot-clients/basicClient.ts` - Cookie auth
-- `src/thoughtspot-clients/cookielessClient.ts` - Token auth
-- `src/apis/getAuthToken.ts` - Token caching
+- `src/thoughtspot-clients/authenticatedClient.ts` - Token auth
 
-### Core Components
+### Core API
 
-- `src/App.tsx` - Main routing
-- `src/pages/loginPage.tsx` - Auth UI
-- `src/pages/dashboardPage.tsx` - Protected content
-- `src/components/ProtectedRoute.tsx` - Auth guard
+- `src/apis/getAuthToken.ts` - Handles token retrieval and caching
+
+### UI Components 🖥
+
+- `src/components/Layout.tsx` - Application layout
+- `src/components/ProtectedRoute.tsx` - Authentication guard
 - `src/components/ErrorBoundary.tsx` - Error handling
+- `src/components/ErrorAlert.tsx` - Error alerts
+- `src/components/LoadingSpinner.tsx` - Loading indicator
+- `src/components/UserCard.tsx` - User information display
 
-## Features
+### Pages 📜
 
-- Multiple auth methods (Cookie/Token)
-- Protected routes
-- Error boundaries
-- ThoughtSpot data display
-- Material UI components
-- TypeScript support
+- `src/pages/loginPage.tsx` - Login screen
+- `src/pages/dashboardPage.tsx` - Protected dashboard
 
-## Resources
+### Other Files
+
+- `src/App.tsx` - Main application entry point
+- `src/main.tsx` - Renders the React app
+- `src/constant.ts` - Constants
+- `vite.config.ts` - Vite configuration
+
+## Features ✨
+
+- ✅ Cookie-based and token-based authentication
+- ✅ Protected routes
+- ✅ Error handling with boundary components
+- ✅ TypeScript support
+- ✅ ThoughtSpot API integration
+
+## Resources 📖
 
 - [ThoughtSpot REST API Docs](https://developers.thoughtspot.com/docs/)
 - [REST API SDK Reference](https://developers.thoughtspot.com/docs/rest-api-sdk)
 
-## Using the Application
+## Using the Application 🚀
 
-### Login Page
+### Login Page 🔐
 <img width="766" alt="Screenshot 2025-02-24 at 1 42 45 AM" src="https://github.com/user-attachments/assets/e595100a-1952-4e00-aa22-b54ab70d8dbc" />
 
 The login page offers two authentication methods:
@@ -96,9 +120,7 @@ The login page offers two authentication methods:
 
 Enter your ThoughtSpot credentials and choose either method to log in.
 
-### Dashboards
-
-The app demonstrates two different dashboard implementations:
+### Dashboard 📊
 
 #### Cookie Dashboard (`/cookie/dashboard`)
 <img width="613" alt="Screenshot 2025-02-24 at 1 57 13 AM" src="https://github.com/user-attachments/assets/458c2e2e-a9b2-4242-bbec-09961135d94a" />
@@ -123,3 +145,4 @@ Both dashboards display:
 - ThoughtSpot metadata (Liveboards & Answers)
 - Authentication type indicator
 - Logout functionality
+
