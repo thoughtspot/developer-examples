@@ -1,4 +1,4 @@
-import { Configuration, ServerConfiguration, ThoughtSpotRestApi, createConfiguration } from "@thoughtspot/rest-api-sdk";
+import { ServerConfiguration, ThoughtSpotRestApi, createConfiguration } from "@thoughtspot/rest-api-sdk";
 import { THOUGHTSPOT_HOST } from "../constants";
 
 
@@ -34,16 +34,3 @@ export const destroyThoughtspotBasicClient = () => {
   thoughtspotBasicClient = null;
 }
 
-// helper function to create a configuration with a bearer token
-export const bearerToken = (token: string): Configuration => {
-  return createConfiguration({
-    authMethods: {
-      bearerAuth: {
-        tokenProvider: {
-          getToken: () => token
-        }
-      }
-    },
-    baseServer: new ServerConfiguration(THOUGHTSPOT_HOST, {})
-  })
-}

@@ -34,7 +34,13 @@ const authenticateUser: RequestHandler = async (req, res, next) => {
   next();
 };
 
-
+/**
+ * Now since we have the username from the authenticateUser middleware, we can add the thoughtspot's client to the request
+ * and use it in the thoughtspot-api handlers
+ * 
+ * We will use the getAuthenticatedClient function to get the authenticated client
+ * and add it to the request
+ */
 const addThoughtSpotToken: RequestHandler = async (req, res, next) => {
 
   try {

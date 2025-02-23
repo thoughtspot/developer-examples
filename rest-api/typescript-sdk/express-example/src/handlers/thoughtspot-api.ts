@@ -1,9 +1,11 @@
 import { RequestHandler } from "express";
-import { getThoughtspotBasicClient } from "../thoughtspot-clients/basicClient";
-import { bearerToken } from "../thoughtspot-clients/basicClient";
 import { SearchMetadataRequest, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk";
 
-
+/**
+ * This will get the current user info from the thoughtspot api
+ * 
+ * We will use the authenticated client to make the request
+ */
 export const getCurrentUser: RequestHandler = async (req, res, next) => {
   try {
     const client: ThoughtSpotRestApi = (req as any).authenticatedClient;
@@ -16,7 +18,11 @@ export const getCurrentUser: RequestHandler = async (req, res, next) => {
   }
 }
 
-
+/**
+ * This will get the metadata from the thoughtspot api
+ * 
+ * We will use the authenticated client to make the request
+ */
 export const getMetadata: RequestHandler = async (req, res, next) => {
   try {
     const client: ThoughtSpotRestApi = (req as any).authenticatedClient;
@@ -42,6 +48,11 @@ export const getMetadata: RequestHandler = async (req, res, next) => {
   }
 }
 
+/**
+ * This will get the answer data from the thoughtspot api
+ * 
+ * We will use the authenticated client to make the request
+ */
 export const getAnswerData: RequestHandler = async (req, res, next) => {
   try {
     const client: ThoughtSpotRestApi = (req as any).authenticatedClient;
@@ -61,6 +72,11 @@ export const getAnswerData: RequestHandler = async (req, res, next) => {
   }
 }
 
+/**
+ * This will get the liveboard data from the thoughtspot api
+ * 
+ * We will use the authenticated client to make the request
+ */
 export const getLiveboardData: RequestHandler = async (req, res, next) => {
   try {
     const client: ThoughtSpotRestApi = (req as any).authenticatedClient;
@@ -81,6 +97,11 @@ export const getLiveboardData: RequestHandler = async (req, res, next) => {
   }
 }
 
+/**
+ * This will get the search data from the thoughtspot api
+ * 
+ * We will use the authenticated client to make the request
+ */
 export const getSearchData: RequestHandler = async (req, res, next) => {
   try {
     const client: ThoughtSpotRestApi = (req as any).authenticatedClient;
