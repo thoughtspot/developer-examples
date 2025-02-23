@@ -29,8 +29,8 @@ PORT=4123
 1. **Clone the repository and install dependencies:**
 
    ```sh
-   git clone <repository-url>
-   cd express-example
+   git clone https://github.com/thoughtspot/developer-examples.git
+   cd typescript-sdk/express-example
    npm install
    ```
 
