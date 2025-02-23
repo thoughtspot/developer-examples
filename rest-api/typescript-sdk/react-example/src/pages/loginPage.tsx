@@ -17,10 +17,10 @@ import {
 } from "@mui/material";
 import { getThoughtspotBasicClient } from "../thoughtspot-clients/basicClient";
 import { 
-  destroyThoughtSpotCookielessClient, 
-  getThoughtSpotCookielessClient, 
-  initializeThoughtSpotCookielessClient 
-} from "../thoughtspot-clients/cookielessClient";
+  destroyThoughtSpotAuthenticatedClient,
+  getThoughtSpotAuthenticatedClient,
+  initializeThoughtSpotAuthenticatedClient,
+} from "../thoughtspot-clients/authenticatedClient";
 import { Layout } from "../components/Layout";
 
 export const LoginPage = () => {
@@ -40,8 +40,8 @@ export const LoginPage = () => {
       if (useCookie) {
         await getThoughtspotBasicClient().login(credentials);
       } else {
-        initializeThoughtSpotCookielessClient(credentials);
-        const client = getThoughtSpotCookielessClient();
+        initializeThoughtSpotAuthenticatedClient(credentials);
+        const client = getThoughtSpotAuthenticatedClient();
         await client?.getCurrentUserInfo();
       }
 
@@ -49,7 +49,7 @@ export const LoginPage = () => {
     } catch (err) {
       setError("Login failed. Please check your credentials and try again.");
       console.error("Login error:", err);
-      destroyThoughtSpotCookielessClient();
+      destroyThoughtSpotAuthenticatedClient();
     } finally {
       setIsLoading(false);
     }

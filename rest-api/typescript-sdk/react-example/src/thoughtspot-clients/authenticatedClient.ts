@@ -8,21 +8,23 @@ import { getAuthTokenWithCache } from "../apis/getAuthToken";
  * @param getAuthToken Function to retrieve the authentication token
  * @returns A ThoughtSpot client instance
  */
-const createThoughtSpotTokenClient = (thoughtSpotHost: string, getAuthToken: () => Promise<string>) => {
+const createThoughtSpotAuthenticatedClient = (thoughtSpotHost: string, getAuthToken: () => Promise<string>) => {
   const tokenConfig = createBearerAuthenticationConfig(thoughtSpotHost, getAuthToken)
   return new ThoughtSpotRestApi(tokenConfig);
 }
 
-let thoughtspotTokenClient: ThoughtSpotRestApi | null = null;
+let thoughtspotAuthenticatedClient: ThoughtSpotRestApi | null = null;
 
 /**
  * Initializes the ThoughtSpot client for cookieless authentication.
  * This function creates a new client if it doesn't exist, or returns the existing client.
  * 
- * @returns A ThoughtSpot client for cookieless authentication
+ * @param username The username for authentication
+ * @param password The password for authentication
+ * @returns void
  */
-export const initializeThoughtSpotCookielessClient = ({ username, password }: { username: string, password: string }) => {
-  thoughtspotTokenClient = createThoughtSpotTokenClient(THOUGHTSPOT_HOST, () => getAuthTokenWithCache({ username, password }));
+export const initializeThoughtSpotAuthenticatedClient = ({ username, password }: { username: string, password: string }) => {
+  thoughtspotAuthenticatedClient = createThoughtSpotAuthenticatedClient(THOUGHTSPOT_HOST, () => getAuthTokenWithCache({ username, password }));
 }
 
 
@@ -36,17 +38,17 @@ export const initializeThoughtSpotCookielessClient = ({ username, password }: { 
  * 
  * @returns A ThoughtSpot client for making API requests
  */
-export const getThoughtSpotCookielessClient = () => {
-  if (!thoughtspotTokenClient) {
+export const getThoughtSpotAuthenticatedClient = () => {
+  if (!thoughtspotAuthenticatedClient) {
     console.error("Client not initialized");
     return null;
   }
-  return thoughtspotTokenClient;
+  return thoughtspotAuthenticatedClient;
 }
 /**
  * Destroys the ThoughtSpot client for cookieless authentication.
  * This function sets the client to null.
  */
-export const destroyThoughtSpotCookielessClient = () => {
-  thoughtspotTokenClient = null;
+export const destroyThoughtSpotAuthenticatedClient = () => {
+  thoughtspotAuthenticatedClient = null;
 }

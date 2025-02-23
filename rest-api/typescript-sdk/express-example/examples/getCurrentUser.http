@@ -1,0 +1,9 @@
+GET http://localhost:4123/api/user/
+Content-Type: application/json
+Authorization: Bearer {{$processEnv.TEST_USERNAME}}
+
+{
+    "email": "test@test.com",
+    "password": "test", 
+    "host": "{{$processEnv.THOUGHTSPOT_HOST}}"
+}

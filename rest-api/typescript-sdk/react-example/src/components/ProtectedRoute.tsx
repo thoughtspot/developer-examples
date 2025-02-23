@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getThoughtspotBasicClient } from "../thoughtspot-clients/basicClient";
-import { getThoughtSpotCookielessClient } from "../thoughtspot-clients/cookielessClient";
+import { getThoughtSpotAuthenticatedClient } from "../thoughtspot-clients/authenticatedClient";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 interface ProtectedRouteProps {
@@ -20,7 +20,7 @@ export const ProtectedRoute = ({
     const verifyAuth = async () => {
       try {
         const client = cookieless
-          ? getThoughtSpotCookielessClient()
+          ? getThoughtSpotAuthenticatedClient()
           : getThoughtspotBasicClient();
 
         if (!client) {
@@ -30,6 +30,7 @@ export const ProtectedRoute = ({
 
         await client.getCurrentUserInfo();
       } catch (error) {
+        console.error(error);
         navigate("/login");
       } finally {
         setIsVerifying(false);

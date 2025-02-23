@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import {
-  destroyThoughtSpotCookielessClient,
-  getThoughtSpotCookielessClient,
-} from "../thoughtspot-clients/cookielessClient";
+import { getThoughtSpotAuthenticatedClient, destroyThoughtSpotAuthenticatedClient } from "../thoughtspot-clients/authenticatedClient";
 import { getThoughtspotBasicClient } from "../thoughtspot-clients/basicClient";
 import { UserCard } from "../components/UserCard";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -16,7 +13,7 @@ export const DashboardPage = ({ cookieless = false }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const client = cookieless
-    ? getThoughtSpotCookielessClient()
+    ? getThoughtSpotAuthenticatedClient()
     : getThoughtspotBasicClient();
 
   if (!client) {
@@ -91,7 +88,7 @@ export const DashboardPage = ({ cookieless = false }) => {
 
   const handleLogout = async () => {
     if (cookieless) {
-      destroyThoughtSpotCookielessClient();
+      destroyThoughtSpotAuthenticatedClient();
     } else {
       await client?.logout();
     }
