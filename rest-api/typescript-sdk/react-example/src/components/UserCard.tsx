@@ -9,7 +9,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  Grid ,
+  Grid,
 } from "@mui/material";
 import { UserDetails, MetadataInfo } from "../types/thoughtspot";
 
