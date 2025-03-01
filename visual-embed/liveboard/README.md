@@ -1,26 +1,21 @@
-# liveboard
+# liveboard-embed
 
-Write something about the example here. 
-
-Include, but not limited to:
-
-- How the code is structured
-- How to navigate when the demo is opened.
-
-## Demo
-
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/liveboard)
+This is a small example of how embed liveboard into your 
 
 ## Documentation
 
-- Links to the Thoughtspot developer docs for the features used in this example.
-- ...
+- [API Reference](https://developers.thoughtspot.com/docs/embed-liveboard) for embedding liveboard.
+
+## Environment
+
+The `.env` file contains some default values. Change the value of `VITE_THOUGHTSPOT_HOST` and `VITE_TS_DATASOURCE_ID` to use on your own instance.
 
 ## Run locally
 
 ```
 $ git clone https://github.com/thoughtspot/developer-examples
 $ cd visual-embed/liveboard
+$ create .env file using .env.sample
 ```
 ```
 $ npm i
@@ -29,8 +24,12 @@ $ npm i
 $ npm run dev
 ```
 
+## Structure
+
+- `src/pages` Includes codes to embed liveboard with multiple options.
+
+
 ### Technology labels
 
 - React
 - Typescript
-- Web
