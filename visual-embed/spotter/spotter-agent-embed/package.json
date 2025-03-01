@@ -1,0 +1,33 @@
+{
+  "name": "spotter-agent-embed",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start-agent": "tsx --env-file=.env api/simple-agent.ts",
+    "dev": "vite",
+    "start": "npm run start-agent & vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ant-design/pro-chat": "^1.15.3",
+    "@google/generative-ai": "^0.22.0",
+    "@thoughtspot/visual-embed-sdk": "latest",
+    "antd": "^5.24.2",
+    "antd-style": "^3.7.1",
+    "express": "^4.21.2",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-layout-kit": "^1.9.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tsx": "^4.19.3",
+    "typescript": "~5.7.2",
+    "vite": "^6.1.0"
+  }
+}
