@@ -1,10 +1,11 @@
 import { NodePlopAPI } from 'plop';
 import readdir from 'readdir-enhanced';
+import * as fs from 'fs';
 
 export default function (plop: NodePlopAPI) {
     const transformName = (str) => {
-        return str.toLowerCase().replace(/ /g, '-')
-    }
+        return str.toLowerCase().replace(/ /g, '-');
+    };
 
     function filterFn(stats) {
         if (stats.isDirectory() || stats.path.match(/(^node_modules)/)) {
@@ -13,7 +14,6 @@ export default function (plop: NodePlopAPI) {
         return true;
     }
 
-    // create your generators here
     plop.setGenerator('example', {
         description: 'new example in repo',
         prompts: [
@@ -31,6 +31,7 @@ export default function (plop: NodePlopAPI) {
                     { name: 'Rest APIs', value: 'rest-api' },
                     { name: 'Solutions', value: 'solutions' },
                     { name: 'Starter', value: 'starter' },
+                    { name: 'Mobile', value: 'mobile' },
                 ],
             },
             {
@@ -42,8 +43,9 @@ export default function (plop: NodePlopAPI) {
                     { name: 'Typescript (Web)', value: 'ts' },
                     { name: 'Typescript (Node)', value: 'node' },
                     { name: 'Python', value: 'python' },
+                    { name: 'React Native + TS', value: 'react-native-ts' },
                     { name: 'Other', value: 'other' },
-                ]
+                ],
             },
         ],
         actions: (data) => {
@@ -51,82 +53,91 @@ export default function (plop: NodePlopAPI) {
                 return [];
             }
 
-            const plopExampleName = transformName(data.name)
-            const plopPath = `${data.exampleScopeFolder}/${plopExampleName}`
-            const templateDir = `utilities/plop-templates/${data.language}`
+            const plopExampleName = transformName(data.name);
+            const plopPath = `${data.exampleScopeFolder}/${plopExampleName}`;
+            const templateDir = `utilities/plop-templates/${data.language}`;
 
             const actions: any[] = [];
 
             readdir.sync(templateDir, { deep: true, filter: filterFn }).forEach((file) => {
                 actions.push({
                     type: 'add',
-                    path: `{{exampleScopeFolder}}/${plopExampleName}/${file}`,
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/${file}`,
                     templateFile: `${templateDir}/${file}`,
-                })
+                    force: true,
+                });
                 actions.push({
                     type: 'modify',
-                    path: `{{exampleScopeFolder}}/${plopExampleName}/${file}`,
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/${file}`,
                     pattern: /(-- PLOP EXAMPLE NAME HERE --)/gi,
                     template: `${plopExampleName}`,
                 });
                 actions.push({
                     type: 'modify',
-                    path: `{{exampleScopeFolder}}/${plopExampleName}/${file}`,
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/${file}`,
                     pattern: /(-- PLOP PATH HERE --)/gi,
                     template: `${plopPath}`,
                 });
             });
 
-            return actions;
-            // modify app/layout.tsx
-            actions.push({
-                type: 'modify',
-                path: `{{exampleScopeFolder}}/${plopExampleName}/app/layout.tsx`,
-                pattern: /(-- PLOP PATH HERE --)/gi,
-                template: `${plopPath}`,
-            })
-            actions.push({
-                type: 'modify',
-                path: `{{exampleScopeFolder}}/${plopExampleName}/app/layout.tsx`,
-                pattern: /(-- PLOP TITLE HERE --)/gi,
-                template: `${data.name}`,
-            })
+            if (data.language === 'react-native-ts') {
+                const fullProjectPath = `${process.cwd()}/${data.exampleScopeFolder}/${plopExampleName}`;
 
-            return [
-                ...actions,
-                // README.md
-                {
+                // Run post-generation script
+                actions.push(function runPostGeneration(answers) {
+                    const postGen = require('child_process');
+                    postGen.execSync(`node utilities/plop-templates/react-native-ts/post-generation.js ${fullProjectPath}`, { stdio: 'inherit' });
+                    return 'React Native post-generation complete.';
+                });
+            } else {
+                actions.push({
                     type: 'modify',
-                    path: `{{exampleScopeFolder}}/${plopExampleName}/README.md`,
-                    pattern: /(-- PLOP TITLE HERE --)/gi,
-                    template: `${data.name}`,
-                },
-                {
-                    type: 'modify',
-                    path: `{{exampleScopeFolder}}/${plopExampleName}/README.md`,
-                    pattern: /(-- PLOP EXAMPLE NAME HERE --)/gi,
-                    template: `${plopExampleName}`,
-                },
-                {
-                    type: 'modify',
-                    path: `{{exampleScopeFolder}}/${plopExampleName}/README.md`,
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/app/layout.tsx`,
                     pattern: /(-- PLOP PATH HERE --)/gi,
                     template: `${plopPath}`,
-                },
-                // package.json
-                {
+                });
+                actions.push({
                     type: 'modify',
-                    path: `{{exampleScopeFolder}}/${plopExampleName}/package.json`,
-                    pattern: /(-- PLOP EXAMPLE NAME HERE --)/gi,
-                    template: `${plopExampleName}`,
-                },
-                {
-                    type: 'modify',
-                    path: `{{exampleScopeFolder}}/${plopExampleName}/app/page.tsx`,
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/app/layout.tsx`,
                     pattern: /(-- PLOP TITLE HERE --)/gi,
                     template: `${data.name}`,
-                },
-            ]
+                });
+
+                actions.push({
+                    type: 'modify',
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/README.md`,
+                    pattern: /(-- PLOP TITLE HERE --)/gi,
+                    template: `${data.name}`,
+                });
+                actions.push({
+                    type: 'modify',
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/README.md`,
+                    pattern: /(-- PLOP EXAMPLE NAME HERE --)/gi,
+                    template: `${plopExampleName}`,
+                });
+                actions.push({
+                    type: 'modify',
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/README.md`,
+                    pattern: /(-- PLOP PATH HERE --)/gi,
+                    template: `${plopPath}`,
+                });
+
+                actions.push({
+                    type: 'modify',
+                    path: `${data.exampleScopeFolder}/${plopExampleName}/app/page.tsx`,
+                    pattern: /(-- PLOP TITLE HERE --)/gi,
+                    template: `${data.name}`,
+                });
+            }
+
+            actions.push({
+                type: 'modify',
+                path: `${data.exampleScopeFolder}/${plopExampleName}/package.json`,
+                pattern: /(-- PLOP EXAMPLE NAME HERE --)/gi,
+                template: `${plopExampleName}`,
+            });
+
+            return actions;
         },
-    })
+    });
 }
