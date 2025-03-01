@@ -15,7 +15,7 @@ function BasicLiveboard() {
                     width: '100%',
                     height: '100%',
                 },
-                liveboardId: '9bd202f5-d431-44bf-9a07-b4f7be372125',
+                liveboardId: import.meta.env.VITE_LIVEBOARD_ID,
             });
             liveboardEmbed.render();
         }
