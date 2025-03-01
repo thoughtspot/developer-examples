@@ -3,6 +3,8 @@ import { AuthType, init } from "@thoughtspot/visual-embed-sdk";
 
 import './App.css';
 import Home from "./pages/Home";
+import EmbedViaClass from "./pages/EmbedViaClass";
+import EmbedViaReact from "./pages/EmbedViaReact";
 
 function App() {
 
@@ -19,6 +21,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route index element={<Home />} />
+          <Route path="/embedViaClass" element={<EmbedViaClass />} />
+          <Route path="/embedViaReact" element={<EmbedViaReact />} />
         </Routes>
       </BrowserRouter>
     </>
