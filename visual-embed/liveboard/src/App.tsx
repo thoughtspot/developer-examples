@@ -24,10 +24,10 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route index element={<Home />} />
-          <Route path="basic" element={<BasicLiveboard />} />
-          <Route path="fullHeight" element={<FullHeightLiveboard />} />
+          <Route path="basicEmbed" element={<BasicLiveboard />} />
+          <Route path="fullHeightEmbed" element={<FullHeightLiveboard />} />
           <Route path="embedWithReact" element={<EmbedWithReact />} />
-          <Route path="withTabs" element={<LiveboardWithTabs />} />
+          <Route path="embedWithTabs" element={<LiveboardWithTabs />} />
         </Routes>
       </BrowserRouter>
     </>
