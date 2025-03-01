@@ -1,6 +1,6 @@
 # spotter-agent-embed
 
-This is a small example of how embed spotter into your own agent if you have one.
+This is a small example of how embed spotter into your own agent if you have one. The example creates a simple agent using Gemini-flash model's function calling capability.
 
 ## Demo
 
@@ -27,6 +27,12 @@ $ npm i
 ```
 $ npm start
 ```
+
+## Structure
+
+- `api/simple-agent.ts` A simple agent node service, using Gemini. This would be your own agent.
+- `src/` React code for a chatbot using [Antd Pro chat](https://pro-chat.antdigital.dev/en-US/components/pro-chat#programming-operation-control)
+
 
 ### Technology labels
 
