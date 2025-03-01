@@ -8,7 +8,7 @@ This is a small example of how embed liveboard into your
 
 ## Environment
 
-The `.env` file contains some default values. Change the value of `VITE_THOUGHTSPOT_HOST` and `VITE_TS_DATASOURCE_ID` to use on your own instance.
+The `.env` file contains values for runing the demo. You can use `.env.sample` to create your own environment file
 
 ## Run locally
 
