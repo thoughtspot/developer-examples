@@ -10,7 +10,7 @@ function Home() {
         <Header title="Example Liveboard Embedding" />
         <div className="content-container">
           <p>
-            This sandbox contains examples for how to <a href="https://developers.thoughtspot.com/docs/embed-liveboard" rel="noreferrer" target="_blank">Embed a Liveboard</a> in your application.
+            This sandbox contains examples for how to <a href="https://developers.thoughtspot.com/docs/embed-a-viz" rel="noreferrer" target="_blank">Embed a Visualization</a> in your application.
           </p>
           <h2>Getting Started</h2>
           <p>Install the latest <a href="https://www.npmjs.com/package/@thoughtspot/visual-embed-sdk" rel="noreferrer" target="_blank">Visual Embed SDK</a> from npm registry</p>
@@ -29,13 +29,11 @@ function Home() {
             <b>Note:</b> Please replace the values with your own cluster details
           </p>
           <p>
-            Thoughtspot supports embedding a liveboard with multiple options, frequent use cases are covered below:
-            <ul>
-              <li><a href="/basicEmbed">With basic parameters</a></li>
-              <li><a href="/fullHeightEmbed">Full height liveboard</a></li>
-              <li><a href="/embedWithTabs">Liveboard with multiple tabs</a></li>
-              <li><a href="/embedWithReact">With React components</a></li>
-            </ul>
+            Thoughtspot supports embedding a visualization via LiveboardEmbed package. Visualization can be embedded by using two approaches:
+              <ul>
+                <li><a href="/embedViaClass">Using LiveboardEmbed Class</a></li>
+                <li><a href="/embedViaReact">Using LiveboardEmbed React Component</a></li>
+              </ul>
           </p>
         </div>
       </>
