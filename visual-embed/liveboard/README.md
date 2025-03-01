@@ -28,6 +28,14 @@ $ npm run dev
 
 - `src/pages` Includes codes to embed liveboard with multiple options.
 
+## Demo
+
+This example includes demos for below scenarios
+
+- Basic Embedding
+- Embedding with Full Height
+- Embedding liveboard with multiple tabs
+- Embedding using React component
 
 ### Technology labels
 
