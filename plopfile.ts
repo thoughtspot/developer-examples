@@ -31,6 +31,7 @@ export default function (plop: NodePlopAPI) {
                     { name: 'Rest APIs', value: 'rest-api' },
                     { name: 'Solutions', value: 'solutions' },
                     { name: 'Starter', value: 'starter' },
+                    { name: 'Mobile', value: 'mobile' },
                 ],
             },
             {
