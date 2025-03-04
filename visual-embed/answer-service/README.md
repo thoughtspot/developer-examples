@@ -2,18 +2,16 @@
 
 This example demonstrates how to use the AnswerService from the ThoughtSpot Visual Embed SDK to programmatically fetch data and interact with ThoughtSpot answers.
 
-## Features
+## Demo
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/answer-service)
 
+## Features
 - Embeds a ThoughtSpot Search component
 - Demonstrates how to get an AnswerService instance from a SearchEmbed
 - Shows multiple AnswerService features:
   - Fetching data with pagination
-  - Getting SQL queries
   - Retrieving TML (ThoughtSpot Modeling Language)
-  - Downloading CSV and PNG exports
-  - Viewing session information
-- Processes and displays the fetched data in a table format
-- Handles errors and loading states
+  - Get source details
 
 ## Code Structure
 
@@ -25,10 +23,7 @@ This example demonstrates how to use the AnswerService from the ThoughtSpot Visu
 
 1. Configure your ThoughtSpot settings if needed
 2. Create a search query in the embedded search
-3. Use the AnswerService features in the sidebar:
-   - **Get TML**: Gets the ThoughtSpot Modeling Language representation
-   - **Get Session Info**: Displays the session information
-4. The data will be displayed in a table below the embed
+3. Click on the buttons to fetch the details in the console
 
 ## Documentation
 - [AnswerService Documentation](https://developers.thoughtspot.com/docs/Class_AnswerService)
@@ -68,8 +63,9 @@ Update these values with your own:
 
 The AnswerService provides several methods to interact with ThoughtSpot answers:
 
-- `getTML()`: Gets the TML representation of the answer
-- `getSession()`: Gets the session information
+- `getSourceDetail()`: Get the details about the source used in the answer.
+- `fetchData()`: Fetch data from the answer.
+-  `getTML()`: Gets the TML of the answer
 
 This example demonstrates most of these methods, but you can extend it to use others as needed.
 
