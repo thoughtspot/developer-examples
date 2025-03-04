@@ -1,0 +1,46 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-self: start;
+  flex-direction: row;
+  width: 100vw;
+  height: 100vh;
+}
+.leftPanel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+.rightPanel {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #aaa;
+}
+
+.action {
+  margin-top: 2rem;
+}
+.action div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.action img {
+  height: 32px;
+  width: 32px;
+  margin-right: 0.5em;
+}
+.action span {
+  text-align: center;
+  height: fit-content;
+}
+.rightPanel div {
+  width: 100%;
+  height: 100%;
+  border: none;
+} 
