@@ -5,13 +5,8 @@ import cors from "cors";
 const app = express();
 
 const PORT = process.env.SERVER_PORT || 4000;
-const THOUGHTSPOT_HOST = process.env.VITE_THOUGHTSPOT_HOST;
-const SECRET_KEY = process.env.SECRET_KEY;
+const THOUGHTSPOT_HOST = process.env.VITE_THOUGHTSPOT_HOST || 'https://training.thoughtspot.cloud';
 
-if (!THOUGHTSPOT_HOST || !SECRET_KEY) {
-  console.error("THOUGHTSPOT_HOST and SECRET_KEY environment variables must be set.");
-  process.exit(1);
-}
 
 let thoughtspotClient: ThoughtSpotRestApi;
 const getThoughtClient = () => {
@@ -31,21 +26,15 @@ const getThoughtClient = () => {
 app.use(express.json());
 app.use(cors())
 
+const password ='code-sandbox'
+const username ='3mbed+#3xplz'
+
 app.get('/api/token', async (req, res) => {
   try {
-    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    const username = url.searchParams.get("username");
-
-    if (!username) {
-      res.status(400).json({ error: "Username is required." });
-      return;
-    }
-
-
     const thoughtspotClient = getThoughtClient();
     const data = await thoughtspotClient.getFullAccessToken({
       username,
-      secret_key: SECRET_KEY,
+      password,
     });
 
     res.status(200).json({ token: data.token });
@@ -56,9 +45,8 @@ app.get('/api/token', async (req, res) => {
   }
 });
 
-app.options('/api/token', function (req, res) {
-  console.log("here first")
-  res.json({ message: "Hello, world!" }).status(200);
+app.all('/', function (req, res) {
+  res.json({ message: "Hello, world!" });
 });
 
 app.listen(PORT, function (err) {

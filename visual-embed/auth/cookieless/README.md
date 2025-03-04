@@ -9,7 +9,7 @@ Include, but not limited to:
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/cookieless-embed)
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/auth/cookieless-embed)
 
 ## Documentation
 
