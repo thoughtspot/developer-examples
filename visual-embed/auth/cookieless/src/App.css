@@ -1,0 +1,38 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-self: start;
+  flex-direction: row;
+  width: 100vw;
+  height: 100vh;
+}
+.leftPanel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+.rightPanel {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #aaa;
+}
+.rightPanel div {
+  width: 100%;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header img {
+  width: 50px;
+  height: 50px;
+  margin-right: 10px;
+}
