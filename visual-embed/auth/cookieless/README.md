@@ -1,11 +1,6 @@
 # cookieless-embed
 
-Write something about the example here. 
-
-Include, but not limited to:
-
-- How the code is structured
-- How to navigate when the demo is opened.
+This example demonstrates how to implement cookieless authentication for embedding ThoughtSpot using the Visual Embed SDK.
 
 ## Demo
 
@@ -13,14 +8,13 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 
 ## Documentation
 
-- Links to the Thoughtspot developer docs for the features used in this example.
-- ...
+- [Cookieless Authentication Examples](https://developers.thoughtspot.com/docs/trusted-auth-sdk#_cookieless_authentication_examples)
 
 ## Run locally
 
 ```
 $ git clone https://github.com/thoughtspot/developer-examples
-$ cd visual-embed/cookieless-embed
+$ cd visual-embed/auth/cookieless-embed
 ```
 ```
 $ npm i
@@ -29,8 +23,19 @@ $ npm i
 $ npm run dev
 ```
 
-### Technology labels
+## Code Structure
+
+### Source Code
+```
+src
+├── App.tsx    -> Contains the embed code using @thoughtspot/visual-embed-sdk
+├── services
+│   └── token.ts  -> Handles fetching auth token from backend
+```
+
+## Technology labels
 
 - React
 - Typescript
 - Web
+

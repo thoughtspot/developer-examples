@@ -26,8 +26,8 @@ const getThoughtClient = () => {
 app.use(express.json());
 app.use(cors())
 
-const password ='code-sandbox'
-const username ='3mbed+#3xplz'
+const username ='code-sandbox'
+const password ='3mbed+#3xplz'
 
 app.get('/api/token', async (req, res) => {
   try {
