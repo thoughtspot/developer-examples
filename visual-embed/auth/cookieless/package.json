@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "token-server": "tsx --env-file=.env api/token-service.ts",
-    "dev": "vite",
+    "dev": "vite --port 3000",
     "build": "tsc -b && vite build",
     "start": "npm run token-server & vite",
     "lint": "eslint .",

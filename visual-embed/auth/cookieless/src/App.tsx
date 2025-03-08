@@ -18,6 +18,8 @@ function App() {
   );
 }
 
+const THOUGHTSPOT_HOST = import.meta.env.VITE_THOUGHTSPOT_HOST || 'https://training.thoughtspot.cloud';
+
 const FullAppEmbed = () => {
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -25,7 +27,7 @@ const FullAppEmbed = () => {
     init({
       authType: AuthType.TrustedAuthTokenCookieless,
       getAuthToken: getThoughtspotToken,
-      thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,
+      thoughtSpotHost: THOUGHTSPOT_HOST,
     });
     setIsInitialized(true);
   }, []);

@@ -4,7 +4,7 @@ import cors from "cors";
 
 const app = express();
 
-const PORT = process.env.SERVER_PORT || 4000;
+const PORT = process.env.VITE_SERVER_PORT || 4000;
 const THOUGHTSPOT_HOST = process.env.VITE_THOUGHTSPOT_HOST || 'https://training.thoughtspot.cloud';
 
 
@@ -26,8 +26,12 @@ const getThoughtClient = () => {
 app.use(express.json());
 app.use(cors())
 
-const username ='code-sandbox'
-const password ='3mbed+#3xplz'
+const username = process.env.VITE_THOUGHT_SPOT_USERNAME
+const password =  process.env.VITE_THOUGHT_SPOT_PASSWORD
+
+if (!username || !password) {
+  throw new Error('Username and password are required');
+}
 
 app.get('/api/token', async (req, res) => {
   try {
