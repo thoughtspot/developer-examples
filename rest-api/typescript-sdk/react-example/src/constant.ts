@@ -1,1 +1,0 @@
-export const THOUGHTSPOT_HOST = import.meta.env.VITE_THOUGHTSPOT_HOST || "";
