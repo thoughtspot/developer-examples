@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 3000",
     "build": "tsc -b && vite build",
-    "start-token-server": "tsx --env-file=.env api/token-server.ts",
+    "token-server": "tsx --env-file=.env api/token-server.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

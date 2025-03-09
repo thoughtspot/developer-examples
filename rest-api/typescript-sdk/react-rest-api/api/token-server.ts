@@ -42,7 +42,7 @@ app.get('/api/token', async (req, res) => {
       validity_time_in_sec: 60 * 2
     });
 
-    res.status(200).json({ token: data.token });
+    res.status(200).json(data);
   }
   catch (e) {
     console.error(e);
@@ -56,5 +56,5 @@ app.all('/', function (req, res) {
 
 app.listen(PORT, function (err) {
   if (err) console.log(err);
-  console.log("Server listening on", `https://localhost:${PORT}`);
+  console.log("Server listening on", `http://localhost:${PORT}`);
 });
