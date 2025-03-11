@@ -10,7 +10,7 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 - Demonstrates how to get an AnswerService instance from a SearchEmbed
 - Shows multiple AnswerService features:
   - Fetching data with pagination
-  - Retrieving TML (ThoughtSpot Modeling Language)
+  - Get underlying data of an answer
   - Get source details
 
 ## Code Structure
@@ -65,7 +65,7 @@ The AnswerService provides several methods to interact with ThoughtSpot answers:
 
 - `getSourceDetail()`: Get the details about the source used in the answer.
 - `fetchData()`: Fetch data from the answer.
--  `getTML()`: Gets the TML of the answer
+-  `getUnderlyingDataFromPoint()`: Gets the underlying data of the answer
 
 This example demonstrates most of these methods, but you can extend it to use others as needed.
 
