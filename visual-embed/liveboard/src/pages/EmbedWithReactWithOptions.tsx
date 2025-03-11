@@ -1,7 +1,7 @@
 import Header from "../components/Header";
 import { EmbedEvent, HostEvent, LiveboardEmbed, RuntimeFilterOp, useEmbedRef } from "@thoughtspot/visual-embed-sdk/react";
 
-function ReactEmbedWithOptions() {
+function EmbedWithReactWithOptions() {
 
     const ref = useEmbedRef<typeof LiveboardEmbed>();
     //apply runtime filters
@@ -45,4 +45,4 @@ function ReactEmbedWithOptions() {
     )
 }
 
-export default ReactEmbedWithOptions;
+export default EmbedWithReactWithOptions;

@@ -24,7 +24,7 @@ function Home() {
               <li><a href="/fullHeightEmbed">Full height liveboard</a></li>
               <li><a href="/embedWithTabs">Liveboard with multiple tabs</a></li>
               <li><a href="/embedWithReact">With React components</a></li>
-              <li><a href="/reactEmbedWithOptions">React embed with options</a></li>
+              <li><a href="/embedWithReactWithOptions">Embed with React with options</a></li>
             </ul>
           </p>
         </div>
