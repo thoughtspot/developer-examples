@@ -1,6 +1,11 @@
 # liveboard-embed
 
-This is a small example of how embed liveboard into your 
+This is a small example of how embed liveboard into your application.
+
+## Demo
+
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/liveboard)
+
 
 ## Documentation
 
@@ -8,7 +13,7 @@ This is a small example of how embed liveboard into your
 
 ## Environment
 
-The `.env` file contains values for runing the demo. You can use `.env.sample` to create your own environment file
+The `.env` file contains values for runing the demo.
 
 ## Run locally
 

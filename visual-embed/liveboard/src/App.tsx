@@ -9,15 +9,15 @@ import FullHeightLiveboard from "./pages/FullHeightLiveboard";
 import EmbedWithReact from "./pages/EmbedWithReact";
 import LiveboardWithTabs from "./pages/LiveboardWithTabs";
 
+init({
+  thoughtSpotHost: import.meta.env.VITE_TS_HOST,
+  authType: AuthType.Basic,
+  username: import.meta.env.VITE_TS_USERNAME,
+  password: import.meta.env.VITE_TS_PASSWORD,
+  callPrefetch: true,
+});
+
 function App() {
-  
-  init({
-    thoughtSpotHost: import.meta.env.VITE_TS_HOST,
-    authType: AuthType.Basic,
-    username: import.meta.env.VITE_TS_USERNAME,
-    password: import.meta.env.VITE_TS_PASSWORD,
-    callPrefetch: true,
-  });
 
   return (
     <>
