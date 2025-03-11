@@ -23,12 +23,20 @@ export const SearchEmbedComponent = () => {
         }
     }
 
-    const getTML = async () => {
+    const getUnderlyingData = async () => {
         if (embedRef.current) {
             const service = await embedRef.current.getAnswerService();
-            const tml = await service.getTML();
-            setLastFetched({ type: 'TML Data', data: tml });
-            console.log('tml', tml);
+           const answer = await service.getAnswer();
+           console.log('answer', answer);
+           const columnName = answer?.visualizations?.[0]?.columns?.[0]?.column?.referencedColumns?.[0]?.displayName;
+           if(!columnName) {
+                console.error('No column name found');
+                return;
+           }
+           console.log('columnName', columnName)
+            const underlyingData = await service.getUnderlyingDataForPoint([columnName], []);
+            const data = await underlyingData.fetchData(0, 100);
+            setLastFetched({ type: 'Underlying Data', data: data });
         }
     }
 
@@ -45,7 +53,7 @@ export const SearchEmbedComponent = () => {
             <div style={{ padding: '20px' }}>
                 <button onClick={getSourceDetails}>Get Source Details</button>
                 <button onClick={fetchData}>Fetch Data</button>
-                <button onClick={getTML}>Get TML</button>
+                <button onClick={getUnderlyingData}>Get Underlying Data</button>
 
                 {lastFetched && (
                     <div>
