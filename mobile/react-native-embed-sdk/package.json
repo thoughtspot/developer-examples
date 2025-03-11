@@ -1,0 +1,21 @@
+{
+  "name": "react-native-embed-sdk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.2",
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@thoughtspot/react-native-embed-sdk": "0.0.0-alpha-1",
+    "@thoughtspot/rest-api-sdk": "^2.12.0",
+    "react-native-webview": "13.12.5"
+  }
+}
