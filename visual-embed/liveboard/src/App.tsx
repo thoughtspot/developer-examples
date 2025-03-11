@@ -8,6 +8,7 @@ import BasicLiveboard from "./pages/BasicLiveboard";
 import FullHeightLiveboard from "./pages/FullHeightLiveboard";
 import EmbedWithReact from "./pages/EmbedWithReact";
 import LiveboardWithTabs from "./pages/LiveboardWithTabs";
+import ReactEmbedWithOptions from "./pages/ReactEmbedWithOptions";
 
 init({
   thoughtSpotHost: import.meta.env.VITE_TS_HOST,
@@ -28,6 +29,7 @@ function App() {
           <Route path="fullHeightEmbed" element={<FullHeightLiveboard />} />
           <Route path="embedWithReact" element={<EmbedWithReact />} />
           <Route path="embedWithTabs" element={<LiveboardWithTabs />} />
+          <Route path="reactEmbedWithOptions" element={<ReactEmbedWithOptions />} />
         </Routes>
       </BrowserRouter>
     </>
