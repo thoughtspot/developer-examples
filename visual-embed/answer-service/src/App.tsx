@@ -4,12 +4,13 @@ import './App.css';
 import { SearchEmbedComponent } from "./components/search/SearchEmbed";
 import { Home } from "./components/home/Home";
 
-function App() {
 
-  init({
+init({
     thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,
     authType: AuthType.None,
-  });
+});
+
+function App() {
 
   return (
     <>
