@@ -1,6 +1,11 @@
 # visualization-embed
 
-This is a small example of how embed visualization into your 
+This is a small example of how embed visualization into your application.
+
+## Demo
+
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/visualization)
+
 
 ## Documentation
 

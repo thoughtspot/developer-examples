@@ -1,6 +1,5 @@
 
-import SyntaxHighlighter from 'react-syntax-highlighter';
-import { a11yDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+
 import Header from '../components/Header';
 
 function Home() {
@@ -15,17 +14,7 @@ function Home() {
           <h2>Getting Started</h2>
           <p>Install the latest <a href="https://www.npmjs.com/package/@thoughtspot/visual-embed-sdk" rel="noreferrer" target="_blank">Visual Embed SDK</a> from npm registry</p>
           <p>
-            Initialise the SDK as described:
-            <SyntaxHighlighter language="javascript" style={a11yDark}>
-              {`
-                init({
-                  thoughtSpotHost: '<%=tshost%>',
-                  authType: AuthType.Basic,
-                  username: '<%=tsusername%>',
-                  password: '<%=tspassword%>',
-                });
-              `}
-            </SyntaxHighlighter>
+            Initialise the SDK as described in <a href="https://developers.thoughtspot.com/docs/getting-started#initSdk" rel="noreferrer" target="_blank">Installation Guide</a><br />
             <b>Note:</b> Please replace the values with your own cluster details
           </p>
           <p>
