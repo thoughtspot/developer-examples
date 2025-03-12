@@ -3,7 +3,7 @@
 This is a small example of how to customize the default styles, color schemes, design elements, and typography of ThoughtSpot elements.
 
 ## Demo
-Open in [Codesandbox](https://codesandbox.io/p/sandbox/lxtpn2)
+Open in [Codesandbox](https://codesandbox.io/p/sandbox/github/thoughtspot/developer-examples/tree/main/visual-embed/style-customizations)
 
 ## Documentation
 

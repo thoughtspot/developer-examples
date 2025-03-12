@@ -4,22 +4,22 @@ interface CssRule {
   };
 }
 
-interface CustomizationStore {
-  style: {
-      customCSSUrl: string;
-      customCSS: {
-          variables: { [key: string]: string };
-          rules_UNSTABLE: CssRule;
+export interface CustomizationStore {
+  style?: {
+      customCSSUrl?: string;
+      customCSS?: {
+          variables?: { [key: string]: string };
+          rules_UNSTABLE?: CssRule;
       };
   };
-  iconSpriteUrl: string;
-  content: {
+  iconSpriteUrl?: string;
+  content?: {
       strings: { [key: string]: string };
   };
 }
 
 
-const initialState: CustomizationStore = {
+const globalCustomizationConfig: CustomizationStore = {
     style: {
         customCSSUrl: "https://cdn.jsdelivr.net/gh/thoughtspot/custom-css-demo/css-variables.css",
         customCSS: {
@@ -28,12 +28,6 @@ const initialState: CustomizationStore = {
             "--ts-var-button--secondary--hover-background": "#E3D9FC",
             "--ts-var-root-background": "#F7F5FF",
           },
-          rules_UNSTABLE: {
-            '{selector1}' : {
-              "{css-property-name}" : "{value}!important",
-              "{css-property-name2}" : "{value}!important"
-            },
-          }
         },
     },
     "iconSpriteUrl": "https://cdn.jsdelivr.net/gh/thoughtspot/custom-css-demo/icon-sprite.svg",
@@ -50,6 +44,25 @@ const initialState: CustomizationStore = {
     
 };
 
+const appCustomizationConfig: CustomizationStore = {
+  style: {
+      customCSSUrl: "https://cdn.jsdelivr.net/gh/thoughtspot/custom-css-demo/css-variables.css",
+      customCSS: {
+        rules_UNSTABLE: {
+          '[data-testid="select-dropdown-header"]':{
+            "background-color":"#ABC7F9"
+          }
+        }
+      },
+  },
+  content: {
+    strings: {
+        "Liveboard": "Dashboard - App",
+    }
+}
+};
+
 export {
-    initialState,
+    globalCustomizationConfig,
+    appCustomizationConfig
 };
