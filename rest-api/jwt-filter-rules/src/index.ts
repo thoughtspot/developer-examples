@@ -32,9 +32,10 @@ app.post("/generate-token", async (req: Request, res: Response): Promise<void> =
             username: THOUGHTSPOT_USERNAME,
             validity_time_in_sec: 300,
             password: THOUGHTSPOT_PASSWORD,
-            // secret_key: SECRET_KEY,
-            auto_create: true,
-            persist_option: "APPEND",
+            // secret_key: SECRET_KEY, // It is highly recommended to use secret key in production environment
+            auto_create: true, // To provision a user just-in-time (JIT), set this attribute to true.
+            persist_option: "APPEND", // Indicates whether the specified attributes should be persisted or not.
+            // Other persist options supported are: "REPLACE", "RESET" and "NONE".
             filter_rules: [
                 {
                     column_name: "Color",
