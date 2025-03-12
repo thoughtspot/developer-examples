@@ -2,12 +2,12 @@ import React, { useRef, useState } from 'react';
 import { StyleSheet, View, Text, Alert, TouchableOpacity } from 'react-native';
 import { Action, HostEvent, LiveboardEmbed } from '@thoughtspot/react-native-embed-sdk';
 
-export const LiveboardView = (props: any) => {
+export const LiveboardView = ({navigation, route}) => {
+
+  const {viewConfig} = route.params;
   const [loading, setLoading] = useState(true);
   const webViewRef = useRef<any>(null);
-  const viewConfig = props.viewConfig;
 
-  // HostEvent usage Example : 1 | Reload Event
   const reloadView = () => {
     Alert.alert("Reloading")
     if(webViewRef?.current) {
@@ -15,19 +15,20 @@ export const LiveboardView = (props: any) => {
     }
   }
 
-  // HostEvent Example : 2 | Share Event - Share Modal will pop-up
   const goBack = () => {
     if(webViewRef?.current) {
       webViewRef.current.trigger(HostEvent.Share)
     }
-    // Toggles loading to confirm on state change - LiveboardEmbed won't reload
     setLoading(!loading);
   }
 
 
   return (
-  <>
+  <> 
    <View style={lbstyles.embedContainer}>
+          <View style={lbstyles.headerRow}>
+            <Text>Liveboard View</Text>
+          </View>
           <View style={lbstyles.headerRow}>
             <Text style={lbstyles.headerText}>My Custom App</Text>
             <View style={lbstyles.actionButtonsRow}>
@@ -45,16 +46,17 @@ export const LiveboardView = (props: any) => {
               ref = {webViewRef}
               liveboardId={viewConfig.liveboardId}
               onAuthInit={() => {alert("Auth Init EmbedEvent");setLoading(false)}}
-              onError={(error) => {alert(`Error :  ${JSON.stringify(error)}`)}}
+              onError={(error) => {alert(`Error : ${JSON.stringify(error)}`)}}
               onLiveboardRendered={() => {alert("Liveboard Rendered")}}
-              visibleActions={[Action.Pin, Action.Edit, Action.DrillDown, Action.AddFilter]}
               // defaultActionsDisabled = {false}
               // visibleActions={[Action.Share]}
               // hideLiveboardHeader = {true}
             />
           </View>
           <View style={lbstyles.footer}>
-            <Text style={lbstyles.footerText}>Footer Content</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+              <Text style={lbstyles.footerText}>Go to Homepage</Text>
+            </TouchableOpacity>
           </View>
       </View>
       </>
