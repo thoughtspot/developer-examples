@@ -1,9 +1,8 @@
-// Import necessary modules and components from ThoughtSpot SDK
 import { AuthType, Page } from '@thoughtspot/visual-embed-sdk';
 import { init } from '@thoughtspot/visual-embed-sdk';
 import { AppEmbed } from '@thoughtspot/visual-embed-sdk/react';
-import './App.css'; // Import custom CSS for app styling
-import { globalCustomizationConfig, appCustomizationConfig } from './customizations'; // Import customizations from a separate file
+import './App.css'; 
+import { globalCustomizationConfig, appCustomizationConfig } from './customizations'; 
 
 /*
   Authentication and ThoughtSpot host configuration:
