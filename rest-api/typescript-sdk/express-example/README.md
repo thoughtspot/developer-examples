@@ -10,6 +10,7 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 
 - [Rest Api Reference](https://developers.thoughtspot.com/docs/rest-apiv2-reference)
 - [Rest Api Sdk](https://developers.thoughtspot.com/docs/rest-api-sdk)
+- [NPM](https://www.npmjs.com/package/@thoughtspot/rest-api-sdk)
 
 ## File Structure
 src/
