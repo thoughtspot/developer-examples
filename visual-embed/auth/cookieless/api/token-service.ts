@@ -1,21 +1,17 @@
 import express from "express";
-import { createBasicConfig,  ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk"
+import { createBasicConfig, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk"
 import cors from "cors";
 
 const app = express();
 
 const PORT = process.env.VITE_SERVER_PORT || 4000;
 const THOUGHTSPOT_HOST = process.env.VITE_THOUGHTSPOT_HOST || 'https://training.thoughtspot.cloud';
-const username = process.env.VITE_THOUGHTSPOT_USERNAME
-const password =  process.env.VITE_THOUGHTSPOT_PASSWORD
-
-if (!username || !password) {
-  throw new Error('Username and password are required');
-}
+const DEMO_USER_PASSWORD = process.env.DEMO_USER_PASSWORD;
+const SECRET_KEY = process.env.VITE_THOUGHTSPOT_SECRET_KEY;
 
 
 let thoughtspotClient: ThoughtSpotRestApi;
-const getThoughtClient = () => {
+const getThoughtSpotClient = () => {
   if (!thoughtspotClient) {
     const basicClientConfig = createBasicConfig(THOUGHTSPOT_HOST);
     thoughtspotClient = new ThoughtSpotRestApi(basicClientConfig);
@@ -29,15 +25,22 @@ app.use(cors())
 
 app.get('/my-token-endpoint', async (req, res) => {
   try {
-    const thoughtspotClient = getThoughtClient();
+    const username = req.headers['x-my-username'] as string;
+
+    const credentials = SECRET_KEY ?
+      // In production use cases use Secret key
+      { secret_key: SECRET_KEY } :
+      { password: DEMO_USER_PASSWORD }
+
+    const thoughtspotClient = getThoughtSpotClient();
     const data = await thoughtspotClient.getFullAccessToken({
       username,
-      password,
+      ...credentials
     });
 
     res.status(200).json({ token: data.token });
   }
-  catch (e) { 
+  catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
   }

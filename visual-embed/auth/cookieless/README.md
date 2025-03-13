@@ -4,7 +4,7 @@ This example demonstrates how to implement cookieless authentication for embeddi
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/auth/cookieless-embed)
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/auth/cookieless)
 
 ## Documentation
 
@@ -14,7 +14,7 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 
 ```
 $ git clone https://github.com/thoughtspot/developer-examples
-$ cd visual-embed/auth/cookieless-embed
+$ cd visual-embed/auth/cookieless
 ```
 ```
 $ npm i
