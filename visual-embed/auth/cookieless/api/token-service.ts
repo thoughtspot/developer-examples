@@ -1,39 +1,33 @@
 import express from "express";
-import { createConfiguration, ServerConfiguration, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk"
+import { createBasicConfig,  ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk"
 import cors from "cors";
 
 const app = express();
 
 const PORT = process.env.VITE_SERVER_PORT || 4000;
 const THOUGHTSPOT_HOST = process.env.VITE_THOUGHTSPOT_HOST || 'https://training.thoughtspot.cloud';
-
-
-let thoughtspotClient: ThoughtSpotRestApi;
-const getThoughtClient = () => {
-
-  if (!thoughtspotClient) {
-    const thoughtspotServer = new ServerConfiguration(THOUGHTSPOT_HOST, {});
-    const basicClientConfig = createConfiguration({
-      baseServer: thoughtspotServer,
-    });
-
-    thoughtspotClient = new ThoughtSpotRestApi(basicClientConfig);
-  }
-  return thoughtspotClient;
-
-}
-
-app.use(express.json());
-app.use(cors())
-
-const username = process.env.VITE_THOUGHT_SPOT_USERNAME
-const password =  process.env.VITE_THOUGHT_SPOT_PASSWORD
+const username = process.env.VITE_THOUGHTSPOT_USERNAME
+const password =  process.env.VITE_THOUGHTSPOT_PASSWORD
 
 if (!username || !password) {
   throw new Error('Username and password are required');
 }
 
-app.get('/api/token', async (req, res) => {
+
+let thoughtspotClient: ThoughtSpotRestApi;
+const getThoughtClient = () => {
+  if (!thoughtspotClient) {
+    const basicClientConfig = createBasicConfig(THOUGHTSPOT_HOST);
+    thoughtspotClient = new ThoughtSpotRestApi(basicClientConfig);
+  }
+  return thoughtspotClient;
+}
+
+app.use(express.json());
+app.use(cors())
+
+
+app.get('/my-token-endpoint', async (req, res) => {
   try {
     const thoughtspotClient = getThoughtClient();
     const data = await thoughtspotClient.getFullAccessToken({

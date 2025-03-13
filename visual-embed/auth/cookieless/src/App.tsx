@@ -5,6 +5,8 @@ import {
   AppEmbed,
   init,
   AuthType,
+  useInit,
+  AuthStatus,
 } from "@thoughtspot/visual-embed-sdk/react";
 import { getThoughtspotToken } from "./services/token";
 
@@ -20,16 +22,19 @@ function App() {
 
 const THOUGHTSPOT_HOST = import.meta.env.VITE_THOUGHTSPOT_HOST || 'https://training.thoughtspot.cloud';
 
-const FullAppEmbed = () => {
-  const [isInitialized, setIsInitialized] = useState(false);
+const FullAppEmbed = () => { 
+  const authEE = useInit({
+    authType: AuthType.TrustedAuthTokenCookieless,
+    getAuthToken: getThoughtspotToken,
+    thoughtSpotHost: THOUGHTSPOT_HOST,
+  });
 
   useEffect(() => {
-    init({
-      authType: AuthType.TrustedAuthTokenCookieless,
-      getAuthToken: getThoughtspotToken,
-      thoughtSpotHost: THOUGHTSPOT_HOST,
-    });
-    setIsInitialized(true);
+    if (authEE.current) {
+      authEE.current.on(AuthStatus.SDK_SUCCESS, () => {
+        console.log('Init successful')
+      })
+    }
   }, []);
 
   return (
@@ -38,7 +43,7 @@ const FullAppEmbed = () => {
         {tsLogo ? <img src={tsLogo} alt="ThoughtSpot Logo" /> : null}
         <span>Cookie-less App Embed</span>
       </span>
-      {isInitialized ? <AppEmbed /> : null}
+      <AppEmbed />
     </div>
   );
 };
