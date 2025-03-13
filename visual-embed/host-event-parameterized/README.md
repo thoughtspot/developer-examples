@@ -1,20 +1,16 @@
 # host-event-parameterized
 
-Write something about the example here. 
+Examples on how to use host event with parameters.
 
-Include, but not limited to:
+## Documentation
 
-- How the code is structured
-- How to navigate when the demo is opened.
+- [Host Event Parameterization](https://developers.thoughtspot.com/docs/events-app-integration#hostEventParameterization)
+- [Pin event with params](https://developers.thoughtspot.com/docs/events-app-integration#_parameters_for_hostevent_pin)
+- [Save event with params](https://developers.thoughtspot.com/docs/events-app-integration#_parameters_for_hostevent_saveanswer)
 
 ## Demo
 
 Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/host-event-parameterized)
-
-## Documentation
-
-- Links to the Thoughtspot developer docs for the features used in this example.
-- ...
 
 ## Run locally
 
