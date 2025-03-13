@@ -23,7 +23,7 @@ const THOUGHTSPOT_HOST =
   import.meta.env.VITE_THOUGHTSPOT_HOST || "https://training.thoughtspot.cloud";
 
 const FullAppEmbed = () => {
-  const username = import.meta.env.DEMO_USERNAME || "code-sandbox";
+  const username = import.meta.env.VITE_DEMO_USER_USERNAME || "code-sandbox";
 
   const getAuthToken = useCallback(
     () => getThoughtspotToken(username),
