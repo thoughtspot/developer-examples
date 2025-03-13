@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@thoughtspot/rest-api-sdk": "^2.12.1",
-    "@thoughtspot/visual-embed-sdk": "https://pkg.pr.new/thoughtspot/visual-embed-sdk/@thoughtspot/visual-embed-sdk@949c1d55dd1f64ed1b01df49a2c7493ba660207e",
+    "@thoughtspot/visual-embed-sdk": "latest",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "react": "^19.0.0",
