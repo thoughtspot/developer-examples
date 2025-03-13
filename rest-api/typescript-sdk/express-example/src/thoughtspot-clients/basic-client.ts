@@ -1,4 +1,4 @@
-import { ServerConfiguration, ThoughtSpotRestApi, createConfiguration } from "@thoughtspot/rest-api-sdk";
+import { ThoughtSpotRestApi, createBasicConfig } from "@thoughtspot/rest-api-sdk";
 import { THOUGHTSPOT_HOST } from "../constants";
 
 
@@ -12,12 +12,8 @@ let thoughtspotBasicClient: ThoughtSpotRestApi | null = null;
  */
 export const getThoughtspotBasicClient = () => {
   if (!thoughtspotBasicClient) {
-    const thoughtspotServer = new ServerConfiguration(THOUGHTSPOT_HOST, {});
-    const basicClientConfig = createConfiguration({
-      baseServer: thoughtspotServer,
-    });
-
-    thoughtspotBasicClient = new ThoughtSpotRestApi(basicClientConfig);
+    const basicConfig = createBasicConfig(THOUGHTSPOT_HOST);
+    thoughtspotBasicClient = new ThoughtSpotRestApi(basicConfig);
   }
 
   return (thoughtspotBasicClient as ThoughtSpotRestApi);

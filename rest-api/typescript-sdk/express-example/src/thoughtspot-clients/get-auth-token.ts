@@ -1,36 +1,37 @@
+import { Token } from "@thoughtspot/rest-api-sdk";
+import { DEMO_USER_PASSWORD, SECRET_KEY } from "../constants";
 import { getThoughtspotBasicClient } from "./basic-client";
 
-const TOKEN_VALIDITY_TIME = 60 * 2;
-
-const tokenCache = {}
+// caching the user token
+const tokenCache: Record<string, Token> = {}
 
 /**
  * Get the cached auth token, here we cache the token based on the username
  */
-export const getCachedAuthToken = async (credentials) => {
-  if (!credentials.username || !credentials.password) {
-    throw new Error("Username and password are required");
-  }
-
-  const { cachedToken, tokenLastFetched } = tokenCache[credentials.username] || {};
-  // if token token has 30s remaining, return cached token
-  if (cachedToken && (Date.now() - tokenLastFetched < (TOKEN_VALIDITY_TIME - 30))) {
-    return cachedToken;
+export const getCachedAuthToken = async (username: string) => {
+  const cacheResponse = tokenCache[username];
+  // if cached token token has 30s remaining, return cached token
+  if (
+    cacheResponse && 
+    cacheResponse.expiration_time_in_millis - Date.now() > 30 * 1000
+  ) {
+    return cacheResponse.token;
   }
 
   // fetch new token
   const client = getThoughtspotBasicClient();
-  const response = await client.getFullAccessToken({
-    username: credentials.username,
-    password: credentials.password,
-    // Instead of password, you can use secret_key to authenticate
-    // secret_key: "secret_key"
+
+  const credentials = SECRET_KEY
+    ? { secret_key: SECRET_KEY }
+    // for demo lets use the demo password if secret key is not provided
+    : { password: DEMO_USER_PASSWORD };
+
+  const tokenResponse = await client.getFullAccessToken({
+    username,
+    ...credentials,
   });
 
-  tokenCache[credentials.username] = {
-    cachedToken: response.token,
-    tokenLastFetched: Date.now(),
-  }
+  tokenCache[username] = tokenResponse
 
-  return response.token;
+  return tokenResponse.token;
 }

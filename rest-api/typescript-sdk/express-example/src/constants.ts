@@ -8,7 +8,7 @@ export const THOUGHTSPOT_HOST = process.env.THOUGHTSPOT_HOST || '';
 export const SECRET_KEY = process.env.SECRET_KEY || ''
 
 // ThoughtSpot username
-export const THOUGHTSPOT_USERNAME = process.env.THOUGHTSPOT_USERNAME || '';
+export const DEMO_USERNAME = process.env.DEMO_USERNAME || '';
 
 // ThoughtSpot password
-export const THOUGHTSPOT_PASSWORD = process.env.THOUGHTSPOT_PASSWORD || '';
+export const DEMO_USER_PASSWORD = process.env.DEMO_USER_PASSWORD || '';
