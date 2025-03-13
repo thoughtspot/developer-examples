@@ -12,7 +12,7 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@thoughtspot/visual-embed-sdk": "latest"
+    "@thoughtspot/visual-embed-sdk": "https://pkg.pr.new/thoughtspot/visual-embed-sdk/@thoughtspot/visual-embed-sdk@949c1d55dd1f64ed1b01df49a2c7493ba660207e"
   },
   "devDependencies": {
     "@types/react": "^19.0.8",
