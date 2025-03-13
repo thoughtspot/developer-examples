@@ -1,10 +1,6 @@
 import tsLogo from "/ts-logo.svg";
 import "./App.css";
-import {
-  AuthStatus,
-  AuthType,
-  HostEvent,
-} from "@thoughtspot/visual-embed-sdk";
+import { AuthStatus, AuthType, HostEvent } from "@thoughtspot/visual-embed-sdk";
 import {
   LiveboardEmbed,
   SearchEmbed,
@@ -14,7 +10,7 @@ import {
 import { useEffect } from "react";
 
 const THOUGHTSPOT_LIVEBOARD_ID = import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID;
-const THOUGHTSPOT_VIZ_ID = import.meta.env.VITE_THOUGHTSPOT_VIZ_ID; 
+const THOUGHTSPOT_VIZ_ID = import.meta.env.VITE_THOUGHTSPOT_VIZ_ID;
 
 function App() {
   const authEERef = useInit({
@@ -35,30 +31,42 @@ function App() {
   const searchRef = useEmbedRef<typeof SearchEmbed>();
 
   const handlePinForPinboard = async () => {
-    const res = await liveboardRef.current.trigger(HostEvent.Pin, {
-      newVizName: "Test Vziz",
-      vizId: THOUGHTSPOT_VIZ_ID,
-      liveboardId: THOUGHTSPOT_LIVEBOARD_ID,
-    });
-    console.log("Viz pinned to", res.liveboardId);
-    console.log("New viz id", res.liveboardId);
+    try {
+      const res = await liveboardRef.current.trigger(HostEvent.Pin, {
+        newVizName: "Test Vziz",
+        vizId: THOUGHTSPOT_VIZ_ID,
+        liveboardId: THOUGHTSPOT_LIVEBOARD_ID,
+      });
+      console.log("Viz pinned to", res.liveboardId);
+      console.log("New viz id", res.liveboardId);
+    } catch (e) {
+      console.info("Failed with error", e);
+    }
   };
 
   const handlePinForSearch = async () => {
-    const res = await searchRef.current.trigger(HostEvent.Pin, {
-      newVizName: "Test Vziz",
-      liveboardId: THOUGHTSPOT_LIVEBOARD_ID,
-    });
-    console.log("Viz pinned to", res.liveboardId);
-    console.log("New viz id", res.liveboardId);
+    try {
+      const res = await searchRef.current.trigger(HostEvent.Pin, {
+        newVizName: "Test Vziz",
+        liveboardId: THOUGHTSPOT_LIVEBOARD_ID,
+      });
+      console.log("Viz pinned to", res.liveboardId);
+      console.log("New viz id", res.liveboardId);
+    } catch (e) {
+      console.info("Failed wit error", e);
+    }
   };
 
   const handleSaveFoSearch = async () => {
-    const res = await searchRef.current.trigger(HostEvent.SaveAnswer, {
-      name: "New name",
-      description: "Some description",
-    });
-    console.log("New answer id ", res.answerId);
+    try {
+      const res = await searchRef.current.trigger(HostEvent.SaveAnswer, {
+        name: "New name",
+        description: "Some description",
+      });
+      console.log("New answer id ", res.answerId);
+    } catch (e) {
+      console.info("Failed with error", e);
+    }
   };
 
   return (
