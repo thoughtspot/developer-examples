@@ -5,36 +5,24 @@ import { NormalEmbed, PreRenderEmbed, PreRenderEmbedOnDemand } from "./embeds";
 import {
   PreRenderedAppEmbed,
   AuthType,
-  init,
   AuthStatus,
+  useInit,
 } from "@thoughtspot/visual-embed-sdk/react";
 
 const EmbedInit = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let authConfig: {
-      authType: AuthType;
-      username?: string;
-      password?: string;
-    } = {
-      authType: AuthType.None,
-    };
+  const authEERef = useInit({
+    thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,
+    authType: AuthType.Basic,
+    username: import.meta.env.VITE_THOUGHTSPOT_USERNAME,
+    password: import.meta.env.VITE_THOUGHTSPOT_PASSWORD,
+  });
 
-    const defaultHost = "https://training.thoughtspot.cloud";
-    if (import.meta.env.VITE_THOUGHTSPOT_HOST === defaultHost) {
-      authConfig = {
-        authType: AuthType.Basic,
-        username: import.meta.env.VITE_THOUGHTSPOT_USERNAME,
-        password: import.meta.env.VITE_THOUGHTSPOT_PASSWORD,
-      };
+  useEffect(() => {
+    if (authEERef.current) {
+      authEERef.current.on(AuthStatus.SDK_SUCCESS, () => setLoading(false));
     }
-    init({
-      thoughtSpotHost: (import.meta.env.VITE_THOUGHTSPOT_HOST ||
-        defaultHost) as string,
-      ...authConfig,
-    }).on(AuthStatus.SDK_SUCCESS, () => setLoading(false))
-   
   }, []);
 
   if (loading) {
