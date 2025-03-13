@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "token-server": "tsx --env-file=.env api/token-server.ts",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "npm run token-server & vite"
   },
   "dependencies": {
     "@thoughtspot/rest-api-sdk": "^2.12.1",
