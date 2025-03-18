@@ -12,6 +12,7 @@
   "devDependencies": {
     "plop": "^4.0.1",
     "readdir-enhanced": "^6.0.4",
+    "tsx": "^4.19.2",
     "@eslint/js": "^9.22.0",
     "eslint": "^9.22.0",
     "eslint-plugin-react": "^7.37.4",
