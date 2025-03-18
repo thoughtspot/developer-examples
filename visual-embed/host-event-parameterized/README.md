@@ -7,6 +7,7 @@ Examples on how to use host event with parameters.
 - [Host Event Parameterization](https://developers.thoughtspot.com/docs/events-app-integration#hostEventParameterization)
 - [Pin event with params](https://developers.thoughtspot.com/docs/events-app-integration#_parameters_for_hostevent_pin)
 - [Save event with params](https://developers.thoughtspot.com/docs/events-app-integration#_parameters_for_hostevent_saveanswer)
+- [Host Events](https://developers.thoughtspot.com/docs/Enumeration_HostEvent)
 
 ## Demo
 
