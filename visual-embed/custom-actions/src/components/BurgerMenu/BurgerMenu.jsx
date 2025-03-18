@@ -4,6 +4,7 @@ import "./burger.css";
 
 const toggleMenu = ({ isOpen }) => {
   const menuWrap = document.querySelector(".bm-menu-wrap");
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   isOpen
     ? menuWrap.setAttribute("aria-hidden", false)
     : menuWrap.setAttribute("aria-hidden", true);

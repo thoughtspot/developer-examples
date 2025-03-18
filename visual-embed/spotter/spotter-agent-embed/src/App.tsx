@@ -38,8 +38,8 @@ function App() {
               } else {
                 return part.text;
               }
-            } catch (e) {
-              
+            } catch {
+              // ignore
             }
             // const msg = JSON.parse(props.message);
             return defaultDom;

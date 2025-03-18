@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import {useEffect} from "react";
 
 import {EmbedEvent, HostEvent, LiveboardEmbed, RuntimeFilterOp} from "@thoughtspot/visual-embed-sdk";

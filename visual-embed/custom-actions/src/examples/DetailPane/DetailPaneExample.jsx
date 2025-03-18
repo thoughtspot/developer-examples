@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import {EmbedEvent, SearchEmbed} from "@thoughtspot/visual-embed-sdk";
 import {useEffect} from "react";
 import {ContextActionData, SearchData, tabularDataToHTML} from "../../apis/dataclasses";

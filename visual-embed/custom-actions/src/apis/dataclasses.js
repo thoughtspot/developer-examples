@@ -264,6 +264,7 @@ export class LiveboardActionData extends TabularData {
       const data = [];
 
       const columnDataLite =
+        // eslint-disable-next-line valid-typeof
         typeof embedAnswerData.data === "array" || Array.isArray(embedAnswerData.data)
           ? embedAnswerData.data[0].columnDataLite
           : embedAnswerData.data.columnDataLite;
@@ -468,6 +469,7 @@ export class GetAnswerData extends TabularData {
         // visualizations is an array
         console.log(v);
         // Assuming that the fist visualization with data is the one we want.
+         // eslint-disable-next-line no-prototype-builtins
         if (v.hasOwnProperty("data")) {
           // get the column name.s
           const colNames = [];

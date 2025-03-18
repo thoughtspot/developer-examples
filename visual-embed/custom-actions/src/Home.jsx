@@ -1,3 +1,5 @@
+/* eslint-disable react/no-unescaped-entities */
+
 import "./css/tse.css";
 
 export default function Home() {
