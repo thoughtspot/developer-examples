@@ -4,7 +4,7 @@ This example demonstrates how to use the @thoughtspot/rest-api-sdk with Express.
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/rest-api/express-example)
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/rest-api/typescript-sdk/express-example)
 
 ## Documentation
 

@@ -1,6 +1,5 @@
 import express from "express";
 import { createBasicConfig, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk"
-import cors from "cors";
 
 const app = express();
 
@@ -20,10 +19,8 @@ const getThoughtSpotClient = () => {
 }
 
 app.use(express.json());
-app.use(cors())
 
-
-app.get('/my-token-endpoint', async (req, res) => {
+app.get('/api/my-token-endpoint', async (req, res) => {
   try {
     const username = req.headers['x-my-username'] as string;
 
