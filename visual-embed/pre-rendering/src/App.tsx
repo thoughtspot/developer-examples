@@ -1,13 +1,74 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Link, Outlet, Route, Routes } from "react-router";
-import { NormalEmbed, PreRenderEmbed, PreRenderEmbedOnDemand } from "./embeds";
+import {
+  NormalEmbed,
+  NormalLiveboardEmbed,
+  PreRenderEmbed,
+  PreRenderEmbedOnDemand,
+  PreRenderLiveboardWithLiveboardId,
+  PreRenderLiveboardWithoutLiveboardId_1,
+  PreRenderLiveboardWithoutLiveboardId_2,
+} from "./embeds";
 import {
   PreRenderedAppEmbed,
   AuthType,
   AuthStatus,
   useInit,
+  PreRenderedLiveboardEmbed,
 } from "@thoughtspot/visual-embed-sdk/react";
+
+const routesData = [
+  {
+    path: "/normal",
+    title: "Normal Embed",
+    description:
+      "Normal Render is the default behavior of the ThoughtSpot SDK. Loads the ThoughtSpot app when the component is rendered.",
+    element: <NormalEmbed />,
+  },
+  {
+    path: "/pre-render",
+    title: "Pre-Render Embed",
+    description:
+      "Pre-Renders Embed when `<PreRenderedAppEmbed preRenderId='pre-render' />` is rendered.",
+    element: <PreRenderEmbed />,
+  },
+  {
+    path: "/pre-render-on-demand",
+    title: "Pre-Render On Demand Embed",
+    description:
+      "Pre-Renders Embed only when the Embed is rendered at least once.",
+    element: <PreRenderEmbedOnDemand />,
+  },
+  {
+    path: "/pre-render-with-liveboard-id",
+    title: "Pre-Render Liveboard With Liveboard Id",
+    description:
+      "Pre-Renders a liveboard Embed when the <PreRenderedLiveboardEmbed liveboardId='<id>' preRenderId='pre-render-with-liveboard-id' /> is rendered.",
+    element: <PreRenderLiveboardWithLiveboardId />,
+  },
+  {
+    path: "/pre-render-without-liveboard-id-1",
+    title: "Pre-Render Liveboard Without Liveboard Id 1",
+    description:
+      "Pre-Renders a generic Embed when the <PreRenderedLiveboardEmbed preRenderId='pre-render-without-liveboard-id' /> is rendered. The liveboardId is passed when the Embed is rendered and we navigate to the liveboard. Since this is a generic pre-render we just load the basic assets needed for rendering the app, this might not be as fast as pre-rendering with liveboardId but it is faster than normal rendering.",
+    element: <PreRenderLiveboardWithoutLiveboardId_1 />,
+  },
+  {
+    path: "/pre-render-without-liveboard-id-2",
+    title: "Pre-Render Liveboard Without Liveboard Id 2",
+    description:
+      "This is same as above but we can reuse the same pre-render shell here.",
+    element: <PreRenderLiveboardWithoutLiveboardId_2 />,
+  },
+  {
+    path: "/normal-liveboard",
+    title: "Normal Liveboard",
+    description:
+      "Normal Render is the default behavior of the ThoughtSpot SDK. Loads the ThoughtSpot app when the component is rendered.",
+    element: <NormalLiveboardEmbed />,
+  },
+];
 
 const EmbedInit = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
@@ -31,9 +92,12 @@ const EmbedInit = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="embed-init">
-      {/* {Need to call this to start pre-rendering} */}
       <PreRenderedAppEmbed preRenderId="pre-render" />
-
+      <PreRenderedLiveboardEmbed preRenderId="pre-render-without-liveboard-id" />
+      <PreRenderedLiveboardEmbed
+        liveboardId="e40c0727-01e6-49db-bb2f-5aa19661477b"
+        preRenderId="pre-render-with-liveboard-id"
+      />
       {children}
     </div>
   );
@@ -43,26 +107,12 @@ const Home = () => {
   return (
     <>
       <h1>ThoughtSpot Pre-Rendering</h1>
-      <div className="card">
-        <Link to="/normal">Normal Embed</Link>
-        <p className="read-the-docs">
-          Normal Render is the default behavior of the ThoughtSpot SDK. Loads
-          the ThoughtSpot app when the component is rendered.
-        </p>
-      </div>
-      <div className="card">
-        <Link to="/pre-render">Pre-Render Embed</Link>
-        <p className="read-the-docs">Pre-Renders Embed when</p>
-        <pre>
-          {`<PreRenderedAppEmbed preRenderId="pre-render" /> is rendered`}
-        </pre>
-      </div>
-      <div className="card">
-        <Link to="/pre-render-on-demand">Pre-Render On Demand Embed</Link>
-        <p className="read-the-docs">
-          Pre-Renders Embed only when the Embed is rendered at-least once.
-        </p>
-      </div>
+      {routesData.map(({ path, title, description }) => (
+        <div className="card" key={path}>
+          <Link to={path}>{title}</Link>
+          <p className="read-the-docs">{description}</p>
+        </div>
+      ))}
     </>
   );
 };
@@ -72,33 +122,33 @@ const Layout = () => {
     <div className="embed-init">
       <nav>
         <Link to="/">Home</Link>
-        <Link to="/normal">Normal Embed</Link>
-        <Link to="/pre-render">Pre-Render Embed</Link>
-        <Link to="/pre-render-on-demand">Pre-Render On Demand Embed</Link>
+        {routesData.map(({ path, title }) => (
+          <Link key={path} to={path}>
+            {title}
+          </Link>
+        ))}
       </nav>
+
       <Outlet />
     </div>
   );
 };
 
-function App() {
+const App = () => {
   return (
     <BrowserRouter>
       <EmbedInit>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
-            <Route path="/normal" element={<NormalEmbed />} />
-            <Route path="/pre-render" element={<PreRenderEmbed />} />
-            <Route
-              path="/pre-render-on-demand"
-              element={<PreRenderEmbedOnDemand />}
-            />
+            {routesData.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
           </Route>
         </Routes>
       </EmbedInit>
     </BrowserRouter>
   );
-}
+};
 
 export default App;

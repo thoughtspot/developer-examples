@@ -14,7 +14,6 @@
   "dependencies": {
     "@thoughtspot/rest-api-sdk": "^2.12.1",
     "@thoughtspot/visual-embed-sdk": "latest",
-    "cors": "^2.8.5",
     "express": "^4.21.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
