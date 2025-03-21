@@ -1,4 +1,4 @@
-# spotter/spotter-embed
+# Spotter Embed
 
 Write something about the example here. 
 
