@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Token</title>
+</head>
+<body>
+    <h1>Created User</h1>
+    <pre id="createdUserOutput">Creating user...</pre>
+
+    <script>
+        fetch('/create-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(result => {
+            document.getElementById("createdUserOutput").innerText = JSON.stringify(result, null, 2) || "Failed to create user.";
+        })
+        .catch(error => {
+            console.error("Error creating user:", error);
+            document.getElementById("createdUserOutput").innerText = `Error creating user: ${error.message}`;
+        });
+    </script>
+</body>
+</html>
