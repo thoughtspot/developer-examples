@@ -20,7 +20,7 @@ const getThoughtSpotClient = () => {
 
 app.use(express.json());
 
-app.get('/my-token-endpoint', async (req, res) => {
+app.get('/api/my-token-endpoint', async (req, res) => {
   try {
     const username = req.headers['x-my-username'] as string;
 
