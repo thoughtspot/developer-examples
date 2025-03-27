@@ -32,7 +32,6 @@ $ npm i
 $ npm run dev
 ```
 
-
 ### Technology labels
 
 - Typescript
