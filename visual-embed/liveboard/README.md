@@ -42,7 +42,6 @@ This example includes demos for below scenarios
 - Embedding liveboard with multiple tabs
 - Embedding using React component
 
-
 ### Technology labels
 
 - React
