@@ -24,6 +24,3 @@ $ npm i
 ```
 $ npm run dev
 ```
-  
-## Preview
-<img width="983" alt="Screenshot 2025-03-27 at 1 38 00 PM" src="https://github.com/user-attachments/assets/1985d507-d1ad-47af-af9b-bd47ed2ff17d" />
