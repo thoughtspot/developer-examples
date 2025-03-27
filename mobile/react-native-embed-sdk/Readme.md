@@ -8,6 +8,9 @@
 You can play around with the code in Expo Snack.
 [Expo Snack Link](https://snack.expo.dev/@git/github.com/thoughtspot/developer-examples:mobile/react-native-embed-sdk)
 
+#### Preview
+![image](https://github.com/user-attachments/assets/3ccee38e-d4ca-4afd-9685-ebe277755d90)
+
 ### Quick Start
 
 #### Embedding a Liveboard
