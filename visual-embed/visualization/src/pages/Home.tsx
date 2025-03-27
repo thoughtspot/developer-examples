@@ -6,7 +6,7 @@ function Home() {
 
     return (
       <>
-        <Header title="Example Liveboard Embedding" />
+        <Header title="Example Visualization Embedding" />
         <div className="content-container">
           <p>
             This sandbox contains examples for how to <a href="https://developers.thoughtspot.com/docs/embed-a-viz" rel="noreferrer" target="_blank">Embed a Visualization</a> in your application.
