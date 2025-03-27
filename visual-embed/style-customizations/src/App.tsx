@@ -19,7 +19,9 @@ import { globalCustomizationConfig, appCustomizationConfig } from './customizati
 
 init({
   thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,  
-  authType: AuthType.None,
+  authType: AuthType.Basic,
+  username: import.meta.env.VITE_TS_USERNAME,
+  password: import.meta.env.VITE_TS_PASSWORD,
   customizations: globalCustomizationConfig, // Global customization for the embed's look and feel
 });
 

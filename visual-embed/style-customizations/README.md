@@ -18,7 +18,7 @@ The `.env` file contains some default values. Change the value of `VITE_THOUGHTS
 
 ```
 $ git clone https://github.com/thoughtspot/developer-examples
-$ cd visual-embed/spotter/spotter-agent-embed
+$ cd visual-embed/style-customizations
 ```
 ```
 $ npm i
