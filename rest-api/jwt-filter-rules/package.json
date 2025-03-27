@@ -4,7 +4,7 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "start": "tsx src/index.ts --env=.env"
+        "start": "tsx src/index.ts --env-file=.env"
     },
     "dependencies": {
         "@types/node-fetch": "^2.6.12",
