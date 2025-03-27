@@ -42,9 +42,6 @@ This example includes demos for below scenarios
 - Embedding liveboard with multiple tabs
 - Embedding using React component
 
-## Preview
-<img width="883" alt="Screenshot 2025-03-27 at 1 46 15 PM" src="https://github.com/user-attachments/assets/814ab60f-3db8-411c-825d-1b0ff76c9575" />
-
 
 ### Technology labels
 
