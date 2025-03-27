@@ -69,12 +69,6 @@ The AnswerService provides several methods to interact with ThoughtSpot answers:
 
 This example demonstrates most of these methods, but you can extend it to use others as needed.
 
-## Preview
-<img width="1092" alt="Screenshot 2025-03-27 at 1 31 45 PM" src="https://github.com/user-attachments/assets/f6bcbbd2-26c7-462a-acb5-e0e0e9fa2515" />
-<img width="1093" alt="Screenshot 2025-03-27 at 1 32 01 PM" src="https://github.com/user-attachments/assets/5b541e63-662f-4dad-a495-6a4f7a4c17ef" />
-
-
-
 ## Technology labels
 
 - React
