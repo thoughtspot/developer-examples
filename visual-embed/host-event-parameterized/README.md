@@ -25,8 +25,6 @@ $ npm i
 ```
 $ npm run dev
 ```
-## Preview
-<img width="1093" alt="Screenshot 2025-03-27 at 1 40 12 PM" src="https://github.com/user-attachments/assets/32956b25-35b4-4c01-9c19-c54b686a0e44" />
 
 ### Technology labels
 
