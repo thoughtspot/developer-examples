@@ -33,6 +33,9 @@ src
 │   └── token.ts  -> Handles fetching auth token from backend
 ```
 
+## Preview
+<img width="1027" alt="Screenshot 2025-03-27 at 1 36 42 PM" src="https://github.com/user-attachments/assets/a0d5bd3d-df9b-477d-aa58-00ac7c8d7b89" />
+
 ## Technology labels
 
 - React
