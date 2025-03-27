@@ -38,6 +38,10 @@ $ npm i
 $ npm run dev
 ```
 
+## Preview
+<img width="1094" alt="Screenshot 2025-03-27 at 1 48 26 PM" src="https://github.com/user-attachments/assets/0fec38d1-f267-4824-a384-0aab76225082" />
+
+
 ### Technology labels
 
 - React
