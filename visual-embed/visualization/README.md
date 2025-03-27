@@ -40,6 +40,10 @@ This example includes demos for below scenarios
 - Embedding via LiveboardEmbed Class
 - Embedding via LiveboardEmbed React component
 
+## Preview
+<img width="1050" alt="Screenshot 2025-03-27 at 2 25 00 PM" src="https://github.com/user-attachments/assets/f07c8619-c954-46a2-98bf-5a66cf5df7b7" />
+
+
 ### Technology labels
 
 - React
