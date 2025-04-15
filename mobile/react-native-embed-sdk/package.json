@@ -14,7 +14,7 @@
     "typescript": "^5.8.2"
   },
   "dependencies": {
-    "@expo/vector-icons": "14.0.2",
+    "@expo/vector-icons": "^14.0.2",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/stack": "^6.3.20",
     "@thoughtspot/react-native-embed-sdk": "0.0.1",
