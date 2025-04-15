@@ -1,6 +1,8 @@
+// @ts-nocheck
 import React, { useRef, useState } from 'react';
 import { StyleSheet, View, Text, Alert, TouchableOpacity } from 'react-native';
 import { Action, HostEvent, LiveboardEmbed } from '@thoughtspot/react-native-embed-sdk';
+import { Ionicons } from '@expo/vector-icons';
 
 export const LiveboardView = ({navigation, route}) => {
 
@@ -15,42 +17,44 @@ export const LiveboardView = ({navigation, route}) => {
     }
   }
 
-  const goBack = () => {
+  const shareHostEventTrigger = () => {
     if(webViewRef?.current) {
       webViewRef.current.trigger(HostEvent.Share)
     }
-    setLoading(!loading);
   }
 
+  const stateChangeLoading = () => {
+    setLoading(!loading);
+  }
 
   return (
   <> 
    <View style={lbstyles.embedContainer}>
           <View style={lbstyles.headerRow}>
-            <Text>Liveboard View</Text>
+            <Text></Text>
           </View>
           <View style={lbstyles.headerRow}>
-            <Text style={lbstyles.headerText}>My Custom App</Text>
+            <Text style={lbstyles.headerText}>App</Text>
             <View style={lbstyles.actionButtonsRow}>
               <TouchableOpacity onPress={reloadView} style={lbstyles.actionButton}>
-                <Text style={lbstyles.actionButtonText}>Reload</Text>
+                <Ionicons name="reload" size={20} color="#FFFFFF" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={goBack} style={lbstyles.actionButton}>
-                <Text style={lbstyles.actionButtonText}>Go Back</Text>
+              <TouchableOpacity onPress={shareHostEventTrigger} style={lbstyles.actionButton}>
+                <Ionicons name="share" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={stateChangeLoading} style={lbstyles.actionButton}>
+                <Ionicons name="sync" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
-          {loading && <Text>Loading...</Text>}
+          {loading && <View style={lbstyles.loadingContainer}><Text>Loading...</Text></View>}
           <View style={lbstyles.content}>
             <LiveboardEmbed
               ref = {webViewRef}
               liveboardId={viewConfig.liveboardId}
               onAuthInit={() => {alert("Auth Init EmbedEvent");setLoading(false)}}
-              onError={(error) => {alert(`Error : ${JSON.stringify(error)}`)}}
               onLiveboardRendered={() => {alert("Liveboard Rendered")}}
-              // defaultActionsDisabled = {false}
-              // visibleActions={[Action.Share]}
-              // hideLiveboardHeader = {true}
+              // visibleActions={[Action.Share]} -> Adding visible Actions
             />
           </View>
           <View style={lbstyles.footer}>
@@ -140,5 +144,10 @@ const lbstyles = StyleSheet.create({
   footerText: {
     color: '#fff',
     fontSize: 16,
+  },
+  loadingContainer: {
+    backgroundColor: 'yellow',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

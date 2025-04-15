@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+// @ts-nocheck
+import * as React from 'react';
+import { useState, useRef } from 'react';
 import { 
   Text, 
   SafeAreaView, 
@@ -11,9 +13,10 @@ import {
 import { init, AuthType } from '@thoughtspot/react-native-embed-sdk';
 import { STYLE_VARS } from './utils';
 import { getAuthToken } from './Auth';
+import { Ionicons } from '@expo/vector-icons';
 
 
-export default function Home({navigation}) {
+export default function Home({navigation}: {navigation: any}) {
   const [credentials, setCredentials] = useState({
     tsHost: '',
     username: '',
@@ -55,6 +58,8 @@ export default function Home({navigation}) {
   return (
     <SafeAreaView style={styles.container}>
         <View style={styles.formContainer}>
+          <Text style={styles.appTitle}>ThoughtSpot Embedded SDK Showcase</Text>
+          <Text style={styles.appSubtitle}>React Native SDK Integration Example</Text>
           <TextInput
             style={styles.input}
             placeholder="ThoughtSpot Host"
@@ -98,7 +103,22 @@ export default function Home({navigation}) {
           >
             <Text style={styles.buttonText}>Connect</Text>
           </TouchableOpacity>
-        </View>
+          <View style={styles.iconDescriptionContainer}>
+            <Text style={styles.descriptionHeader}>Icon Guide:</Text>
+            <View style={styles.iconDescription}>
+              <Ionicons name="sync" size={20} color="#2770EF" />
+              <Text style={styles.descriptionText}>State Change Demo - Tests updating state without reloading the webview</Text>
+            </View>
+            <View style={styles.iconDescription}>
+              <Ionicons name="reload" size={20} color="#2770EF" />
+              <Text style={styles.descriptionText}>Reload - Refreshes the embedded content</Text>
+            </View>
+            <View style={styles.iconDescription}>
+              <Ionicons name="share" size={20} color="#2770EF" />
+              <Text style={styles.descriptionText}>Share - Shares the current content</Text>
+            </View>
+          </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -180,5 +200,43 @@ const styles = StyleSheet.create({
   footerText: {
     color: '#fff',
     fontSize: 16,
+  },
+  iconDescriptionContainer: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    maxHeight: 200,
+    overflow: 'scroll',
+  },
+  descriptionHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  iconDescription: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  descriptionText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#555',
+    flex: 1,
+  },
+  appTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2770EF',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  appSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
   },
 });
