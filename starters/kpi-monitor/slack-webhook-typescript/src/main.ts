@@ -131,12 +131,18 @@ app.post("/send-to-slack", async (req: Request, res: Response) => {
   };
 
   // Send the message to Slack
-  await slackClient.chat.postMessage(slackMessage);
-
-  // Close the connection
-  res.status(200).json({
-    message: "Message forwarded to Slack channel: " + slackChannel,
-  });
+  try {
+    await slackClient.chat.postMessage(slackMessage);
+    // Close the connection
+    res.status(200).json({
+      message: "Message forwarded to Slack channel: " + slackChannel,
+    });
+  } catch (error) {
+    console.error("Error sending message to Slack:", error);
+    res.status(500).json({
+      message: "Failed to forward message to Slack. Please try again later.",
+    });
+  }
 });
 
 // Start the server
