@@ -5,3 +5,4 @@
 ## Examples
 
 - [Slack webhook (Typescript)](slack-webhook-typescript/): A simple typescript project which consumes the webhook payloads sent by KPI Monitor and sends them to a Slack channel.
+- [Slack webhook (Python)](slack-webhook-python/): A simple python project which consumes the webhook payloads sent by KPI Monitor and sends them to a Slack channel.

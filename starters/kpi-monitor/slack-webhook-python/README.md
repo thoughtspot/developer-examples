@@ -1,6 +1,6 @@
-# Slack webhook (Typescript)
+# Slack webhook (Python)
 
-A simple webhook made with TypeScript and Express that forwards a KPI monitor alert through webhooks to a Slack channel. The message would look like this:
+A simple webhook made with Python and FastAPI that forwards a KPI monitor alert through webhooks to a Slack channel. The message would look like this:
 
 ![Slack message](./img/slack-message.png)
 
@@ -9,23 +9,20 @@ This app exposes a single endpoint `/send-to-slack` that accepts POST requests f
 File structure:
 
 ```
-slack-webhook-typescript
-├── src
-│   ├── main.ts              # Main file that defines the express app and the endpoint
-│   └── tsconfig.json        # Typescript configuration
+slack-webhook-python
 ├── img
 │   └── slack-message.png    # Image of the slack message
+├── .devcontainer.json       # Devcontainer configuration
 ├── .env.example             # Example environment configuration file
 ├── .gitignore               # Git ignore file
-├── package.json             # Package configuration
-├── package-lock.json        # Package lock file
-├── tsconfig.json            # Typescript configuration
-└── README.md                # This file
+├── main.py                  # Main file that defines the fastapi app and the endpoint
+├── README.md                # This file
+└── requirements.txt         # Python dependencies
 ```
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/starters/kpi-monitor/slack-webhook-typescript)
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/starters/kpi-monitor/slack-webhook-python)
 
 ## Documentation
 
@@ -43,13 +40,13 @@ git clone https://github.com/thoughtspot/developer-examples.git
 - Change directory to the project
 
 ```bash
-cd developer-examples/starters/kpi-monitor/slack-webhook-typescript
+cd developer-examples/starters/kpi-monitor/slack-webhook-python
 ```
 
 - Install dependencies
 
 ```bash
-npm install
+pip install -r requirements.txt
 ```
 
 - Configure the environment variables by copying the `.env.example` file to `.env` and setting the variables. It is recommended to use a [Slack developer sandbox](https://api.slack.com/docs/developer-sandbox) while trying out this example. Refer to [Slack documentation](https://api.slack.com/quickstart) to learn how to create a Slack app and get a token. Following are the variables that need to be set:
@@ -62,8 +59,7 @@ npm install
 - Build and run the project
 
 ```bash
-npm run build
-npm run start
+python main.py
 ```
 
 The above steps will start the server on port 3000 on your local machine. Now we have to configure the webhook in ThoughtSpot.
@@ -80,8 +76,7 @@ The above steps will start the server on port 3000 on your local machine. Now we
 
 ## Technology labels
 
-- Typescript
-- NodeJS
-- Express
+- Python
+- FastAPI
 - Slack
 - Webhook
