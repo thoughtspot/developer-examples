@@ -9,7 +9,7 @@
  *        ... ,
  *        customVariablesForThirdPartyTools: {
  *            pendoKey: <PENDO_KEY>,
- *            hostName: <THOUGHTSPOT_HOST>,
+ *            tsHostName: <THOUGHTSPOT_HOST>,
  *        }
  *    })
  */
@@ -23,7 +23,7 @@ let infoResponse = {
     clusterName:''
 };
 let pendoKey = windowObj.tsEmbed.pendoKey;
-let thoughtspotHost = windowObj.tsEmbed.TsHost;
+let thoughtspotHost = windowObj.tsEmbed.tsHostName;
 let LOADED_SCRIPTS_NUMBER = 0;
 
 function getPendoVisitorConfig() {
