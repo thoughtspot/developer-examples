@@ -8,9 +8,10 @@
  *   init({ 
  *        ... ,
  *        customVariablesForThirdPartyTools: {
- *        pendoKey: <YOUR PENDO KEY HERE>,
- *        hostName: <YOUR CLUSTER ID>,
- *    }})
+ *            pendoKey: <PENDO_KEY>,
+ *            hostName: <THOUGHTSPOT_HOST>,
+ *        }
+ *    })
  */
 
 let windowObj = window;
@@ -21,7 +22,7 @@ let infoResponse = {
     clusterId: '',
     clusterName:''
 };
-let pendoKey = windowObj.tsEmbed.pendoKey; // replace this in actual demo
+let pendoKey = windowObj.tsEmbed.pendoKey;
 let thoughtspotHost = windowObj.tsEmbed.TsHost;
 let LOADED_SCRIPTS_NUMBER = 0;
 
