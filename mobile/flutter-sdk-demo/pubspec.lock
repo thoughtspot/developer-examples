@@ -68,7 +68,7 @@ packages:
       path: "/Users/justin.mathew/Documents/source/flutter-embed-sdk"
       relative: false
     source: path
-    version: "0.0.0"
+    version: "0.0.2"
   flutter_lints:
     dependency: "direct dev"
     description:
