@@ -11,7 +11,8 @@
   "license": "ISC",
   "packageManager": "pnpm@10.6.2",
   "devDependencies": {
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "@types/react": "~18.3.12"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
