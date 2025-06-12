@@ -62,8 +62,15 @@ html, body, #root {
 }
 
 .tabs h2::before {
-  content: "🤖";
-  font-size: 24px;
+  content: "";
+  width: 32px;
+  height: 32px;
+  background-image: url('/ts-logo.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: inline-block;
+  margin-right: 12px;
 }
 
 .header-buttons {
@@ -241,6 +248,7 @@ html, body, #root {
   border-radius: 24px;
   font-size: 14px;
   background-color: #f8f9fa;
+  color: var(--text-gray);
   transition: all 0.3s ease;
   outline: none;
 }
@@ -248,11 +256,13 @@ html, body, #root {
 .input-container input:focus {
   border-color: var(--primary-blue);
   background-color: white;
+  color: var(--text-gray);
   box-shadow: 0 0 0 3px rgba(0, 80, 158, 0.1);
 }
 
 .input-container input:disabled {
   background-color: #e9ecef;
+  color: #6c757d;
   cursor: not-allowed;
 }
 
