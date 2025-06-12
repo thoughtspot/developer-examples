@@ -70,6 +70,6 @@ export async function createLiveboard(name: string, answers: any[]) {
         import_policy: "ALL_OR_NONE",
     })
 
-    return `https://${THOUGHTSPOT_HOST}/pinboard/${resp[0].response.header.id_guid}`;
+    return `https://${THOUGHTSPOT_HOST}/#/pinboard/${resp[0].response.header.id_guid}`;
 }
 
