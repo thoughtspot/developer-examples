@@ -1,39 +1,53 @@
-# Route Change Handler Example
+# Route Change Handler
 
-This example demonstrates how to handle route changes in ThoughtSpot embedded analytics and fetch liveboard metadata using the Visual Embed SDK.
+<p align="center">
+    <img src="preview.png" width="800" alt="Route Change Handler Preview" />
+</p>
 
-## Features
+This example demonstrates how to handle route changes in ThoughtSpot embeds using React. It shows how to:
 
-- Subscribes to route change events in ThoughtSpot embedded analytics
-- Extracts liveboard IDs from URLs
-- Fetches liveboard metadata using the REST API
-- Displays liveboard names using toast notifications
+1. Listen for route changes in embedded ThoughtSpot components
+2. Extract liveboard IDs from URLs
+3. Fetch liveboard metadata using the ThoughtSpot API
+4. Display toast notifications for user feedback
 
-## Setup
+## Demo
 
-1. Install dependencies:
-
-```bash
-npm install
-```
-
-2. Configure your ThoughtSpot instance:
-
-   - Open `src/App.tsx`
-   - Replace `https://your-thoughtspot-instance.com` with your ThoughtSpot instance URL
-   - Update the `authType` in the `init` configuration based on your authentication method
-
-3. Start the development server:
-
-```bash
-npm run dev
-```
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/route-change-handler)
 
 ## Documentation
 
-- [Visual Embed SDK Documentation](https://developers.thoughtspot.com/docs/visual-embed-sdk)
-- [REST API Documentation](https://developers.thoughtspot.com/docs/rest-apis)
+- [Visual Embed SDK](https://developers.thoughtspot.com/docs/visual-embed-sdk)
+- [Embed Events](https://developers.thoughtspot.com/docs/visual-embed-sdk#_embed_events)
+- [Metadata API](https://developers.thoughtspot.com/docs/rest-apiv2-reference#_metadata_search)
 
-## Live Demo
+## Run locally
 
-[View this example on CodeSandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/route-change-handler)
+```bash
+$ git clone https://github.com/thoughtspot/developer-examples
+$ cd visual-embed/route-change-handler
+```
+
+```bash
+$ npm i
+```
+
+```bash
+$ npm run dev
+```
+
+### Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```
+VITE_THOUGHTSPOT_HOST=your-thoughtspot-host
+VITE_THOUGHTSPOT_USERNAME=your-username
+VITE_THOUGHTSPOT_PASSWORD=your-password
+```
+
+### Technology labels
+
+- React
+- TypeScript
+- Web
