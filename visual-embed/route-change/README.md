@@ -17,9 +17,9 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 
 ## Documentation
 
-- [Visual Embed SDK](https://developers.thoughtspot.com/docs/visual-embed-sdk)
-- [Embed Events](https://developers.thoughtspot.com/docs/visual-embed-sdk#_embed_events)
-- [Metadata API](https://developers.thoughtspot.com/docs/rest-apiv2-reference#_metadata_search)
+- [Visual Embed SDK](https://developers.thoughtspot.com/docs/VisualEmbedSdk)
+- [Embed Events](https://developers.thoughtspot.com/docs/Enumeration_EmbedEvent#_routechange)
+- [Metadata API](https://developers.thoughtspot.com/docs/rest-apiv2-search#_search_metadata)
 
 ## Run locally
 
