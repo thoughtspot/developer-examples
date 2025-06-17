@@ -27,10 +27,10 @@ You can then configure your Pendo guides via the Pendo dashboard, and they will 
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/your-org/your-repo.git
+git clone https://github.com/thoughtspot/developer-examples
 
 # 2. Navigate to the example
-cd your-repo/examples/my-example
+cd visual-embed/pendo-integration
 
 # 3. Install dependencies
 npm install
@@ -43,7 +43,7 @@ npm run dev
 
 Preview :-
 
-<img src="https://i.postimg.cc/J0HcZz0q/preview-App-Embed-With-Pendo.png" alt="Preview App Embed With Pendo">
+<img src="./previews/previewAppEmbedWithPendo.png" alt="Preview App Embed With Pendo">
 
 ```
 
