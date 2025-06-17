@@ -2,6 +2,10 @@
 
 > This example uses the [ThoughtSpot Flutter Embed SDK](https://pub.dev/packages/flutter_embed_sdk) to integrate ThoughtSpot analytics into Flutter applications.
 
+## Preview
+
+![Flutter ThoughtSpot Embed Demo](preview.png)
+
 This example demonstrates how to embed a ThoughtSpot Liveboard using the **Flutter Embed SDK** in a Flutter application. It covers **authentication**, **custom theming**, and interaction using **host and embed events**.
 
 ## Features
@@ -61,7 +65,8 @@ static const String host = 'https://<your-thoughtspot-host>';
 static const String username = '<your-username>';
 static const String password = '<your-password>';
 static const String liveboardId = '<your-liveboard-id>';
-static const String tabId = '<your-tab-id>';
+static const String tabIdOne = '<your-tab-id>';
+static const String tabIdTwo = '<your-tab-id>';
 ```
 
 3. Install dependencies:

@@ -10,12 +10,12 @@ void main() {
 }
 
 class ThoughtSpotConst {
-  static const String host =
-      'https://training.thoughtspot.cloud';
+  static const String host = 'https://training.thoughtspot.cloud';
   static const String username = 'code-sandbox';
   static const String password = '3mbed+#3xplz';
   static const String liveboardId = 'b7074f85-4a5c-499e-b2b1-2435f08f5d9a';
-  static const String tabId = 'bf5f7a54-c76c-43c7-9415-a94ed67f79a6';
+  static const String tabIdOne = 'bf5f7a54-c76c-43c7-9415-a94ed67f79a6';
+  static const String tabIdTwo = '023ac83e-6c59-4328-8f48-945fd472e742';
   static const String tokenApiEndpoint = '$host/api/rest/2.0/auth/token/full';
 }
 
@@ -110,6 +110,10 @@ class _MyHomePageState extends State<MyHomePage> {
     liveboardEmbedController.on(EmbedEvent.Data, (payload) {
       print('Data: ${payload['displayMode']}');
     });
+
+    liveboardEmbedController.on(EmbedEvent.RouteChange, (payload) {
+      print('Route Change: ${payload['currentPath']}');
+    });
   }
 
   @override
@@ -146,24 +150,19 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   ElevatedButton(
                     onPressed:
-                        () =>
-                            liveboardEmbedController.trigger(HostEvent.Filter),
-                    child: const Text('Filter'),
+                        () => liveboardEmbedController.trigger(
+                          HostEvent.SetActiveTab,
+                          {'tabId': ThoughtSpotConst.tabIdTwo},
+                        ),
+                    child: const Text('Set Tab One'),
                   ),
                   ElevatedButton(
                     onPressed:
                         () => liveboardEmbedController.trigger(
                           HostEvent.SetActiveTab,
-                          {'tabId': ThoughtSpotConst.tabId},
+                          {'tabId': ThoughtSpotConst.tabIdOne},
                         ),
-                    child: const Text('Set Active Tab'),
-                  ),
-                  ElevatedButton(
-                    onPressed:
-                        () => liveboardEmbedController.trigger(
-                          HostEvent.DrillDown,
-                        ),
-                    child: const Text('Drill Down'),
+                    child: const Text('Set Tab Two'),
                   ),
                 ],
               ),
