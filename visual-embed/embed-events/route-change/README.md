@@ -1,4 +1,4 @@
-# Route Change Handler
+# Route Change Embed Event
 
 This example demonstrates how to handle route changes in ThoughtSpot embeds using React. It shows how to:
 
@@ -9,7 +9,7 @@ This example demonstrates how to handle route changes in ThoughtSpot embeds usin
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/route-change-handler)
+Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/embed-events/route-change)
 
 ## Documentation
 
@@ -21,7 +21,7 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 
 ```bash
 $ git clone https://github.com/thoughtspot/developer-examples
-$ cd visual-embed/route-change-handler
+$ cd visual-embed/embed-events/route-change
 ```
 
 ```bash
@@ -40,7 +40,7 @@ $ npm run dev
 
 ### Environment Variables
 
-Create a `.env` file in the root directory with the following variables:
+Update the `.env` file in the root directory with the following variables to use your own ThoughtSpot instance:
 
 ```
 VITE_THOUGHTSPOT_HOST=your-thoughtspot-host
