@@ -7,25 +7,23 @@ This project contains the code example for Embedded ThoughtSpot developers who a
 
 ## 📦 Prerequisites
 
-This project uses the feature Third-Party-Tools-For-Embed and it is not enabled by default.
+This project uses the feature Third-Party-Tools-For-Embed and it is not enabled by default for your ThoughtSpot cluster.
 To enable this feature, please contact ThoughtSpot Support and provide them with the necessary details.
 
-Enablement Steps:
-- Host your integration script (e.g., the one for Pendo) on a publicly accessible URL.
+Enablement Steps :
+- Host your integration script (For Pendo - pendoIntegrationScript.js) on a publicly accessible URL which serves the javaScript.
 - Share the hosted script URL with ThoughtSpot Support so they can configure it for your cluster.
-- Once the script is set by Support, enable the feature from the Frontend for your cluster.
+- Next a user with AdminPrivileges need to go to "developTab/Security-Settings.
+  Toggle the feature by editing the CSPScriptSrc field. Also make sure to white the domain where your script is hosted.
 
 📘 Refer to the documentation for step-by-step instructions on enablement: https://developers.thoughtspot.com/docs/external-tool-script-integration
 
-Once the feature is enabled and your script is configured, you can embed your ThoughtSpot instance as usual. The hosted script will automatically execute inside the ThoughtSpot ecosystem after the authentication flow.
+Once the feature is enabled and your script is configured, you can embed your ThoughtSpot instance as usual. The hosted script will automatically execute inside the ThoughtSpot ecosystem after the authentication flow. Make sure to pass the correct variables in the init config for the script to execute.
 
 You can then configure your Pendo guides via the Pendo dashboard, and they will appear in the embedded ThoughtSpot instance.
 
 ## 🚀 Getting Started
 
-
-Make sure you have a Third-Party-Tools-For-Embed enabled cluster.
-Once done follow the Step-by-step guide to run locally:
 
 ```bash
 # 1. Clone the repo
@@ -38,15 +36,14 @@ cd your-repo/examples/my-example
 npm install
 
 # 4. update init
-Make sure to update the init block in the App.tsx with the Pendo secret key and the ThoughtSpotHost for your script along with your other cluster details.
+If you are using your own cluster. Make sure to update the init block in the App.tsx according to your cluster details along with the pendoKey.
 
 # 4. Start the project
 npm run dev
 
-You should have a fullAppEmbed with your cluster and would be able to see the guides you set.
 Preview :-
 
-![Pendo Integration Preview](https://i.postimg.cc/J0HcZz0q/preview-App-Embed-With-Pendo.png)
+<img src="https://i.postimg.cc/J0HcZz0q/preview-App-Embed-With-Pendo.png" alt="Preview App Embed With Pendo">
 
 ```
 

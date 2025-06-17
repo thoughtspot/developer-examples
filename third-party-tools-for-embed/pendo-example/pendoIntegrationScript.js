@@ -1,7 +1,11 @@
 /**
  * Copyright: ThoughtSpot Inc. 2025
  * Author: Priyanshu Kumar(priyanshu.kumar@thoughtspot.com)
- *
+ * Description: This is the script that is used to initialise pendo in the embed instance.
+ * You need to host this script on the internet and the url to be shared with the ThoughtSpot support team for us to enable for your embed instance.
+ * Refer the documentation for more details: 
+ *  https://developers.thoughtspot.com/docs/external-tool-script-integration
+ *  https://developers.thoughtspot.com/docs/Interface_EmbedConfig#_customvariablesforthirdpartytools
  */
 
 /*
