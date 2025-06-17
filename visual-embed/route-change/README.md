@@ -1,9 +1,5 @@
 # Route Change Handler
 
-<p align="center">
-    <img src="preview.png" width="800" alt="Route Change Handler Preview" />
-</p>
-
 This example demonstrates how to handle route changes in ThoughtSpot embeds using React. It shows how to:
 
 1. Listen for route changes in embedded ThoughtSpot components
@@ -18,7 +14,7 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 ## Documentation
 
 - [Visual Embed SDK](https://developers.thoughtspot.com/docs/VisualEmbedSdk)
-- [Embed Events](https://developers.thoughtspot.com/docs/Enumeration_EmbedEvent#_routechange)
+- [Route Change Embed Event](https://developers.thoughtspot.com/docs/Enumeration_EmbedEvent#_routechange)
 - [Metadata API](https://developers.thoughtspot.com/docs/rest-apiv2-search#_search_metadata)
 
 ## Run locally
@@ -35,6 +31,12 @@ $ npm i
 ```bash
 $ npm run dev
 ```
+
+## Preview
+
+<p align="center">
+    <img src="preview.png" width="800" alt="Route Change Handler Preview" />
+</p>
 
 ### Environment Variables
 
