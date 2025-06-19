@@ -184,7 +184,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ visible, onClose }) => {
 
     // Extract liveboard ID if present in the message
     const liveboardMatch = message.content.match(
-      /(?:https:\/\/[^/]+\/pinboard\/([^/\s)]+)|\[.*?\]\(https:\/\/[^/]+\/pinboard\/([^/\s)]+)\))/
+      /(?:https:\/\/[^/]+\/#\/pinboard\/([^/\s)]+)|\[.*?\]\(https:\/\/[^/]+\/#\/pinboard\/([^/\s)]+)\))/
     );
     const liveboardId = liveboardMatch ? (liveboardMatch[1] || liveboardMatch[2]) : null;
 
