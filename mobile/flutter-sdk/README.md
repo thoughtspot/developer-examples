@@ -4,7 +4,7 @@
 
 ## Preview
 
-![Flutter ThoughtSpot Embed Demo](preview.png)
+<img src="preview.png" alt="Flutter ThoughtSpot Embed Demo" width="50%"/>
 
 This example demonstrates how to embed a ThoughtSpot Liveboard using the **Flutter Embed SDK** in a Flutter application. It covers **authentication**, **custom theming**, and interaction using **host and embed events**.
 
