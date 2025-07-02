@@ -32,7 +32,6 @@ const accountConfig = {
  * thoughtSpotHost: The host name of the ThoughtSpot cluster.
  * authType: The authentication type for the embed SDK.
  * customVariablesForThirdPartyTools: Custom variables accessed in your `pendoIntegration.js` file via the global window object (window.tsEmbed).
- *     hostName: The ThoughtSpot cluster hostname (same as thoughtSpotHost).
  *     pendoKey: The Pendo API key for the embed instance.
  *     pendoVisitorConfig: Visitor config used to identify the unique visitor in Pendo. 
  *         Reference: https://support.pendo.io/hc/en-us/articles/21326198721563-Choose-IDs-and-metadata
@@ -49,7 +48,6 @@ init({
   thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,
   authType: AuthType.None,
   customVariablesForThirdPartyTools: {
-    hostName: import.meta.env.VITE_THOUGHTSPOT_HOST,
     pendoKey: import.meta.env.VITE_PENDO_KEY,
     pendoVisitorConfig: visitorConfig,
     pendoAccountConfig: accountConfig,
