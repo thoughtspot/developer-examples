@@ -14,7 +14,7 @@ To enable this feature, please contact ThoughtSpot Support and provide the neces
 **Enablement Steps:**
 
 1. Host your integration script on a **publicly accessible URL** that serves JavaScript. (In this example, the hosted script is `pendoIntegrationScript.js`.)
-2. Share the hosted script URL with ThoughtSpot Support so they can configure it for your cluster. Be sure to share the **full path of the URL including the `.js` file**.
+2. Share the hosted script URL with ThoughtSpot Support so they can configure it for your cluster. Be sure to share the full URL path, including the .js extension at the end, if your URL includes it.
 3. A user with **Admin privileges** needs to go to the **Develop > Security Settings** page in the ThoughtSpot application.
 4. Enable the feature by editing the `CSPScriptSrc` field. Also, ensure that the domain where your script is hosted is whitelisted.
 
