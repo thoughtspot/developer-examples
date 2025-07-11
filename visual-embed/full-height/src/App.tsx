@@ -4,19 +4,17 @@ import "./App.css";
 
 // Initialize ThoughtSpot SDK
 init({
-  thoughtSpotHost:
-    import.meta.env.VITE_THOUGHTSPOT_HOST ||
-    "https://training.thoughtspot.cloud",
+  thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,
   authType: AuthType.Basic,
-  username: import.meta.env.VITE_THOUGHTSPOT_USERNAME || "code-sandbox",
-  password: import.meta.env.VITE_THOUGHTSPOT_PASSWORD || "3mbed+#3xplz",
+  username: import.meta.env.VITE_THOUGHTSPOT_USERNAME,
+  password: import.meta.env.VITE_THOUGHTSPOT_PASSWORD,
 });
 
 function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Full Height Liveboard Comparison</h1>
+        <h1>Liveboard Lazy Loading vs Regular Loading Demo</h1>
         <p>
           Compare the performance difference between regular and lazy loading.
         </p>
@@ -24,23 +22,27 @@ function App() {
 
       <div className="main-container">
         <div className="code-section">
-          <pre className="code-block">
-            {`// Regular Loading
-<LiveboardEmbed
+          <div className="code-block-container">
+            <div className="code-title">Regular Loading</div>
+            <pre className="code-block">{`<LiveboardEmbed
   liveboardId="${import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID}"
-  vizId="${import.meta.env.VITE_THOUGHTSPOT_VIZ_ID}"
   fullHeight={true}
-/>`}
-          </pre>
-          <pre className="code-block">
-            {`// With Lazy Loading
-<LiveboardEmbed
+/>`}</pre>
+          </div>
+          <div className="code-block-container">
+            <div className="code-title">With Lazy Loading</div>
+            <pre className="code-block">
+              {`<LiveboardEmbed
   liveboardId="${import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID}"
-  vizId="${import.meta.env.VITE_THOUGHTSPOT_VIZ_ID}"
   fullHeight={true}
-  lazyLoadingForFullHeight={true}
+  `}
+              <span className="highlight-prop">
+                {`lazyLoadingForFullHeight={true}`}
+              </span>
+              {`
 />`}
-          </pre>
+            </pre>
+          </div>
         </div>
 
         <div className="embed-container">
@@ -58,6 +60,9 @@ function App() {
               vizId={import.meta.env.VITE_THOUGHTSPOT_VIZ_ID}
               fullHeight={true}
               lazyLoadingForFullHeight={true}
+              additionalFlags={{
+                rootMarginForLazyLoad: "0px 0px 0px 0px",
+              }}
             />
           </div>
         </div>
