@@ -83,7 +83,7 @@ flutter run
 
 ## Documentation
 
-- [Flutter Embed SDK Documentation](https://developers.thoughtspot.com/docs/flutter-embed-sdk)
+- [Flutter Embed SDK Documentation](https://developers.thoughtspot.com/docs/embed-ts-flutter)
 
 ## Technology Stack
 
