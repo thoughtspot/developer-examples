@@ -14,9 +14,9 @@
     Inside window.tsEmbed object, we can access all the variables that 
     were passed	 in the customVariablesForThirdPartyTools in ThoughtSpot Embed init call.
 */
-const pendoKey = window.tsEmbed.pendoKey;
-const pendoVisitorConfig = window.tsEmbed.pendoVisitorConfig; // Make sure to pass atleast id and name in the customVariablesForThirdPartyTools
-const pendoAccountConfig = window.tsEmbed.pendoAccountConfig; // Make sure to pass atleast id and name in the customVariablesForThirdPartyTools
+const pendoKey = window.tsEmbed?.pendoKey;
+const pendoVisitorConfig = window.tsEmbed?.pendoVisitorConfig; // Make sure to pass atleast id and name in the customVariablesForThirdPartyTools
+const pendoAccountConfig = window?.tsEmbed?.pendoAccountConfig; // Make sure to pass atleast id and name in the customVariablesForThirdPartyTools
 
 /*
     Step 1. Define the Visitor and Account IDs
@@ -82,6 +82,18 @@ pendoInitScript = (apiKey) => {
 
 
 async function insertPendoScript() {
+    // checking if pendo is already initialized
+    if (window.pendo && typeof window.pendo.initialize === 'function') {
+        console.log("Pendo is already initialized, skipping initialization");
+        return;
+    }
+
+    // checking if the pendo key is present
+    if (!pendoKey) {
+        console.warn('pendoClientKey not found!');
+        return;
+    }
+
 
     /*
         Step 2. Install and initialize Pendo on your application
@@ -118,4 +130,4 @@ async function insertPendoScript() {
     };
 }
 
-await insertPendoScript();
+insertPendoScript();

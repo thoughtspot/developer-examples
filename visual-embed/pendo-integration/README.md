@@ -13,7 +13,9 @@ To enable this feature, please contact ThoughtSpot Support and provide the neces
 
 **Enablement Steps:**
 
-1. Host your [integration script for Pendo](https://support.pendo.io/hc/en-us/articles/360046272771-Developer-s-guide-to-implementing-Pendo-using-the-install-script) on a **publicly accessible URL** that serves JavaScript. (In this example, the hosted script is `pendoIntegrationScript.js`.)
+1. Host your [integration script for Pendo](https://support.pendo.io/hc/en-us/articles/360046272771-Developer-s-guide-to-implementing-Pendo-using-the-install-script) on a **publicly accessible URL** that serves JavaScript. (In this example, the hosted script is **[`pendoIntegrationScript.js`](pendoIntegrationScript.js)**.) 
+
+   **Alternatively, you can use the pre-hosted script for testing/developement environments:** [https://cdn.jsdelivr.net/gh/quantum29/jsFile@main/Production/pendoIntegration_v1.js](https://cdn.jsdelivr.net/gh/quantum29/jsFile@main/Production/pendoIntegration_v1.js)
 
 2. Share the hosted script URL with ThoughtSpot Support so they can configure it for your cluster. Be sure to share the full URL path, including the .js extension at the end, if your URL includes it.
 
