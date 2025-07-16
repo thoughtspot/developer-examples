@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@thoughtspot/visual-embed-sdk": "https://pkg.pr.new/thoughtspot/visual-embed-sdk/@thoughtspot/visual-embed-sdk@238",
+    "@thoughtspot/visual-embed-sdk": "1.39.2-alpha.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
