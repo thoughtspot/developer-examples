@@ -39,11 +39,13 @@ body {
   display: flex;
   flex-direction: column;
   padding: 1rem;
+  min-width: min-content;
 }
 
 .code-section {
   display: flex;
   gap: 1.5rem;
+  min-width: min-content;
 }
 
 .code-block-container {
@@ -51,6 +53,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: min-content;
 }
 
 .code-title {
@@ -88,11 +91,10 @@ body {
 }
 
 .embed-wrapper {
-  flex: 1;
+  flex:1;
   min-height: 150px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  overflow: hidden;
 }
 
 /* Input controls styles */
