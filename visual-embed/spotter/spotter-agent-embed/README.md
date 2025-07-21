@@ -2,6 +2,9 @@
 
 This is a small example of how embed spotter into your own agent if you have one. The example creates a simple agent using Gemini-flash model's function calling capability.
 
+The simple agent makes the decision whether a user's message has analytical intent and should be handled by ThoughtSpot. The decision is passed down to the client which makes
+the actual API call to run the query on ThoughtSpot and return the ThoughtSpot visual using the ThoughtSpot Visual embed SDK.
+
 ## Demo
 
 Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/spotter/spotter-agent-embed)
