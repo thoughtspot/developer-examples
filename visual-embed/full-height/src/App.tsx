@@ -59,9 +59,7 @@ function App() {
           <div id="ts-embed-1" className="embed-wrapper">
             <LiveboardEmbed
               liveboardId={import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID}
-              vizId={import.meta.env.VITE_THOUGHTSPOT_VIZ_ID}
               fullHeight={true}
-              // lazyLoadingForFullHeight={true}
             />
           </div>
           <div id="ts-embed-2" className="embed-wrapper">
@@ -82,13 +80,9 @@ function App() {
             </div>
             <LiveboardEmbed
               liveboardId={import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID}
-              vizId={import.meta.env.VITE_THOUGHTSPOT_VIZ_ID}
               fullHeight={true}
               lazyLoadingForFullHeight={true}
               lazyLoadingMargin={lazyLoadingMargin}
-              additionalFlags={{
-                sdkVersion: "1.19.0",
-              }}
             />
           </div>
         </div>
