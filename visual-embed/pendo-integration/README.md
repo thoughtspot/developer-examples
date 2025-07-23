@@ -64,3 +64,4 @@ npm run dev
 - [Quick Start Guide for Embed](https://developers.thoughtspot.com/docs/getting-started)  
 - [Developer's Guide to Implementing Pendo Using the Install Script](https://support.pendo.io/hc/en-us/articles/360046272771-Developer-s-guide-to-implementing-Pendo-using-the-install-script)  
 - [Choose IDs and Metadata for Pendo Config](https://support.pendo.io/hc/en-us/articles/21326198721563-Choose-IDs-and-metadata)
+- [Try this on CodeSandbox](https://codesandbox.io/p/devbox/optimistic-mcclintock-lw2qq8)
