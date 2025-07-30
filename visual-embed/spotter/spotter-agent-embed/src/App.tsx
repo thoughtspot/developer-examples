@@ -76,7 +76,6 @@ function App() {
               return (
                 <SpotterMessage
                   message={lastTSResponse.message}
-                  query={lastTSResponse.query}
                   style={{ height: "600px" }}
                 />
               );
