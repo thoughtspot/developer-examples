@@ -1,11 +1,10 @@
 export const sendMessage = async (chatId: string, message: any) => {
-    return fetch('/api/send', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ chatId, message }),
+    const res = await fetch('/api/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId, message }),
     });
+    return res.json();
 };
 
 export const startAgentChat = async () => {
