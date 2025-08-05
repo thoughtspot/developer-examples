@@ -16,6 +16,7 @@ import {
   AuthStatus,
   useInit,
   PreRenderedLiveboardEmbed,
+  Action,
 } from "@thoughtspot/visual-embed-sdk/react";
 
 const routesData = [
@@ -73,9 +74,12 @@ const routesData = [
 const EmbedInit = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
+  const authType: AuthType =
+    import.meta.env.VITE_THOUGHTSPOT_AUTH_TYPE || AuthType.Basic;
+
   const authEERef = useInit({
     thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,
-    authType: AuthType.Basic,
+    authType: authType,
     username: import.meta.env.VITE_THOUGHTSPOT_USERNAME,
     password: import.meta.env.VITE_THOUGHTSPOT_PASSWORD,
   });
@@ -93,9 +97,12 @@ const EmbedInit = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="embed-init">
       <PreRenderedAppEmbed preRenderId="pre-render" />
-      <PreRenderedLiveboardEmbed preRenderId="pre-render-without-liveboard-id" />
       <PreRenderedLiveboardEmbed
-        liveboardId="e40c0727-01e6-49db-bb2f-5aa19661477b"
+        preRenderId="pre-render-without-liveboard-id"
+        visibleActions={[Action.Edit, Action.MakeACopy]}
+      />
+      <PreRenderedLiveboardEmbed
+        liveboardId={import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID_1}
         preRenderId="pre-render-with-liveboard-id"
       />
       {children}
