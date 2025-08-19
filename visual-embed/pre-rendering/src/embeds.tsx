@@ -1,4 +1,10 @@
-import { Action, AppEmbed, LiveboardEmbed } from "@thoughtspot/visual-embed-sdk/react";
+import {
+  Action,
+  AppEmbed,
+  LiveboardEmbed,
+  useEmbedRef,
+} from "@thoughtspot/visual-embed-sdk/react";
+import React, { useRef, useState, useEffect } from "react";
 
 /**
  * This will re-render the thoughtspot instance every time user visits this.
@@ -32,7 +38,6 @@ const PreRenderEmbedOnDemand = () => {
   );
 };
 
-
 const PreRenderLiveboardWithLiveboardId = () => {
   return (
     <LiveboardEmbed
@@ -45,10 +50,10 @@ const PreRenderLiveboardWithLiveboardId = () => {
 
 /**
  * Pre-Renders a generic Embed when the
- * <PreRenderedLiveboardEmbed preRenderId='pre-render-without-liveboard-id' /> 
- * is rendered. 
- * The liveboardId is passed when the Embed is rendered and we navigate to the liveboard. 
- * Since this is a generic pre-render we just load the basic assets needed for rendering the app, 
+ * <PreRenderedLiveboardEmbed preRenderId='pre-render-without-liveboard-id' />
+ * is rendered.
+ * The liveboardId is passed when the Embed is rendered and we navigate to the liveboard.
+ * Since this is a generic pre-render we just load the basic assets needed for rendering the app,
  * this might not be as fast as pre-rendering with liveboardId but it is faster than normal rendering.
  */
 const PreRenderLiveboardWithoutLiveboardId_1 = () => {
@@ -63,12 +68,12 @@ const PreRenderLiveboardWithoutLiveboardId_1 = () => {
           customCSS: {
             variables: {
               "--ts-var-root-background": "#c64242",
-              "--ts-var-root-color": "#ff0707"
-            }
-          }
-        }
+              "--ts-var-root-color": "#ff0707",
+            },
+          },
+        },
       }}
-    />  
+    />
   );
 };
 
@@ -87,18 +92,17 @@ const PreRenderLiveboardWithoutLiveboardId_2 = () => {
           customCSS: {
             variables: {
               "--ts-var-root-background": "green",
-              "--ts-var-root-color": "blue"
-            }
-          }
-        }
+              "--ts-var-root-color": "blue",
+            },
+          },
+        },
       }}
     />
   );
 };
 
-
 /**
- *  Normal Render is the default behavior of the ThoughtSpot SDK. 
+ *  Normal Render is the default behavior of the ThoughtSpot SDK.
  * Loads the ThoughtSpot app when the component is rendered.
  */
 const NormalLiveboardEmbed = () => {
@@ -110,6 +114,50 @@ const NormalLiveboardEmbed = () => {
   );
 };
 
+const MovingLiveboardEmbed = () => {
+  const embedRef = useEmbedRef();
+
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     embedRef.current?.syncPreRenderStyle();
+  //   }, 1);
+  //   return () => clearInterval(interval);
+  // }, []);
+
+  return (
+    <div
+      className="bouncing-embed"
+      style={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        border: "2px solid green",
+      }}
+    >
+      <div
+        style={{
+          width: "300px",
+          height: "200px",
+          position: "fixed",
+          top: "0",
+          left: "0",
+          border: "2px solid #ff0000",
+          borderRadius: "8px",
+          backgroundColor: "rgba(0,0,0,0.1)",
+        }}
+      >
+        <LiveboardEmbed
+          ref={embedRef}
+          className="embed-div"
+          preRenderId={"pre-render-without-liveboard-id"}
+          liveboardId={import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID_1}
+          style={{ width: "100%", height: "100%" }}
+        />
+      </div>
+    </div>
+  );
+};
+
 export {
   NormalEmbed,
   PreRenderEmbed,
@@ -117,5 +165,6 @@ export {
   PreRenderLiveboardWithLiveboardId,
   PreRenderLiveboardWithoutLiveboardId_1,
   PreRenderLiveboardWithoutLiveboardId_2,
-  NormalLiveboardEmbed
+  NormalLiveboardEmbed,
+  MovingLiveboardEmbed,
 };

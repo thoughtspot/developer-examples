@@ -71,7 +71,9 @@ button:focus-visible {
   }
 }
 
-.embed-init, .embed-div, #root {
+.embed-init,
+.embed-div,
+#root {
   width: 100%;
   height: 100%;
 }
@@ -82,4 +84,21 @@ nav a {
   width: 100%;
   height: 100%;
   text-align: center;
+}
+
+/* Simple Left-Right Animation */
+@keyframes leftRight {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(calc(100vw - 300px));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.bouncing-embed {
+  animation: leftRight 4s ease-in-out infinite;
 }

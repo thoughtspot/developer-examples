@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Link, Outlet, Route, Routes } from "react-router";
 import {
+  MovingLiveboardEmbed,
   NormalEmbed,
   NormalLiveboardEmbed,
   PreRenderEmbed,
@@ -68,6 +69,13 @@ const routesData = [
     description:
       "Normal Render is the default behavior of the ThoughtSpot SDK. Loads the ThoughtSpot app when the component is rendered.",
     element: <NormalLiveboardEmbed />,
+  },
+  {
+    path: "/moving-liveboard",
+    title: "Moving Liveboard",
+    description:
+      "Moving Liveboard is a liveboard that moves around the screen.",
+    element: <MovingLiveboardEmbed />,
   },
 ];
 
