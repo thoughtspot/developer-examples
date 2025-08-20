@@ -51,7 +51,6 @@ async function handleFunctionCall(functionArgs: any, res: express.Response, chat
                             question: answer.question,
                             interpretation: answer.tokens,
                             data: answer.data,
-                            id: `${answer.session_identifier}:${answer.generation_number}`,
                         }
                     }),
                     liveboard: liveboard,
@@ -132,7 +131,7 @@ const generativeModel = genAI.getGenerativeModel({
         functionDeclarations: [relevantDataFunctionDefinition],
     }],
     systemInstruction: `
-        You are a helpful assistant, which can answer questions by using the relevant data tool which returns relevant data from a database to answer any question. Use the tool when you feel appropriate. The questions are generally business questions. Like "How do I increase sales?" You will get the relevant data and provide a summary with specific actions and recommendations based on the data and your own knowledge. Quote specific data points (answers) from the data which is in the form of a collection of answers(with their data and the original question) with a reference to the question corresponding to each answer in square brackets [question1, question2, ...] to support your recommendations, make all numbers human readable. Provide a link to the liveboard at the end of your response for the user to open in a new tab.
+        You are a helpful assistant, which can answer questions by using the relevant data tool which returns relevant data from a database to answer any question. Use the tool when you feel appropriate. The questions are generally business questions. Like "How do I increase sales?" You will get the relevant data and provide a summary with specific actions and recommendations based on the data and your own knowledge. Quote specific data points (answers) from the data which is in the form of a collection of answers(with their data and the original question) with a reference to the question corresponding to each answer in square brackets [question1, question2, ...], where question is the real text of the question that was answered in the function call, to support your recommendations, make all numbers human readable. Provide a link to the liveboard at the end of your response for the user to open in a new tab.
     `,
 });
 
