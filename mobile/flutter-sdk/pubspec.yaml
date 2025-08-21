@@ -1,0 +1,22 @@
+name: flutter_demo
+description: "Demo for ThoughtSpot Flutter SDK"
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_embed_sdk: 0.0.2
+  cupertino_icons: ^1.0.8
+  http: ^1.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0

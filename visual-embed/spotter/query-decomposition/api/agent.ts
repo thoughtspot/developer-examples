@@ -45,14 +45,16 @@ async function handleFunctionCall(functionArgs: any, res: express.Response, chat
         functionResponse: {
             name: "getRelevantData",
             response: {
-                data: allAnswers.map(answer => {
-                    return {
-                        question: answer.question,
-                        interpretation: answer.tokens,
-                        data: answer.data,
-                        liveboard: liveboard,
-                    }
-                }),
+                data: {
+                    answers: allAnswers.map(answer => {
+                        return {
+                            question: answer.question,
+                            interpretation: answer.tokens,
+                            data: answer.data,
+                        }
+                    }),
+                    liveboard: liveboard,
+                },
             },
         },
     }]);
@@ -122,14 +124,14 @@ app.get('/', function (req, res) {
 
 const generativeModel = genAI.getGenerativeModel({
     // Use a model that supports function calling, like a Gemini 1.5 model
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
 
     // Specify the function declaration.
     tools: [{
         functionDeclarations: [relevantDataFunctionDefinition],
     }],
     systemInstruction: `
-        You are a helpful assistant, which can answer questions by using the relevant data tool which returns relevant data from a database to answer any question. Use the tool when you feel appropriate. The questions are generally business questions. Like "How do I increase sales?" You will get the relevant data and provide a summary with specific actions and recommendations based on the data and your own knowledge. Quote specific data points from the data to support your recommendations, make all numbers human readable. Provide a link to the liveboard at the end of your response for the user to open in a new tab in a read friendly format.
+        You are a helpful assistant, which can answer questions by using the relevant data tool which returns relevant data from a database to answer any question. Use the tool when you feel appropriate. The questions are generally business questions. Like "How do I increase sales?" You will get the relevant data and provide a summary with specific actions and recommendations based on the data and your own knowledge. Quote specific data points (answers) from the data which is in the form of a collection of answers(with their data and the original question) with a reference to the question corresponding to each answer in square brackets [question1, question2, ...], where question is the real text of the question that was answered in the function call, to support your recommendations, make all numbers human readable. Provide a link to the liveboard at the end of your response for the user to open in a new tab.
     `,
 });
 
