@@ -1,4 +1,4 @@
-import { AppEmbed, LiveboardEmbed } from "@thoughtspot/visual-embed-sdk/react";
+import { Action, AppEmbed, LiveboardEmbed } from "@thoughtspot/visual-embed-sdk/react";
 
 /**
  * This will re-render the thoughtspot instance every time user visits this.
@@ -37,7 +37,7 @@ const PreRenderLiveboardWithLiveboardId = () => {
   return (
     <LiveboardEmbed
       preRenderId={"pre-render-with-liveboard-id"}
-      liveboardId="e40c0727-01e6-49db-bb2f-5aa19661477b"
+      liveboardId={import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID_1}
       className="embed-div"
     />
   );
@@ -55,9 +55,20 @@ const PreRenderLiveboardWithoutLiveboardId_1 = () => {
   return (
     <LiveboardEmbed
       preRenderId={"pre-render-without-liveboard-id"}
-      liveboardId="e40c0727-01e6-49db-bb2f-5aa19661477b"
+      liveboardId={import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID_1}
       className="embed-div"
-    />
+      visibleActions={[Action.Edit]}
+      customizations={{
+        style: {
+          customCSS: {
+            variables: {
+              "--ts-var-root-background": "#c64242",
+              "--ts-var-root-color": "#ff0707"
+            }
+          }
+        }
+      }}
+    />  
   );
 };
 
@@ -68,8 +79,19 @@ const PreRenderLiveboardWithoutLiveboardId_2 = () => {
   return (
     <LiveboardEmbed
       preRenderId={"pre-render-without-liveboard-id"}
-      liveboardId="b504e160-3025-4508-a76a-1beb1f4b5eed"
+      liveboardId={import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID_2}
       className="embed-div"
+      visibleActions={[Action.MakeACopy]}
+      customizations={{
+        style: {
+          customCSS: {
+            variables: {
+              "--ts-var-root-background": "green",
+              "--ts-var-root-color": "blue"
+            }
+          }
+        }
+      }}
     />
   );
 };
@@ -83,7 +105,7 @@ const NormalLiveboardEmbed = () => {
   return (
     <LiveboardEmbed
       className="embed-div"
-      liveboardId="b504e160-3025-4508-a76a-1beb1f4b5eed"
+      liveboardId={import.meta.env.VITE_THOUGHTSPOT_LIVEBOARD_ID_1}
     />
   );
 };
