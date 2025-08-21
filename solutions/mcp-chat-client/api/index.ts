@@ -59,4 +59,8 @@ app.post("/conversations/delete", async (c) => {
     // Delete a conversation for the current user
 });
 
+app.notFound((c) => {
+    return c.text('This endpoint does not exist', 404)
+})
+
 export default app;
