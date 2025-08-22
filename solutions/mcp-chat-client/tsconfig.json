@@ -3,12 +3,11 @@
     "target": "ESNext",
     "useDefineForClassFields": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "module": "CommonJS",
+    "module": "ESNext",
     "jsx": "react-jsx",
     "skipLibCheck": true,
     "allowJs": false,
     "sourceMap": true,
-    "allowImportingTsExtensions": true,
 
     /* Bundler mode */
     "moduleResolution": "node",

@@ -60,6 +60,7 @@ app.post("/conversations/delete", async (c) => {
 });
 
 app.notFound((c) => {
+    console.log(c.req.url, c.req.path);
     return c.text('This endpoint does not exist', 404)
 })
 
