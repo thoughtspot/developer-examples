@@ -1,6 +1,6 @@
 # Python Google ADK Trusted Auth MCP Client
 
-This is a Google ADK (Agent Development Kit) agent that connects to ThoughtSpot via MCP (Model Context Protocol) to extract and summarize Wikipedia articles.
+This is a Google ADK (Agent Development Kit) agent that connects to ThoughtSpot via MCP (Model Context Protocol) to query and retrieve data from ThoughtSpot data models using ThoughtSpot AI capabilities.
 
 ## Setup
 
