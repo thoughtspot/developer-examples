@@ -18,7 +18,7 @@ The examples in this directory utilize the [ThoughtSpot MCP Server](https://gith
 ## Projects in this Directory
 
 ### 1. [Python Google ADK Trusted Auth](./python-google-adk-trusted-auth/)
-A Python implementation demonstrating trusted authentication with Google ADK (Application Default Credentials) using MCP. This example shows how to securely authenticate and access Google services through the MCP framework.
+A Python implementation demonstrating trusted authentication with Google ADK (Agent Developement Kit) using MCP. This example shows how to build and agent which can access ThoughtSpot AI through the MCP framework using Google Agent developement kit.
 
 **Key Features:**
 - Google Agent developement kit integration
