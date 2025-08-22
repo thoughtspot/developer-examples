@@ -47,6 +47,13 @@ This project includes integration with the [ThoughtSpot trusted auth](https://de
 - **User Group Management**: Handle user groups and permissions
 
 
+## References
+
+- **[ThoughtSpot MCP Server](https://github.com/thoughtspot/mcp-server)** - The MCP server implementation used in these examples
+- **[Google Agent development kit(ADK)](https://google.github.io/adk-docs/tools/mcp-tools/)** - Google Agent development kit(ADK) used in the Python examples
+- **[Model Context Protocol](https://modelcontextprotocol.io/)** - Official MCP specification and documentation
+
+
 ## Requirements
 
 - Python 3.8+
