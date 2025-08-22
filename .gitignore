@@ -131,3 +131,5 @@ dist
 .pnp.*
 .vercel
 .venv
+*.egg-info
+__pycache__
