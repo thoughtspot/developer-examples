@@ -1,46 +1,86 @@
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
+// import { Context } from "./context";
+// import { listConnectors } from "./mcp/connectors";
 
-const app = new Hono().basePath("/api");
+class Context {
+    constructor(a: any, b: any) {
+    }
+    addMCPServer(mcpServer: any) { }
+    connectMCPServer(serverId: string, onRedirect: (url: string) => void) { }
+    finishMCPServerOAuth(code: string, state: string) { }
+    listMCPServers() { }
+    listMCPServerTools(serverId: string) { }
+    listMCPServerResources(serverId: string) { }
+    readMCPServerResource(serverId: string, resourceURI: string) { }
+}
+
+type ContextVariableMap = { Variables: { context: Context } };
+
+const contextMiddleware = createMiddleware<ContextVariableMap>(async (c, next) => {
+    const appUrl = c.req.header("X-Forwarded-Host") || c.req.header("Host") || "https://chat.thoughtspot.app";
+    const context = new Context(c.req.header("Authorization"), appUrl);
+    c.set("context", context);
+    await next();
+});
+
+const app = new Hono<ContextVariableMap>().basePath("/api");
+app.use(contextMiddleware);
 
 app.get("/", (c) => c.text("Hello World"));
 
 
 app.post("/mcp/add", async (c) => {
-    const { mcpServerUrl, mcpServerName, oAuthClientId, oAuthClientSecret } = await c.req.json();
-    console.log(mcpServerUrl, mcpServerName, oAuthClientId);
-    return c.json({ message: "MCP server added" });
+    const mcpServer = await c.req.json();
+    c.var.context.addMCPServer(mcpServer);
 });
 
-app.get("/mcp/connect", async (c) => {
-    // Retrieve the mcp server from the database
-    // Start the oAuth flow.
+app.get("/mcp/:serverId/connect", async (c) => {
+    const serverId = c.req.param("serverId");
+    return new Promise((resolve) => {
+        const onRedirect = (url: string) => {
+            resolve(c.json({ redirectUrl: url }));
+        };
+        c.var.context.connectMCPServer(serverId, onRedirect);
+    });
 });
 
-app.get("/mcp/oauth-callback", async (c) => {
-    // Retrieve the mcp server from the database
-    // Complete the oAuth flow.
+app.post("/mcp/oauth/callback", async (c) => {
+    const { code, state } = await c.req.json();
+    await c.var.context.finishMCPServerOAuth(code, state);
+    return c.json({ success: true });
 });
 
-app.post("/mcp/list", async (c) => {
-    // Retrieve the mcp servers from the database for the current user
-    // Return the mcp servers
+app.get("/mcp/list", async (c) => {
+    const mcpServers = await c.var.context.listMCPServers();
+    return c.json(mcpServers);
 });
 
-app.post("/mcp/tools/list", async (c) => {
-    // Retrieve the mcp tools from the database for the current user
-    // Return the mcp tools
+app.get("/mcp/:serverId/tools/list", async (c) => {
+    const serverId = c.req.param("serverId");
+    const tools = await c.var.context.listMCPServerTools(serverId);
+    return c.json(tools);
 });
 
 
-app.post("/mcp/resources/list", async (c) => {
-    // Retrieve the mcp token for the server id, and the current user
-    // List the MCP resources using the sdk using list-resources
+app.get("/mcp/:serverId/resources/list", async (c) => {
+    const serverId = c.req.param("serverId");
+    const resources = await c.var.context.listMCPServerResources(serverId);
+    return c.json(resources);
 });
 
-app.post("/mcp/resources/read", async (c) => {
-    // Retrieve the mcp token for the server id, and the current user
-    // Read the MCP resource using the sdk using read-resource
+app.get("/mcp/:serverId/resources/read", async (c) => {
+    const serverId = c.req.param("serverId");
+    const resourceURI = c.req.query("resourceURI");
+    const resource = await c.var.context.readMCPServerResource(serverId, resourceURI);
+    return c.json(resource);
 });
+
+app.get("/mcp/connectors/list", async (c) => {
+    // const connectors = await listConnectors(c.var.context.supabaseClient);
+    // return c.json(connectors);
+    return c.json([]);
+})
 
 app.post("/conversations/create", async (c) => {
     // Create a new conversation

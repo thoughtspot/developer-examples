@@ -10,14 +10,19 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.60.0",
+    "@modelcontextprotocol/sdk": "^1.17.4",
     "@supabase/supabase-js": "^2.55.0",
     "@thoughtspot/visual-embed-sdk": "latest",
+    "@types/react-router-dom": "^5.3.3",
     "@vercel/edge": "^1.2.2",
     "antd": "^5.27.1",
     "hono": "^4.9.2",
     "openid-client": "^6.6.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.8.2",
+    "redis": "^5.8.2",
+    "sass-embedded": "^1.91.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.8",
