@@ -12,7 +12,7 @@ import { TypingIndicator } from "../typing-indicator/typing-indicator";
 import { useSmartScroll } from "../../hooks/use-smart-scroll";
 import { DownOutlined } from "@ant-design/icons";
 import { useMCPContext } from "../../contexts/mcp-context";
-import { ToolCallEventData } from "../../../api/types";
+import { ToolCallEventData } from "../../../backend/types";
 
 interface Message {
     role: 'user' | 'assistant';

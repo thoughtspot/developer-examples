@@ -1,4 +1,4 @@
-import { createClient } from "./api/clients/supabase";
+import { createClient } from "./backend/clients/supabase";
 import { next } from "@vercel/edge";
 
 

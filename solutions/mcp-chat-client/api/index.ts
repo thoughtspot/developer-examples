@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
-import { Context } from "./context";
-import { listConnectors } from "./mcp/connectors";
-import { MCPAuthError } from "./util";
+import { Context } from "../backend/context";
+import { listConnectors } from "../backend/mcp/connectors";
+import { MCPAuthError } from "../backend/util";
 
 type ContextVariableMap = { Variables: { context: Context } };
 

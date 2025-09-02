@@ -1,6 +1,6 @@
 import { ConversationResponseState } from "../../services/conversations";
 import { Flex, Timeline, Typography } from "antd";
-import { OutputTextEventData, ResponseEventType, ToolCallEventData } from "../../../api/types";
+import { OutputTextEventData, ResponseEventType, ToolCallEventData } from "../../../backend/types";
 import { useMCPContext } from "../../contexts/mcp-context";
 import ReactMarkdown from "react-markdown";
 import { useState } from "react";

@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { useState, useEffect } from 'react';
 import { listMCPServers, listMCPServerResources } from '../services/mcp';
-import type { MCPServerMetadata } from '../../api/types';
+import type { MCPServerMetadata } from '../../backend/types';
 import { useMCPContext } from '../contexts/mcp-context';
 
 export interface MCPResource {

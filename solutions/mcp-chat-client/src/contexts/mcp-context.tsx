@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { MCPServerMetadata } from '../../api/types';
+import type { MCPServerMetadata } from '../../backend/types';
 import { listMCPServers } from '../services/mcp';
 import { message } from 'antd';
 

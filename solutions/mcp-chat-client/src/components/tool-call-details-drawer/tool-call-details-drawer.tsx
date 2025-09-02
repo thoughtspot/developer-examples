@@ -1,5 +1,5 @@
 import { Drawer, Descriptions, Tag, Typography } from "antd";
-import { ToolCallEventData } from "../../../api/types";
+import { ToolCallEventData } from "../../../backend/types";
 
 interface ToolCallDetailsDrawerProps {
     visible: boolean;

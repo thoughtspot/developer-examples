@@ -1,4 +1,4 @@
-import { Attachment, MCPServerMetadata, ResponseEvent, ResponseEventType } from "../../api/types";
+import { Attachment, MCPServerMetadata, ResponseEvent, ResponseEventType } from "../../backend/types";
 import { ImmutableObject } from "../util";
 import { apiCall, readNDJSONStream } from "./api-call";
 

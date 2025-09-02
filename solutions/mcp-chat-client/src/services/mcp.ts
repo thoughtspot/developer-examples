@@ -1,4 +1,4 @@
-import type { MCPServerMetadata } from "../../api/types";
+import type { MCPServerMetadata } from "../../backend/types";
 import { apiCall } from "./api-call";
 
 export const listMCPServers = async (forceRefresh?: boolean) => {

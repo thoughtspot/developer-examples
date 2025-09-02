@@ -4,7 +4,7 @@ import "./mcp-list.scss";
 import { useState, useEffect } from "react";
 import { AddMCPModal } from "./add-mcp-modal";
 import { listMCPServerTools, connectMCPServer } from "../../services/mcp";
-import type { MCPServerMetadata } from "../../../api/types";
+import type { MCPServerMetadata } from "../../../backend/types";
 import { useMCPContext } from "../../contexts/mcp-context";
 
 export const MCPList = () => {
