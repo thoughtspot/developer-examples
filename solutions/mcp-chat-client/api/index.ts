@@ -142,3 +142,7 @@ app.onError((err, c) => {
 })
 
 export default app;
+
+export const config = {
+    runtime: 'edge',
+};
