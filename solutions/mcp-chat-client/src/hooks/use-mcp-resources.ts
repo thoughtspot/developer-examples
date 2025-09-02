@@ -2,6 +2,7 @@ import _ from 'lodash';
 import { useState, useEffect } from 'react';
 import { listMCPServers, listMCPServerResources } from '../services/mcp';
 import type { MCPServerMetadata } from '../../api/types';
+import { useMCPContext } from '../contexts/mcp-context';
 
 export interface MCPResource {
     uri: string;
@@ -17,23 +18,33 @@ export interface MCPServerWithResources extends MCPServerMetadata {
 }
 
 export const useMCPResources = () => {
-    const [mcpServers, setMcpServers] = useState<MCPServerWithResources[]>([]);
+    const { mcpServers, loading: serverListLoading } = useMCPContext();
+    const [mcpServersWithResources, setMcpServersWithResources] = useState<MCPServerWithResources[]>([]);
+
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const fetchMCPServersAndResources = async () => {
+        if (mcpServers?.length === 0) {
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
         try {
-            // Fetch all MCP servers
-            const servers = await listMCPServers(true);
-
             // For each connected server, fetch its resources
             const serversWithResources = await Promise.all(
-                servers.map(async (server) => {
+                mcpServers.map(async (server) => {
                     if (!server.isConnected) {
                         return { ...server, resources: [] };
+                    }
+
+                    // If the server is already in the list, return the server with the resources
+                    const serverWithResources = mcpServersWithResources.find(server => server.id === server.id);
+                    if (serverWithResources) {
+                        return { ...server, resources: serverWithResources.resources };
                     }
 
                     try {
@@ -51,7 +62,7 @@ export const useMCPResources = () => {
                 })
             );
 
-            setMcpServers(serversWithResources);
+            setMcpServersWithResources(serversWithResources);
         } catch (error) {
             console.error('Error fetching MCP servers and resources:', error);
             setError('Failed to fetch MCP servers and resources');
@@ -62,14 +73,14 @@ export const useMCPResources = () => {
 
     useEffect(() => {
         fetchMCPServersAndResources();
-    }, []);
+    }, [mcpServers]);
 
 
-    const serversWithResources = mcpServers.filter(server => server.resources.length > 0);
+    const serversWithResources = mcpServersWithResources.filter(server => server.resources.length > 0);
 
     return {
         serversWithResources,
-        loading,
+        loading: serverListLoading || loading,
         error,
         refetch: fetchMCPServersAndResources
     };

@@ -3,41 +3,17 @@ import { EllipsisOutlined, PlusOutlined, SafetyCertificateOutlined } from "@ant-
 import "./mcp-list.scss";
 import { useState, useEffect } from "react";
 import { AddMCPModal } from "./add-mcp-modal";
-import { listMCPServers, listMCPServerTools, connectMCPServer } from "../../services/mcp";
+import { listMCPServerTools, connectMCPServer } from "../../services/mcp";
 import type { MCPServerMetadata } from "../../../api/types";
 import { useMCPContext } from "../../contexts/mcp-context";
 
 export const MCPList = () => {
     const [addMCPModalOpen, setAddMCPModalOpen] = useState(false);
-    const { mcpServers, setMcpServers } = useMCPContext();
+    const { mcpServers, setMcpServers, loading, fetchMCPServers } = useMCPContext();
     const [mcpServerTools, setMcpServerTools] = useState<Record<string, any[]>>({});
-    const [loading, setLoading] = useState(false);
 
-    const fetchMCPServers = async () => {
-        setLoading(true);
-        try {
-            const servers = await listMCPServers(true);
-            setMcpServers(servers || []);
-
-
-            servers.forEach(server => {
-                if (server.isConnected) {
-                    fetchMCPServerTools(server.id);
-                }
-            });
-        } catch (error) {
-            console.error('Error fetching MCP servers:', error);
-            message.error('Failed to fetch MCP servers');
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    
     const fetchMCPServerTools = async (serverId: string) => {
-        if (mcpServerTools[serverId]) {
-            return;
-        }
-        
         try {
             const { tools } = await listMCPServerTools(serverId);
             setMcpServerTools(mcpServerTools => ({
@@ -53,8 +29,15 @@ export const MCPList = () => {
     };
 
     useEffect(() => {
-        fetchMCPServers();
-    }, []);
+        mcpServers.forEach(server => {
+            if (mcpServerTools[server.id] || !server.isConnected) {
+                return;
+            }
+    
+            fetchMCPServerTools(server.id);
+        });
+        
+    }, [mcpServers]);
 
     const handleToggleTool = (serverId: string, toolName: string, enabled: boolean) => {
         // TODO: Implement tool toggle functionality
