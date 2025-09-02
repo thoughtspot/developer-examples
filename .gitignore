@@ -133,3 +133,4 @@ dist
 .venv
 *.egg-info
 __pycache__
+.env*.local

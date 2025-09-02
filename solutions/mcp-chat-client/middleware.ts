@@ -1,18 +1,13 @@
-import { createClient } from "./api/supabase";
+import { createClient } from "./api/clients/supabase";
 import { next } from "@vercel/edge";
 
 
 export const config = {
     matcher: [
         /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - /api/hello (hello API endpoint)
-         * Feel free to modify this pattern to include more paths.
+         * Match all api routes
          */
-        '/((?!favicon\\.ico(?:$|\\/)|api\\/hello(?:$|\\/)|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/api/:path*',
     ],
 }
 
@@ -33,6 +28,8 @@ export default async function middleware(req: Request) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-user-id', data.user.id);
     requestHeaders.set('x-user-email', data.user.email);
+
+    console.debug(`[API] ${data.user.id} ${req.url}`);
 
     return next({
         request: {

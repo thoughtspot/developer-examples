@@ -1,15 +1,15 @@
-import { Card, Form, Input, Modal, Space, Tabs, Typography, Flex, Button, Divider, message } from "antd"
+import { Card, Form, Input, Modal, Space, Tabs, Typography, Flex, Button, Divider, message, Spin } from "antd"
 import { PlusOutlined } from "@ant-design/icons"
 import { useState, useEffect } from "react"
-import { addMCPServer, listConnectors } from "../../services/mcp"
+import { addMCPServer, listConnectors, addMCPFromConnector } from "../../services/mcp"
 
 // Define a generic connector interface based on common patterns
 interface Connector {
     id: string;
     name: string;
+    url: string;
     description?: string;
     logo_url?: string;
-    is_connected?: boolean;
     [key: string]: any; // Allow for additional properties
 }
 
@@ -61,10 +61,20 @@ export const AddMCPModal = ({ open, onCancel, onAdd }: { open: boolean, onCancel
         }
     }
 
-    const handleConnectorAdd = (connector: Connector) => {
+    const handleConnectorAdd = async (connector: Connector) => {
+        setLoading(true)
         // Handle adding a connector - you can implement this based on your needs
-        message.info(`Adding connector: ${connector.name}`)
-        // You might want to call addMCPServer here with connector data
+        message.info(`Adding connector: ${connector.name}`);
+        try {
+        await addMCPFromConnector(connector.id);
+        onAdd();
+        message.success('Connector added successfully!')
+        } catch (error) {
+            console.error('Error adding MCP server from connector:', error)
+            message.error('Failed to add MCP server from connector. Please try again.')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return <Modal
@@ -79,6 +89,7 @@ export const AddMCPModal = ({ open, onCancel, onAdd }: { open: boolean, onCancel
         width={560}
         centered
     >
+        <Spin spinning={loading}>
         <Tabs style={{ height: '470px'}}>
             <Tabs.TabPane tab="Connectors" key="connectors">
                 {connectorsLoading ? (
@@ -96,13 +107,13 @@ export const AddMCPModal = ({ open, onCancel, onAdd }: { open: boolean, onCancel
                                 <Flex align="center" justify="space-between">
                                     <img 
                                         src={connector.logo_url || "https://cdn.brandfetch.io/idJ_HhtG0Z/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1745381296843"} 
-                                        style={{ width: 48, height: 48 }}
+                                        style={{ width: 48, height: 48, padding: 12, boxSizing: 'border-box' }}
                                         alt={connector.name}
                                     />
                                     <Flex vertical style={{ width: '150px' }}>
                                         <Typography.Text>{connector.name}</Typography.Text>
                                         <Typography.Text type="secondary">
-                                            {connector.description || `Connect ${connector.name.toLowerCase()}`}
+                                            {connector.description || `Add ${connector.name}`}
                                         </Typography.Text>
                                     </Flex>
                                     <Button 
@@ -160,5 +171,6 @@ export const AddMCPModal = ({ open, onCancel, onAdd }: { open: boolean, onCancel
                 </Form>
             </Tabs.TabPane>
         </Tabs>
+        </Spin>
     </Modal>
 }

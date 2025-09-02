@@ -5,6 +5,7 @@ import './App.css'
 import { SignInBtn } from './components/sign-in-btn'
 import { Home } from './components/home/home';
 import { OAuthCallback } from './components/oauth';
+import { MCPProvider } from './contexts/mcp-context'
 
 function App() {
   const { loading, isAuthenticated, user } = useAuth();
@@ -18,12 +19,14 @@ function App() {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/oauth/callback" element={<OAuthCallback />} />
-        <Route path="/" element={<Home />} />
-      </Routes>
-    </Router>
+    <MCPProvider>
+      <Router>
+        <Routes>
+          <Route path="/oauth/callback" element={<OAuthCallback />} />
+          <Route path="/" element={<Home />} />
+        </Routes>
+      </Router>
+    </MCPProvider>
   );
 }
 

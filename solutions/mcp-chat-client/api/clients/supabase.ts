@@ -1,7 +1,7 @@
 import { createClient as _createClient } from "@supabase/supabase-js";
 
 export const createClient = (authorization: string) => {
-    return _createClient(
+    const client = _createClient(
         process.env.VITE_SUPABASE_URL!,
         process.env.VITE_SUPABASE_ANON_KEY!,
         {
@@ -10,6 +10,10 @@ export const createClient = (authorization: string) => {
             },
         }
     );
+    client.auth.getUser().then((user) => {
+        console.debug(`[SUPABASE] user ${user.data.user.id}`);
+    });
+    return client;
 }
 
 export const globalSupabaseClient = _createClient(

@@ -1,7 +1,7 @@
-import { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth"
-import type { MCPServerMetadata } from '../types'
-import { OAuthClientInformation, OAuthClientInformationFull, OAuthClientMetadata, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth";
-import { redisClient } from '../redis';
+import { auth, OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js"
+import type { MCPServerMetadata, OauthTokensWithExpiresAt } from '../types'
+import { OAuthClientInformation, OAuthClientInformationFull, OAuthClientMetadata, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { redisClient } from '../clients/redis';
 
 export class OauthProvider implements OAuthClientProvider {
 
@@ -9,7 +9,8 @@ export class OauthProvider implements OAuthClientProvider {
     public onRedirect: (url: string) => void;
 
     constructor(private readonly mcpServer: MCPServerMetadata,
-        private readonly _redirectUrl?: string) {
+        private readonly _redirectUrl?: string,
+        private readonly saveClientInfo?: (clientInfo: OAuthClientInformationFull) => void) {
         //
         this._clientMetadata = {
             redirect_uris: [this._redirectUrl],
@@ -33,8 +34,12 @@ export class OauthProvider implements OAuthClientProvider {
         return encodeState(this.mcpServer.id);
     }
 
-    async tokens(): Promise<OAuthTokens> {
+    async tokens(): Promise<OauthTokensWithExpiresAt> {
         return JSON.parse(await redisClient.get(this.mcpServer.id) as string || '{}');
+    }
+
+    async deleteTokens(): Promise<void> {
+        await redisClient.del(this.mcpServer.id);
     }
 
     async codeVerifier(): Promise<string> {
@@ -46,21 +51,32 @@ export class OauthProvider implements OAuthClientProvider {
     }
 
     async saveClientInformation(clientInformation: OAuthClientInformationFull): Promise<void> {
-
+        if (this.saveClientInfo) {
+            return this.saveClientInfo(clientInformation);
+        }
     }
 
-    async saveTokens(tokens: OAuthTokens): Promise<void> {
+    async saveTokens(tokens: OauthTokensWithExpiresAt): Promise<void> {
+        if (tokens.expires_in) {
+            const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+            tokens.expires_at = expiresAt.valueOf();
+        }
         await redisClient.set(this.mcpServer.id, JSON.stringify(tokens));
     }
 
-    async redirectToAuthorization(): Promise<void> {
-        this.onRedirect(this._redirectUrl);
-        // redirect to the authorization url
+    async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
+        this.onRedirect(authorizationUrl.href);
     }
 
     async saveCodeVerifier(codeVerifier: string): Promise<void> {
         await redisClient.set(this.mcpServer.id + ':codeVerifier', codeVerifier, {
             EX: 60 * 5, // 5 minutes
+        });
+    }
+
+    async refreshAuth() {
+        return auth(this, {
+            serverUrl: new URL(this.mcpServer.url),
         });
     }
 }

@@ -13,6 +13,15 @@ export default defineConfig({
         target: "http://localhost:3000",
         changeOrigin: true,
         secure: false,
+        headers: {
+          "X-Forwarded-Proto": "http",
+          "X-Forwarded-Host": "localhost:5173",
+        },
+        bypass: (req, res, proxyOptions) => {
+          if (req.url?.includes('/api/types')) {
+            return req.url;
+          }
+        }
       },
     },
   },

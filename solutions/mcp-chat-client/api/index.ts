@@ -1,24 +1,16 @@
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
-// import { Context } from "./context";
-// import { listConnectors } from "./mcp/connectors";
-
-class Context {
-    constructor(a: any, b: any) {
-    }
-    addMCPServer(mcpServer: any) { }
-    connectMCPServer(serverId: string, onRedirect: (url: string) => void) { }
-    finishMCPServerOAuth(code: string, state: string) { }
-    listMCPServers() { }
-    listMCPServerTools(serverId: string) { }
-    listMCPServerResources(serverId: string) { }
-    readMCPServerResource(serverId: string, resourceURI: string) { }
-}
+import { Context } from "./context";
+import { listConnectors } from "./mcp/connectors";
+import { MCPAuthError } from "./util";
 
 type ContextVariableMap = { Variables: { context: Context } };
 
 const contextMiddleware = createMiddleware<ContextVariableMap>(async (c, next) => {
-    const appUrl = c.req.header("X-Forwarded-Host") || c.req.header("Host") || "https://chat.thoughtspot.app";
+    // Get protocol and host to construct the full app URL
+    const protocol = c.req.header("X-Forwarded-Proto") || (c.req.header("Forwarded")?.split(";").find(s => s.trim().startsWith("proto="))?.split("=")[1]) || "https";
+    const host = c.req.header("X-Forwarded-Host") || c.req.header("Host") || "chat.thoughtspot.app";
+    const appUrl = `${protocol}://${host}`;
     const context = new Context(c.req.header("Authorization"), appUrl);
     c.set("context", context);
     await next();
@@ -29,19 +21,36 @@ app.use(contextMiddleware);
 
 app.get("/", (c) => c.text("Hello World"));
 
+app.post("/test", async (c) => {
+    const body = await c.req.json();
+    console.log(body);
+    return c.json(body);
+});
 
 app.post("/mcp/add", async (c) => {
     const mcpServer = await c.req.json();
-    c.var.context.addMCPServer(mcpServer);
+    const resp = await c.var.context.addMCPServer(mcpServer);
+    return c.json(resp);
 });
 
-app.get("/mcp/:serverId/connect", async (c) => {
+app.post("/mcp/add/connector", async (c) => {
+    const { connectorId } = await c.req.json();
+    const resp = await c.var.context.addMCPServerFromConnector(connectorId);
+    return c.json(resp);
+});
+
+app.post("/mcp/:serverId/connect", async (c) => {
     const serverId = c.req.param("serverId");
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
         const onRedirect = (url: string) => {
             resolve(c.json({ redirectUrl: url }));
         };
-        c.var.context.connectMCPServer(serverId, onRedirect);
+        const { error } = await c.var.context.connectMCPServer(serverId, onRedirect);
+        if (error) {
+            resolve(c.json({ error: error.message }, 500));
+        } else {
+            resolve(c.json({ success: true }));
+        }
     });
 });
 
@@ -77,9 +86,8 @@ app.get("/mcp/:serverId/resources/read", async (c) => {
 });
 
 app.get("/mcp/connectors/list", async (c) => {
-    // const connectors = await listConnectors(c.var.context.supabaseClient);
-    // return c.json(connectors);
-    return c.json([]);
+    const connectors = await listConnectors(c.var.context.supabaseClient);
+    return c.json(connectors);
 })
 
 app.post("/conversations/create", async (c) => {
@@ -87,8 +95,15 @@ app.post("/conversations/create", async (c) => {
 });
 
 app.post("/conversations/send", async (c) => {
-    // Send a message to the conversation
-    // Return the response from the conversation using the llm
+    const { message, attachments, referenceId, mcpServers, enabledDefaultTools } = await c.req.json();
+    const responseStream = await c.var.context.sendMessage(message, attachments, mcpServers, enabledDefaultTools, referenceId);
+    return new Response(responseStream, {
+        headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Transfer-Encoding": "chunked",
+            "Connection": "keep-alive",
+        },
+    });
 });
 
 app.post("/conversations/list", async (c) => {
@@ -102,6 +117,28 @@ app.post("/conversations/delete", async (c) => {
 app.notFound((c) => {
     console.log(c.req.url, c.req.path);
     return c.text('This endpoint does not exist', 404)
+})
+
+// Define a global error handler
+app.onError((err, c) => {
+    console.error(err) // log the error
+    if (err instanceof MCPAuthError) {
+        return c.json(
+            {
+                error: 'MCP Connection Error',
+                code: 'MCP_CONNECTION_ERROR',
+                message: err.message,
+            },
+            403
+        )
+    }
+    return c.json(
+        {
+            error: 'Internal Server Error',
+            message: err.message,
+        },
+        500
+    )
 })
 
 export default app;

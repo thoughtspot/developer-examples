@@ -1,0 +1,14 @@
+.tools-wrapper {
+    width: 100%;
+    height: 100%;
+    
+    // Ensure proper spacing between components
+    .default-tools {
+        flex-shrink: 0;
+    }
+    
+    .mcp-list {
+        flex: 1;
+        min-height: 0; // Allow MCP list to scroll if needed
+    }
+}

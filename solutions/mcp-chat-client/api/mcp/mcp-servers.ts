@@ -2,11 +2,12 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { MCPServer } from "./mcp-server";
 import type { MCPServerMetadata } from "../types";
 import { convertToCamelCaseObjectKeys, convertToSnakeCaseObjectKeys } from "../util";
+import { OAuthClientInformationFull } from "@modelcontextprotocol/sdk/shared/auth";
 
 export class MCPServers {
     private supabaseClient: SupabaseClient;
 
-    constructor(supabaseClient: SupabaseClient) {
+    constructor(supabaseClient: SupabaseClient, private redirectUrl: string) {
         this.supabaseClient = supabaseClient;
     }
 
@@ -24,16 +25,19 @@ export class MCPServers {
             throw error;
         }
         return new MCPServer(
-            data[0] as unknown as MCPServerMetadata,
+            convertToCamelCaseObjectKeys(data[0]) as unknown as MCPServerMetadata,
+            this.redirectUrl,
             () => this.setIsConnected(id, true),
-            () => this.setIsConnected(id, false)
+            () => this.setIsConnected(id, false),
+            (clientInfo: OAuthClientInformationFull) => this.saveClientInfo(id, clientInfo)
         );
     }
 
-    async upsert(mcpServer: MCPServerMetadata) {
+    async upsert(mcpServer: Partial<MCPServerMetadata>) {
         const mcpServerSnakeCase = convertToSnakeCaseObjectKeys(mcpServer);
         const { data, error } = await this.supabaseClient.from('mcp_servers').upsert(mcpServerSnakeCase);
         if (error) {
+            console.error(error);
             throw error;
         }
         return data;
@@ -52,5 +56,12 @@ export class MCPServers {
             throw error;
         }
         return data;
+    }
+
+    async saveClientInfo(id: string, clientInfo: OAuthClientInformationFull) {
+        const { data, error } = await this.supabaseClient.from('mcp_servers').update({ "oauth_client_info": clientInfo }).eq('id', id).select();
+        if (error) {
+            throw error;
+        }
     }
 }

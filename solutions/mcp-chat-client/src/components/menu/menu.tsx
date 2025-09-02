@@ -1,7 +1,7 @@
 import { Flex, Menu } from "antd";
 import { AppstoreOutlined, MessageOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import { useState } from "react";
-import { MCPList } from "../mcp/mcp-list";
+import { ToolsWrapper } from "../tools-wrapper/tools-wrapper";
 import { History } from "../history/history";
 import "./menu.scss";
 
@@ -15,11 +15,11 @@ export const MenuComponent = () => {
     const renderContent = () => {
         switch (selectedKey) {
             case 'mcp-servers':
-                return <MCPList />;
+                return <ToolsWrapper />;
             case 'history':
                 return <History />;
             default:
-                return <MCPList />;
+                return <ToolsWrapper />;
         }
     };
 
