@@ -39,7 +39,7 @@ export const DefaultTools = () => {
     };
 
     return (
-        <Flex className="default-tools" vertical gap={12} align="flex-start">
+        <Flex className="default-tools" vertical gap={24} align="flex-start">
             <Typography.Text type="secondary">Default Tools</Typography.Text>
             
             <Flex vertical gap={8} style={{ width: '100%', textAlign: 'left' }}>

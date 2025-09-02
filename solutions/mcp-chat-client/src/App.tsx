@@ -15,7 +15,11 @@ function App() {
   }
 
   if (!isAuthenticated) {
-    return <SignInBtn />;
+    return <div style={{ width: '200px', margin: 'auto'}}>
+      <SignInBtn  />
+    </div>;
+
+    ;
   }
 
   return (
