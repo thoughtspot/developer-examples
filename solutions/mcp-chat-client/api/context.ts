@@ -59,13 +59,15 @@ export class Context {
     }
 
     async connectMCPServer(serverId: string, onRedirect: (url: string) => void) {
-        const server = await this.mcpServers.get(serverId);
         try {
+            const server = await this.mcpServers.get(serverId);
             await server.connect(onRedirect);
         } catch (error) {
             console.error(error);
             return { error };
         }
+
+        return { error: null };
     }
 
     async finishMCPServerOAuth(code: string, state: string) {

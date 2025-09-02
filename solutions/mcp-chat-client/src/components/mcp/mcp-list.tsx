@@ -45,9 +45,14 @@ export const MCPList = () => {
     };
 
     const handleConnect = async (serverId: string) => {
-        const { redirectUrl } = await connectMCPServer(serverId);
+        const { success,redirectUrl } = await connectMCPServer(serverId);
         if (redirectUrl) {
             window.location.href = redirectUrl;
+        }
+
+        if (success) {
+            // Refresh the list of MCP servers
+            fetchMCPServers();
         }
     };
 
