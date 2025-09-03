@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Drawer, Input, Button, List, Typography, Spin } from 'antd';
+import { Drawer, Input, Button, List, Typography, Spin, Tag } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import Liveboard from './Liveboard';
+import Reference from './Reference';
+import remarkTags from '../utils/remark-tags';
 
 const { Text } = Typography;
 
@@ -23,6 +25,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ visible, onClose }) => {
   const [inputValue, setInputValue] = useState('');
   const [chatId, setChatId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [referenceVisible, setReferenceVisible] = useState(false);
+  const [referenceContent, setReferenceContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -139,7 +143,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ visible, onClose }) => {
         )
       );
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.log('Request was aborted');
       } else {
         console.error('Error sending message:', error);
@@ -164,6 +168,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ visible, onClose }) => {
     }
   };
 
+  const handleTagClick = (nodeValue: string) => {
+    setReferenceContent(nodeValue);
+    setReferenceVisible(true);
+  };
+
   const renderMessage = (message: Message) => {
     if (message.sender === 'user') {
       return (
@@ -184,7 +193,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ visible, onClose }) => {
 
     // Extract liveboard ID if present in the message
     const liveboardMatch = message.content.match(
-      /(?:https:\/\/[^/]+\/#\/pinboard\/([^/\s)]+)|\[.*?\]\(https:\/\/[^/]+\/#\/pinboard\/([^/\s)]+)\))/
+      /(?:https:\/\/[^/]+\/#\/pinboard\/([a-zA-Z0-9-]+)|\[.*?\]\(https:\/\/[^/]+\/#\/pinboard\/([a-zA-Z0-9-]+)\))/
     );
     const liveboardId = liveboardMatch ? (liveboardMatch[1] || liveboardMatch[2]) : null;
 
@@ -195,7 +204,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ visible, onClose }) => {
           padding: '8px 12px',
         }}
       >
-        <ReactMarkdown>{message.content}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkTags]}
+          components={{
+            // @ts-ignore - Custom tag component for ThoughtSpot tags
+            Tag: ({ node }: { node: any}) => <Tag style={{ cursor: 'pointer' }} color="blue" onClick={() => handleTagClick(node.properties.value)}>ThoughtSpot</Tag>,
+          }}
+        >
+          {message.content}
+        </ReactMarkdown>
         {message.isStreaming && (
           <Spin size="small" style={{ marginLeft: 8 }} />
         )}
@@ -209,50 +226,58 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ visible, onClose }) => {
   };
 
   return (
-    <Drawer
-      title="Chat Assistant"
-      placement="right"
-      onClose={onClose}
-      open={visible}
-      width={600}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
-          <List
-            dataSource={messages}
-            renderItem={(message) => (
-              <List.Item
-                style={{
-                  justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start',
-                  width: '100%',
-                }}
-              >
-                {renderMessage(message)}
-              </List.Item>
-            )}
-          />
-          <div ref={messagesEndRef} />
-        </div>
-        <div style={{ padding: '16px 0', borderTop: '1px solid #f0f0f0' }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Input.TextArea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              autoSize={{ minRows: 1, maxRows: 4 }}
-              disabled={isLoading}
+    <>
+      <Drawer
+        title="Chat Assistant"
+        placement="right"
+        onClose={onClose}
+        open={visible}
+        width={800}
+        zIndex={1000}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
+            <List
+              dataSource={messages}
+              renderItem={(message) => (
+                <List.Item
+                  style={{
+                    justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start',
+                    width: '100%',
+                  }}
+                >
+                  {renderMessage(message)}
+                </List.Item>
+              )}
             />
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading}
-            />
+            <div ref={messagesEndRef} />
+          </div>
+          <div style={{ padding: '16px 0', borderTop: '1px solid #f0f0f0' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Input.TextArea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                autoSize={{ minRows: 1, maxRows: 4 }}
+                disabled={isLoading}
+              />
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim() || isLoading}
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </Drawer>
+      </Drawer>
+      <Reference
+        visible={referenceVisible}
+        onClose={() => setReferenceVisible(false)}
+        content={referenceContent}
+      />
+    </>
   );
 };
 

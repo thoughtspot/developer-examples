@@ -38,14 +38,15 @@ export const getRelevantData = async (query: string, streamCb: (data: any) => vo
 
     const answers = await getAnswersForQuestions(questions, streamCb);
 
-    const additionalQuestions = await getRelevantQuestions(query, `
-        These questions have been answered already (with their csv data): ${answers.map((a) => `Question: ${a.question} \n CSV data: \n${a.data}`).join("\n\n ")}
-        Look at the csv data of the above queries to see if you need additional related queries to be answered. You can also ask questions going deeper into the data returned by applying filters.
-        Do NOT resend the same query already asked before.
-    `);
-    streamCb(`#### Need to get answers to some of these additional questions:\n ${additionalQuestions.map((q) => `- ${q}`).join("\n")}`);
+    // const additionalQuestions = await getRelevantQuestions(query, `
+    //     These questions have been answered already (with their csv data): ${answers.map((a) => `Question: ${a.question} \n CSV data: \n${a.data}`).join("\n\n ")}
+    //     Look at the csv data of the above queries to see if you need additional related queries to be answered. You can also ask questions going deeper into the data returned by applying filters.
+    //     Do NOT resend the same query already asked before.
+    // `);
+    // streamCb(`#### Need to get answers to some of these additional questions:\n ${additionalQuestions.map((q) => `- ${q}`).join("\n")}`);
 
-    const additionalAnswers = await getAnswersForQuestions(additionalQuestions, streamCb);
+    // const additionalAnswers = await getAnswersForQuestions(additionalQuestions, streamCb);
+    const additionalAnswers = [];
 
     const allAnswers = [...answers, ...additionalAnswers];
     const liveboard = await createLiveboard(query, allAnswers);

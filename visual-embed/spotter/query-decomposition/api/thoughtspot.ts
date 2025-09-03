@@ -81,6 +81,13 @@ export async function createLiveboard(name: string, answers: any[]) {
         import_policy: "ALL_OR_NONE",
     })
 
-    return `https://${THOUGHTSPOT_HOST}/#/pinboard/${resp[0].response.header.id_guid}`;
+    return ensureHttps(`${THOUGHTSPOT_HOST}/#/pinboard/${resp[0].response.header.id_guid}`);
+}
+
+function ensureHttps(url: string) {
+    if (!url.startsWith("https://")) {
+        return `https://${url}`;
+    }
+    return url;
 }
 
