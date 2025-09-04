@@ -1,11 +1,6 @@
 # Spotter Embed
 
-Write something about the example here. 
-
-Include, but not limited to:
-
-- How the code is structured
-- How to navigate when the demo is opened.
+Embed the ThoughtSpot spotter experience inside any app. You can customize the text, logo, and other styles to fit your application.
 
 ## Demo
 
@@ -13,8 +8,8 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 
 ## Documentation
 
-- Links to the Thoughtspot developer docs for the features used in this example.
-- ...
+- [Spotter Embed](https://developers.thoughtspot.com/docs/Class_SpotterEmbed)
+
 
 ## Run locally
 

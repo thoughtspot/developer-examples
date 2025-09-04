@@ -1,0 +1,33 @@
+.mcp-list {
+    .ant-collapse-header {
+        align-items: center !important;
+    }
+
+    .menu-btn {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+        cursor: pointer;
+    }
+
+    .ant-collapse-item:hover {
+        .menu-btn {
+            visibility: visible;
+            opacity: 1;
+        }
+    }
+
+    .ant-collapse-content-box {
+        padding: 0 !important;
+    }
+}
+
+.add-mcp-modal {
+    .ant-card-body {
+        padding: 10px !important;
+    }
+
+    .ant-typography-secondary {
+        line-height: 18px !important;
+    }
+}

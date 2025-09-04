@@ -1,0 +1,5 @@
+asyncio==4.0.0
+dotenv==0.9.9
+email_validator==2.2.0
+fastmcp==2.11.3
+pip==24.3.1
