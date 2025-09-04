@@ -1,4 +1,4 @@
-# spotter-agent-embed
+# Spotter Agent Embed
 
 This is a small example of how embed spotter into your own agent if you have one. The example creates a simple agent using Gemini-flash model's function calling capability.
 
@@ -9,33 +9,69 @@ the actual API call to run the query on ThoughtSpot and return the ThoughtSpot v
 
 Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/spotter/spotter-agent-embed)
 
-## Documentation
+## 🚀 **Run Locally**
 
-- [API Reference](https://developers.thoughtspot.com/docs/Class_BodylessConversation) for the Spotter Agent Embed.
-- Full [tutorial](https://developers.thoughtspot.com/docs/tutorials/spotter/integrate-into-chatbot) on how to embed in your own chatbot.
+```bash
+# Get repo locally
+git clone https://github.com/thoughtspot/developer-examples
+cd visual-embed/spotter/spotter-agent-embed
+# Install dependencies
+npm install
 
-## Environment
-
-The `.env` file contains some default values. Change the value of `VITE_THOUGHTSPOT_HOST` and `VITE_TS_DATASOURCE_ID` to use on your own instance.
-
-## Run locally
-
-```
-$ git clone https://github.com/thoughtspot/developer-examples
-$ cd visual-embed/spotter/spotter-agent-embed
-```
-```
-$ npm i
-```
-```
-$ npm start
+# Start both services (Gemini agent + React app)
+npm start
 ```
 
-## Structure
+## 📋 **Environment Variables**
 
-- `api/simple-agent.ts` A simple agent node service, using Gemini. This would be your own agent.
-- `src/` React code for a chatbot using [Antd Pro chat](https://pro-chat.antdigital.dev/en-US/components/pro-chat#programming-operation-control)
+```bash
+# ThoughtSpot Configuration
+VITE_THOUGHTSPOT_HOST=your-thoughtspot-host
+VITE_TOKEN_SERVER=your-token-server  
+VITE_USERNAME=your-username
+VITE_TS_DATASOURCE_ID=your-worksheet-id
 
+# Gemini Configuration  
+GEMINI_API_KEY=your-gemini-api-key
+AGENT_PORT=4000
+```
+
+## 🔄 **How It Works**
+
+```
+User: "Sales per year"
+      ↓
+Gemini AI decides to call analyzeData function
+      ↓  
+ThoughtSpot Spotter generates visualization
+      ↓
+SpotterMessage displays the chart
+```
+
+## 📁 **Simple File Structure**
+
+- **`src/App.tsx`** - Main chat interface (everything in one file!)
+- **`api/simple-agent.ts`** - Gemini agent with function calling
+- **`src/service.ts`** - Simple API calls to Gemini agent
+
+## 💬 **Try These Queries**
+
+**Text Responses:**
+- "Hello"
+- "What can you help me with?"
+
+**Data Visualization:**  
+- "sales per year"
+- "taxes this year"
+- "Analyze revenue trends"
+
+## 📚 **Learn More**
+
+- [ThoughtSpot Visual Embed SDK](https://developers.thoughtspot.com/docs/visual-embed-sdk)
+- [Google Gemini Function Calling](https://ai.google.dev/docs/function_calling)
+- [ProChat Documentation](https://pro-chat.antdigital.dev/)
+
+---
 
 ### Technology labels
 
