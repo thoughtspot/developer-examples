@@ -1,0 +1,595 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		6E87910A2DC1DBBD001AB7E6 /* SwiftEmbedSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 6E8791092DC1DBBD001AB7E6 /* SwiftEmbedSDK */; };
+		6E8791322DC1F24E001AB7E6 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 6E8791312DC1F249001AB7E6 /* README.md */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		6E8790CB2DC1DA61001AB7E6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6E8790B22DC1DA5E001AB7E6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6E8790B92DC1DA5E001AB7E6;
+			remoteInfo = "swift-embed-sdk";
+		};
+		6E8790D52DC1DA61001AB7E6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6E8790B22DC1DA5E001AB7E6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6E8790B92DC1DA5E001AB7E6;
+			remoteInfo = "swift-embed-sdk";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		6E8790BA2DC1DA5E001AB7E6 /* swift-embed-sdk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "swift-embed-sdk.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E8790CA2DC1DA61001AB7E6 /* swift-embed-sdkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "swift-embed-sdkTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E8790D42DC1DA61001AB7E6 /* swift-embed-sdkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "swift-embed-sdkUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E8791312DC1F249001AB7E6 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		6E8790BC2DC1DA5E001AB7E6 /* swift-embed-sdk */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "swift-embed-sdk";
+			sourceTree = "<group>";
+		};
+		6E8790CD2DC1DA61001AB7E6 /* swift-embed-sdkTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "swift-embed-sdkTests";
+			sourceTree = "<group>";
+		};
+		6E8790D72DC1DA61001AB7E6 /* swift-embed-sdkUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "swift-embed-sdkUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6E8790B72DC1DA5E001AB7E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6E87910A2DC1DBBD001AB7E6 /* SwiftEmbedSDK in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6E8790C72DC1DA61001AB7E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6E8790D12DC1DA61001AB7E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		6E8790B12DC1DA5E001AB7E6 = {
+			isa = PBXGroup;
+			children = (
+				6E8791312DC1F249001AB7E6 /* README.md */,
+				6E8790BC2DC1DA5E001AB7E6 /* swift-embed-sdk */,
+				6E8790CD2DC1DA61001AB7E6 /* swift-embed-sdkTests */,
+				6E8790D72DC1DA61001AB7E6 /* swift-embed-sdkUITests */,
+				6E8790BB2DC1DA5E001AB7E6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6E8790BB2DC1DA5E001AB7E6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6E8790BA2DC1DA5E001AB7E6 /* swift-embed-sdk.app */,
+				6E8790CA2DC1DA61001AB7E6 /* swift-embed-sdkTests.xctest */,
+				6E8790D42DC1DA61001AB7E6 /* swift-embed-sdkUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6E8790B92DC1DA5E001AB7E6 /* swift-embed-sdk */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6E8790DE2DC1DA61001AB7E6 /* Build configuration list for PBXNativeTarget "swift-embed-sdk" */;
+			buildPhases = (
+				6E8790B62DC1DA5E001AB7E6 /* Sources */,
+				6E8790B72DC1DA5E001AB7E6 /* Frameworks */,
+				6E8790B82DC1DA5E001AB7E6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6E8790BC2DC1DA5E001AB7E6 /* swift-embed-sdk */,
+			);
+			name = "swift-embed-sdk";
+			packageProductDependencies = (
+				6E8791092DC1DBBD001AB7E6 /* SwiftEmbedSDK */,
+			);
+			productName = "swift-embed-sdk";
+			productReference = 6E8790BA2DC1DA5E001AB7E6 /* swift-embed-sdk.app */;
+			productType = "com.apple.product-type.application";
+		};
+		6E8790C92DC1DA61001AB7E6 /* swift-embed-sdkTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6E8790E12DC1DA61001AB7E6 /* Build configuration list for PBXNativeTarget "swift-embed-sdkTests" */;
+			buildPhases = (
+				6E8790C62DC1DA61001AB7E6 /* Sources */,
+				6E8790C72DC1DA61001AB7E6 /* Frameworks */,
+				6E8790C82DC1DA61001AB7E6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6E8790CC2DC1DA61001AB7E6 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6E8790CD2DC1DA61001AB7E6 /* swift-embed-sdkTests */,
+			);
+			name = "swift-embed-sdkTests";
+			packageProductDependencies = (
+			);
+			productName = "swift-embed-sdkTests";
+			productReference = 6E8790CA2DC1DA61001AB7E6 /* swift-embed-sdkTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		6E8790D32DC1DA61001AB7E6 /* swift-embed-sdkUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6E8790E42DC1DA61001AB7E6 /* Build configuration list for PBXNativeTarget "swift-embed-sdkUITests" */;
+			buildPhases = (
+				6E8790D02DC1DA61001AB7E6 /* Sources */,
+				6E8790D12DC1DA61001AB7E6 /* Frameworks */,
+				6E8790D22DC1DA61001AB7E6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6E8790D62DC1DA61001AB7E6 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6E8790D72DC1DA61001AB7E6 /* swift-embed-sdkUITests */,
+			);
+			name = "swift-embed-sdkUITests";
+			packageProductDependencies = (
+			);
+			productName = "swift-embed-sdkUITests";
+			productReference = 6E8790D42DC1DA61001AB7E6 /* swift-embed-sdkUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6E8790B22DC1DA5E001AB7E6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					6E8790B92DC1DA5E001AB7E6 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					6E8790C92DC1DA61001AB7E6 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 6E8790B92DC1DA5E001AB7E6;
+					};
+					6E8790D32DC1DA61001AB7E6 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 6E8790B92DC1DA5E001AB7E6;
+					};
+				};
+			};
+			buildConfigurationList = 6E8790B52DC1DA5E001AB7E6 /* Build configuration list for PBXProject "swift-embed-sdk" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 6E8790B12DC1DA5E001AB7E6;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6E8791082DC1DBBD001AB7E6 /* XCRemoteSwiftPackageReference "swift-embed-sdk" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6E8790BB2DC1DA5E001AB7E6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6E8790B92DC1DA5E001AB7E6 /* swift-embed-sdk */,
+				6E8790C92DC1DA61001AB7E6 /* swift-embed-sdkTests */,
+				6E8790D32DC1DA61001AB7E6 /* swift-embed-sdkUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6E8790B82DC1DA5E001AB7E6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6E8791322DC1F24E001AB7E6 /* README.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6E8790C82DC1DA61001AB7E6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6E8790D22DC1DA61001AB7E6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6E8790B62DC1DA5E001AB7E6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6E8790C62DC1DA61001AB7E6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6E8790D02DC1DA61001AB7E6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6E8790CC2DC1DA61001AB7E6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6E8790B92DC1DA5E001AB7E6 /* swift-embed-sdk */;
+			targetProxy = 6E8790CB2DC1DA61001AB7E6 /* PBXContainerItemProxy */;
+		};
+		6E8790D62DC1DA61001AB7E6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6E8790B92DC1DA5E001AB7E6 /* swift-embed-sdk */;
+			targetProxy = 6E8790D52DC1DA61001AB7E6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		6E8790DC2DC1DA61001AB7E6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		6E8790DD2DC1DA61001AB7E6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		6E8790DF2DC1DA61001AB7E6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"swift-embed-sdk/Preview Content\"";
+				DEVELOPMENT_TEAM = 7FG5XV4443;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thoughtspot.swift-embed-sdk";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6E8790E02DC1DA61001AB7E6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"swift-embed-sdk/Preview Content\"";
+				DEVELOPMENT_TEAM = 7FG5XV4443;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thoughtspot.swift-embed-sdk";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6E8790E22DC1DA61001AB7E6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FG5XV4443;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thoughtspot.swift-embed-sdkTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/swift-embed-sdk.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/swift-embed-sdk";
+			};
+			name = Debug;
+		};
+		6E8790E32DC1DA61001AB7E6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FG5XV4443;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thoughtspot.swift-embed-sdkTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/swift-embed-sdk.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/swift-embed-sdk";
+			};
+			name = Release;
+		};
+		6E8790E52DC1DA61001AB7E6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FG5XV4443;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thoughtspot.swift-embed-sdkUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "swift-embed-sdk";
+			};
+			name = Debug;
+		};
+		6E8790E62DC1DA61001AB7E6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FG5XV4443;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thoughtspot.swift-embed-sdkUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "swift-embed-sdk";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6E8790B52DC1DA5E001AB7E6 /* Build configuration list for PBXProject "swift-embed-sdk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6E8790DC2DC1DA61001AB7E6 /* Debug */,
+				6E8790DD2DC1DA61001AB7E6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6E8790DE2DC1DA61001AB7E6 /* Build configuration list for PBXNativeTarget "swift-embed-sdk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6E8790DF2DC1DA61001AB7E6 /* Debug */,
+				6E8790E02DC1DA61001AB7E6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6E8790E12DC1DA61001AB7E6 /* Build configuration list for PBXNativeTarget "swift-embed-sdkTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6E8790E22DC1DA61001AB7E6 /* Debug */,
+				6E8790E32DC1DA61001AB7E6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6E8790E42DC1DA61001AB7E6 /* Build configuration list for PBXNativeTarget "swift-embed-sdkUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6E8790E52DC1DA61001AB7E6 /* Debug */,
+				6E8790E62DC1DA61001AB7E6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6E8791082DC1DBBD001AB7E6 /* XCRemoteSwiftPackageReference "swift-embed-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/thoughtspot/swift-embed-sdk";
+			requirement = {
+				kind = exactVersion;
+				version = "0.0.1-alpha";
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6E8791092DC1DBBD001AB7E6 /* SwiftEmbedSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6E8791082DC1DBBD001AB7E6 /* XCRemoteSwiftPackageReference "swift-embed-sdk" */;
+			productName = SwiftEmbedSDK;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 6E8790B22DC1DA5E001AB7E6 /* Project object */;
+}
