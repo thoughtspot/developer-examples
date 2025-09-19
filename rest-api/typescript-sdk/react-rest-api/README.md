@@ -38,7 +38,7 @@ $ npm run dev
 ### Run token server
 
 ```
-$ npm run start-token-server
+$ npm run token-server
 ```
 
 ### Technology labels
