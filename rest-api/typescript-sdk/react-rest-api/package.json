@@ -12,7 +12,7 @@
     "start": "npm run token-server & vite"
   },
   "dependencies": {
-    "@thoughtspot/rest-api-sdk": "^2.12.1",
+    "@thoughtspot/rest-api-sdk": "^2.17.1",
     "express": "^4.21.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
