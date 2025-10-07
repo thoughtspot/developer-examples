@@ -100,7 +100,7 @@ Ask the ThoughtSpot support to run the flag to remove the header from the export
 
 ## Learn More
 
-- [ThoughtSpot REST API Documentation](https://developers.thoughtspot.com/docs/rest-api-reference)
+- [ThoughtSpot REST API Documentation](https://developers.thoughtspot.com/docs/rest-apiv2-reference)
 - [ThoughtSpot REST API SDK](https://www.npmjs.com/package/@thoughtspot/rest-api-sdk)
-- [Spotter AI Documentation](https://developers.thoughtspot.com/docs/spotter-ai)
+- [Spotter Tutorial](https://developers.thoughtspot.com/docs/tutorials/spotter/integrate-into-chatbot)
 
