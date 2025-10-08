@@ -11,6 +11,7 @@ Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/
 - Links to the Thoughtspot developer docs for the features used in this example.
 - [Rest Api Reference](https://developers.thoughtspot.com/docs/rest-apiv2-reference)
 - [Rest Api Sdk](https://developers.thoughtspot.com/docs/rest-api-sdk)
+- [Developer Examples]((https://github.com/thoughtspot/developer-examples))
 
 ## File structure
 .
@@ -38,7 +39,7 @@ $ npm run dev
 ### Run token server
 
 ```
-$ npm run start-token-server
+$ npm run token-server
 ```
 
 ### Technology labels
