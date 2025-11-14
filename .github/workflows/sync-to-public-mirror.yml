@@ -3,8 +3,6 @@ name: Sync Repository to Public Mirror
 on:
   pull_request:
     types: [closed]
-    # No branches filter means it will trigger for ALL branches
-    # If you want to sync main branch then add:
     branches:
      - main
   workflow_dispatch:
