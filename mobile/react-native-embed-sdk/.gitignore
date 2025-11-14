@@ -1,0 +1,71 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Build
+build/
+android/app/build/
+ios/build/
+
+# Bundle artifacts
+*.jsbundle
+*.bundle
+*.map
+
+# macOS
+.DS_Store
+*.pem
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+xcuserdata/
+*.xcworkspace
+
+# Temp files
+*.log
+*.tmp
+*.temp
+
+# Pods
+ios/Pods/

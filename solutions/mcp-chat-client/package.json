@@ -1,0 +1,42 @@
+{
+  "name": "mcp-chat-client",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "local2": "tsx --env-file=.env.local local/index.ts",
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
+    "@modelcontextprotocol/sdk": "^1.17.4",
+    "@supabase/supabase-js": "^2.55.0",
+    "@thoughtspot/visual-embed-sdk": "latest",
+    "@types/react-router-dom": "^5.3.3",
+    "@vercel/edge": "^1.2.2",
+    "antd": "^5.27.1",
+    "hono": "^4.9.2",
+    "lodash": "^4.17.21",
+    "openai": "^5.16.0",
+    "openid-client": "^6.6.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.8.2",
+    "redis": "^5.8.2",
+    "sass-embedded": "^1.91.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "tsx": "^4.20.5",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.5"
+  }
+}

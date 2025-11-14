@@ -1,0 +1,33 @@
+#root {
+  margin: 0 auto;
+  width: 100%;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #DDDDDD;
+}
+
+.logo {
+  height: 3em;
+  padding-right: 1rem;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.content-container {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding-top: 20px; 
+}

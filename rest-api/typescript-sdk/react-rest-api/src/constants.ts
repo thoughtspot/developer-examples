@@ -1,0 +1,3 @@
+export const THOUGHTSPOT_HOST = import.meta.env.VITE_THOUGHTSPOT_HOST;
+export const THOUGHTSPOT_USERNAME = import.meta.env.VITE_THOUGHT_SPOT_USERNAME;
+export const THOUGHTSPOT_PASSWORD = import.meta.env.VITE_THOUGHT_SPOT_PASSWORD;

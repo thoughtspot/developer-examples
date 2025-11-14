@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Token</title>
+</head>
+<body>
+    <h1>Generated Token</h1>
+    <pre id="tokenOutput">Fetching token...</pre>
+
+    <script>
+        fetch('/generate-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(result => {
+            document.getElementById("tokenOutput").innerText = JSON.stringify(result, null, 2) || "Failed to retrieve token.";
+        })
+        .catch(error => {
+            console.error("Error fetching token:", error);
+            document.getElementById("tokenOutput").innerText = `Error fetching token: ${error.message}`;
+        });
+    </script>
+</body>
+</html>

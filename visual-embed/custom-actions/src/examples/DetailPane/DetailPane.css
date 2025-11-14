@@ -1,0 +1,25 @@
+#detail-pane {
+  height: 250px;
+  overflow: auto;
+  display: none;
+}
+
+.tabular-table {
+  padding: 10px;
+  margin: 10px;
+}
+
+.tabular-data-body tr:nth-child(odd) {
+  background-color: grey;
+  color: floralwhite;
+}
+
+.tabular-data-body tr:nth-child(even) {
+  background-color: lightgray;
+  color: white;
+}
+
+td {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Token</title>
+  </head>
+  <body>
+    <h1>Created User</h1>
+    <pre id="createdUserOutput">Creating user...</pre>
+
+    <label for="string1">org_identifier1:</label>
+    <input type="text" id="string1" /><br /><br />
+
+    <label for="string2">org_identifier2:</label>
+    <input type="text" id="string2" /><br /><br />
+
+    <button onclick="submitUser()">Submit</button>
+    <p id="response"></p>
+
+    <script>
+      async function submitUser() {
+        const org1 = document.getElementById('string1').value;
+        const org2 = document.getElementById('string2').value;
+
+        fetch('/create-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ org1, org2 })
+        })
+        .then(response => response.json())
+        .then(result => {
+            document.getElementById("createdUserOutput").innerText = JSON.stringify(result, null, 2) || "Failed to create user.";
+        })
+        .catch(error => {
+            console.error("Error creating user:", error);
+            document.getElementById("createdUserOutput").innerText = `Error creating user: ${error.message}`;
+        });
+      }
+    </script>
+  </body>
+</html>

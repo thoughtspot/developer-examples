@@ -1,0 +1,22 @@
+{
+  "name": "developer-examples",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">     <img src=\"https://raw.githubusercontent.com/thoughtspot/visual-embed-sdk/main/static/doc-images/images/TS-Logo-black-no-bg.svg\" width=120 align=\"center\" alt=\"ThoughtSpot\" />     <h3 align=\"center\">ThoughtSpot Developer Examples</h3> </p>",
+  "main": "index.js",
+  "scripts": {
+    "new-example": "tsx ./node_modules/.bin/plop example",
+    "lint": "eslint ."
+  },
+  "author": "ashish.shubham@thoughtspot.com",
+  "license": "ISC",
+  "devDependencies": {
+    "plop": "^4.0.1",
+    "readdir-enhanced": "^6.0.4",
+    "tsx": "^4.19.2",
+    "@eslint/js": "^9.22.0",
+    "eslint": "^9.22.0",
+    "eslint-plugin-react": "^7.37.4",
+    "globals": "^16.0.0",
+    "typescript-eslint": "^8.26.0"
+  }
+}

@@ -1,0 +1,20 @@
+{
+    "name": "trusted-auth-server",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "start": "tsx --env-file=.env index.ts"
+    },
+    "dependencies": {
+        "axios": "^1.8.4",
+        "body-parser": "^2.2.0",
+        "cors": "^2.8.5",
+        "express": "^4.21.2",
+        "morgan": "^1.10.1",
+        "tsx": "^4.20.4"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.0"
+    }
+}

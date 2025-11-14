@@ -1,0 +1,15 @@
+name: Jenkins Trigger - Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  jenkins-security-check:
+    uses: thoughtspot/workflows/.github/workflows/jenkins-trigger.yml@main
+    secrets:
+      JENKINS_USER: ${{ secrets.JENKINS_USER }}
+      JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}

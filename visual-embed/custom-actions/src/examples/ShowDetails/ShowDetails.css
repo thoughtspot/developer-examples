@@ -1,0 +1,10 @@
+#embed-popup {
+  height: 45vh;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.tabular-data {
+  table-layout: fixed;
+  width: 100%;
+}

@@ -1,0 +1,16 @@
+{
+    "name": "-- PLOP EXAMPLE NAME HERE --",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "start": "tsx src/index.ts"
+    },
+    "dependencies": {
+        "express": "^4.21.2",
+        "tsx": "^4.20.4"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.0"
+    }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cookieless-embed",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "token-server": "tsx --env-file=.env api/token-service.ts",
+    "dev": "vite --port 3000",
+    "build": "tsc -b && vite build",
+    "start": "npm run token-server & vite",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@thoughtspot/rest-api-sdk": "^2.12.1",
+    "@thoughtspot/visual-embed-sdk": "latest",
+    "express": "^4.21.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.5"
+  }
+}

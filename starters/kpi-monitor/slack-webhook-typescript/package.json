@@ -1,0 +1,25 @@
+{
+  "name": "slack-webhook-typescript",
+  "version": "1.0.0",
+  "description": "An app that forwards monitor alerts to Slack.",
+  "main": "dist/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "nodemon --watch \"src/**\" --ext \"ts,json\"  --exec \"ts-node src/main.ts\""
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@slack/web-api": "^7.9.1",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "typescript": "^5.8.3"
+  }
+}
