@@ -29,7 +29,7 @@ an embed. Supports trusted auth and other standard thoughtspot customizations.
 
 - Python 3.10+
 - Node.js 18+
-- OpenAI API key
+- Azure OpenAI endpoint and API key (or an OpenAI-compatible endpoint)
 - ThoughtSpot instance with:
   - Host URL
   - Authentication token (Bearer token)
@@ -38,7 +38,7 @@ an embed. Supports trusted auth and other standard thoughtspot customizations.
 
 ### 1. Configure environment
 
-From the project root (`python-agent-simple-ui/`):
+From the project root (`python-react-agent-simple-ui/`):
 
 ```bash
 cp env.template .env
@@ -47,13 +47,16 @@ cp env.template .env
 Edit `.env` with your credentials:
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
-TS_HOST=your-instance.thoughtspot.cloud
-TS_AUTH_TOKEN=your_thoughtspot_bearer_token
+# Server-side (used by the Python agent)
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/openai/v1
+AZURE_OPENAI_KEY=your_azure_openai_key_here
+
+# Client-side (prefix with VITE_ so Vite exposes them to the browser)
 VITE_TS_HOST=your-instance.thoughtspot.cloud
+VITE_TS_AUTH_TOKEN=your_thoughtspot_bearer_token
 ```
 
-Both the Python server and the Vite client read from this single `.env` file. Variables prefixed with `VITE_` are exposed to the browser via `import.meta.env`.
+The Python server reads `AZURE_OPENAI_*` and `VITE_TS_*` variables from this `.env` file. The Vite client reads variables prefixed with `VITE_` via `import.meta.env`.
 
 ### 2. Start the backend
 
@@ -82,7 +85,7 @@ Open `http://localhost:5173` in your browser. The Vite dev server proxies `/api`
 ## Project Structure
 
 ```
-python-agent-simple-ui/
+python-react-agent-simple-ui/
 ├── .env                   # Shared env vars (create from env.template)
 ├── env.template           # Environment variable template
 ├── server/
@@ -136,14 +139,13 @@ MCP_TOOL = {
 }
 ```
 
-### Use Azure OpenAI
+### Use standard OpenAI instead of Azure
 
-Update the client initialization:
+Update the `.env` variables and client initialization in `server/agent.py`:
 
 ```python
 openai_client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
-    base_url="https://your-resource.openai.azure.com/openai/v1",
 )
 ```
 
@@ -151,8 +153,8 @@ openai_client = OpenAI(
 
 | Issue | Fix |
 |---|---|
-| `OPENAI_API_KEY not found` | Make sure `.env` exists in the project root and contains your key |
-| ThoughtSpot auth errors | Verify `TS_AUTH_TOKEN` is valid and `TS_HOST` has no `https://` prefix |
+| `AZURE_OPENAI_KEY` / endpoint errors | Make sure `.env` exists in the project root and contains valid Azure OpenAI credentials |
+| ThoughtSpot auth errors | Verify `VITE_TS_AUTH_TOKEN` is valid and `VITE_TS_HOST` is correct |
 | CORS errors in browser | Ensure FastAPI server is running on port 8000 |
 | Blank responses | Check FastAPI logs for streaming errors |
 
