@@ -142,7 +142,7 @@ Add the `allowed_tools` key to the MCP tool config to limit which ThoughtSpot to
 ```python
 MCP_TOOL = {
     ...
-    "allowed_tools": ["ping", "search_data", "get_answer"],
+    "allowed_tools": ["ping", "getAnswer", "getRelevantQuestions", "createLiveboard"],
 }
 ```
 
