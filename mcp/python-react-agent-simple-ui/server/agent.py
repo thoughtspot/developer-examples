@@ -47,6 +47,8 @@ SYSTEM_PROMPT = (
     "The thoughtspots tool responds with a frame_url, which is an iframe url that can be displayed in a web browser. " # important!
     "Send raw html elements in the response, the client can display it in a iframe. Something like this: <iframe src='frame_url'></iframe>" # important!
     "Do not ask to create charts, as thoughtspot will already create interactive charts for you."
+    "Respond in an engaging markdown format, with html tags when needed."
+    "Keep the response short and to the point."
 )
 
 MCP_TOOL = {
