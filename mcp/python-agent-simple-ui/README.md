@@ -2,7 +2,8 @@
 
 A full-stack example that pairs a **Python (FastAPI) agent** powered by the OpenAI Responses API and ThoughtSpot MCP server with a **React chat UI**.
 
-The backend streams responses to the frontend using Server-Sent Events (SSE), giving users a real-time chat experience while the agent queries ThoughtSpot for data insights.
+The backend streams responses to the frontend using Server-Sent Events (SSE), giving users a real-time chat experience while the agent queries ThoughtSpot for data insights and displays ThoughtSpot charts in
+an embed. Supports trusted auth and other standard thoughtspot customizations.
 
 ## Screenshot
 
