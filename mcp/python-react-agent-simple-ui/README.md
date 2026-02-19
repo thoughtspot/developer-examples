@@ -36,7 +36,14 @@ an embed. Supports trusted auth and other standard thoughtspot customizations.
 
 ## Quick Start
 
-### 1. Configure environment
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/thoughtspot/developer-examples.git
+cd developer-examples/mcp/python-react-agent-simple-ui
+```
+
+### 2. Configure environment
 
 From the project root (`python-react-agent-simple-ui/`):
 
@@ -58,7 +65,7 @@ VITE_TS_AUTH_TOKEN=your_thoughtspot_bearer_token
 
 The Python server reads `AZURE_OPENAI_*` and `VITE_TS_*` variables from this `.env` file. The Vite client reads variables prefixed with `VITE_` via `import.meta.env`.
 
-### 2. Start the backend
+### 3. Start the backend
 
 ```bash
 cd server
@@ -70,7 +77,7 @@ uvicorn agent:app --reload
 
 The API will be running at `http://localhost:8000`.
 
-### 3. Start the frontend
+### 4. Start the frontend
 
 In a separate terminal:
 
