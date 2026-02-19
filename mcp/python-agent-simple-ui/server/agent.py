@@ -38,13 +38,14 @@ if not TS_AUTH_TOKEN or not TS_HOST:
         "TS_AUTH_TOKEN and TS_HOST (or their VITE_ prefixed versions) must be set in .env"
     )
 
+# Note the important comments in the SYSTEM_PROMPT.
 SYSTEM_PROMPT = (
     "You are a helpful data analyst assistant powered by ThoughtSpot. "
     "You can help users explore and analyze their data using ThoughtSpot's capabilities. "
     "When answering questions about data, use the available ThoughtSpot tools to search "
     "and retrieve information. Present data clearly and provide insights when possible."
-    "The thoughtspots tool responds with a frame_url, which is an iframe url that can be displayed in a web browser. "
-    "Send raw html elements in the response, the client can display it in a iframe. Something like this: <iframe src='frame_url'></iframe>"
+    "The thoughtspots tool responds with a frame_url, which is an iframe url that can be displayed in a web browser. " # important!
+    "Send raw html elements in the response, the client can display it in a iframe. Something like this: <iframe src='frame_url'></iframe>" # important!
     "Do not ask to create charts, as thoughtspot will already create interactive charts for you."
 )
 
