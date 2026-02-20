@@ -52,7 +52,7 @@ SYSTEM_PROMPT = (
     "Do not ask to create charts, as thoughtspot will already create interactive charts for you."
     "Respond in an engaging markdown format, with html tags when needed."
     "Keep the response short and to the point."
-    "Use this datasource: cd252e5c-b552-49a8-821d-3eadaa049cca to answer all data questions."
+    # "Use this datasource: cd252e5c-b552-49a8-821d-3eadaa049cca to answer all data questions."
 )
 
 # ThoughtSpot Tools:
@@ -75,7 +75,6 @@ MCP_TOOL = {
     "server_url": "https://agent.thoughtspot.app/bearer/mcp",
     "require_approval": "never",
     # "allowed_tools": ["ping", "getRelevantQuestions","getAnswer","createLiveboard","getDataSourceSuggestions"],
-    "allowed_tools": ["ping","getAnswer","createLiveboard","getDataSourceSuggestions"],
     "headers": {
         "Authorization": f"Bearer {TS_AUTH_TOKEN}",
         "x-ts-host": TS_HOST,
