@@ -39,6 +39,9 @@ if not TS_AUTH_TOKEN or not TS_HOST:
     )
 
 # Note the important comments in the SYSTEM_PROMPT.
+# To customize the behavior of the MCP agent, add instructions to the SYSTEM_PROMPT.
+# Commented example below: Forces the agent to use the (Sample) Retail - Apparel datasource for all questions.
+# Can be paired with the allowed_tools parameter in the MCP_TOOL config below to control what the MCP Server will do
 SYSTEM_PROMPT = (
     "You are a helpful data analyst assistant powered by ThoughtSpot. "
     "You can help users explore and analyze their data using ThoughtSpot's capabilities. "
@@ -49,7 +52,21 @@ SYSTEM_PROMPT = (
     "Do not ask to create charts, as thoughtspot will already create interactive charts for you."
     "Respond in an engaging markdown format, with html tags when needed."
     "Keep the response short and to the point."
+    "Use this datasource: cd252e5c-b552-49a8-821d-3eadaa049cca to answer all data questions."
 )
+
+# ThoughtSpot Tools:
+# To specify exactly which Spotter tools should be accessible to the agent, use the allowed_tools parameter.
+# In the MCP_TOOL config below and list the tools that are allowed to be used.
+# All tools are allowed by default.
+#
+# ping: Test connectivity and authentication.
+# getRelevantQuestions: Get relevant data questions from ThoughtSpot analytics based on a user query.
+# getAnswer: Get the answer to a specific question from ThoughtSpot analytics.
+# createLiveboard: Create a liveboard from a list of answers.
+# getDataSourceSuggestions: Get datasource suggestions for a given query.
+# To specify exactly which Spotter tools should be accessible to the agent, use the allowed_tools parameter.
+# In the MCP_TOOL config below and list the tools that are allowed to be used.
 
 MCP_TOOL = {
     "type": "mcp",
@@ -57,6 +74,8 @@ MCP_TOOL = {
     "server_description": "Data analysis and visualization tool for searching and exploring business data",
     "server_url": "https://agent.thoughtspot.app/bearer/mcp",
     "require_approval": "never",
+    # "allowed_tools": ["ping", "getRelevantQuestions","getAnswer","createLiveboard","getDataSourceSuggestions"],
+    "allowed_tools": ["ping","getAnswer","createLiveboard","getDataSourceSuggestions"],
     "headers": {
         "Authorization": f"Bearer {TS_AUTH_TOKEN}",
         "x-ts-host": TS_HOST,

@@ -125,35 +125,92 @@ python-react-agent-simple-ui/
 - Shows **real-time status** while the agent connects to and queries ThoughtSpot
 - Tracks `response_id` across turns for seamless multi-turn conversation
 
-## Customization
+## Customizations
 
-### Change the model
+### 1. OpenAI Configuration (`server/agent.py`)
 
-In `server/agent.py`, modify the `model` parameter:
+#### Change the model
+
+Modify the `model` parameter in the `/api/chat` handler:
 
 ```python
 "model": "gpt-5",  # or gpt-5-mini, gpt-4.1-mini, etc.
 ```
 
-### Restrict available tools
+#### Use Standard OpenAI Instead of Azure
 
-Add the `allowed_tools` key to the MCP tool config to limit which ThoughtSpot tools the agent can use:
-
-```python
-MCP_TOOL = {
-    ...
-    "allowed_tools": ["ping", "getAnswer", "getRelevantQuestions", "createLiveboard"],
-}
-```
-
-### Use standard OpenAI instead of Azure
-
-Update the `.env` variables and client initialization in `server/agent.py`:
+Update the `.env` variables and client initialization:
 
 ```python
 openai_client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
 )
+```
+
+---
+
+### 2. Spotter MCP customizations (`server/agent.py`)
+
+#### System Prompt
+
+Edit the `SYSTEM_PROMPT` string to change how the agent behaves — tone, focus areas, or which datasource to use. For example, you can force a specific datasource by uncommenting the line at the end of the prompt:
+
+```python
+SYSTEM_PROMPT = (
+    "You are a helpful data analyst assistant powered by ThoughtSpot. "
+    # ...
+    # "Use this datasource: cd252e5c-b552-49a8-821d-3eadaa049cca to answer all data questions."
+)
+```
+
+#### Restrict Available Tools
+
+The `MCP_TOOL` config controls which ThoughtSpot tools the agent can call. By default every tool is available. Uncomment and edit the `allowed_tools` list to restrict access:
+
+```python
+MCP_TOOL = {
+    ...
+    "allowed_tools": [
+        "ping",                    # Test connectivity and authentication
+        "getRelevantQuestions",     # Get suggested questions for a query
+        "getAnswer",               # Get the answer to a specific question
+        "createLiveboard",         # Create a liveboard from a list of answers
+        "getDataSourceSuggestions", # Get datasource suggestions for a query
+    ],
+}
+```
+
+---
+
+### 3. Visual Embed customizations (`client/src/App.jsx`)
+
+All ThoughtSpot embed styling is configured in the `init()` call at the top of **`client/src/App.jsx`**.
+
+#### Style customization via CSS variables
+
+Pass a `customizations.style.customCSS.variables` object to `init()` to override ThoughtSpot's built-in CSS variables. The example below makes secondary buttons and menus use a yellow color scheme with rounded corners:
+
+```javascript
+init({
+  thoughtSpotHost: import.meta.env.VITE_TS_HOST,
+  authType: AuthType.TrustedAuthTokenCookieless,
+  getAuthToken: async () => {
+    return import.meta.env.VITE_TS_AUTH_TOKEN;
+  },
+  customizations: {
+    style: {
+      customCSS: {
+        variables: {
+          "--ts-var-button-border-radius": "10px",
+          "--ts-var-button--secondary-background": "#FDE9AF",
+          "--ts-var-button--secondary--hover-background": "#FCD977",
+          "--ts-var-menu-background": "#FDE9AF",
+          // Full list of variables: https://developers.thoughtspot.com/docs/custom-css
+        },
+      },
+    },
+  },
+});
 ```
 
 ## Troubleshooting

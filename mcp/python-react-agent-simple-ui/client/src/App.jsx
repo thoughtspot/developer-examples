@@ -12,6 +12,25 @@ init({
   getAuthToken: async () => {
     return import.meta.env.VITE_TS_AUTH_TOKEN; // Do not use in production, use a secure token fetching logic.
   },
+  // Customize the style of the ThoughtSpot embed
+  // The example below will make secondary buttons square and yellow
+  // As well as make the menu background yellow and the menu item hover background yellow
+  
+  // customizations: {
+  //   style: {
+  //     customCSS: {
+  //       variables: {
+  //         "--ts-var-button-border-radius": "10px",
+  //         "--ts-var-button--icon-border-radius": "10px",
+  //         "--ts-var-button--secondary-background": "#FDE9AF",
+  //         "--ts-var-button--secondary--hover-background": "#FCD977",
+  //         "--ts-var-button--secondary--active-background": "#FCC838",
+  //         "--ts-var-menu-background": "#FDE9AF",
+  //         "--ts-var-menu--hover-background": "#FCD977",
+  //       },
+  //     },
+  //   },
+  // },
 });
 
 startAutoMCPFrameRenderer({
