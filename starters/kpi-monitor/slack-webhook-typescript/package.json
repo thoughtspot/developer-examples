@@ -12,7 +12,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@slack/web-api": "^7.9.1",
+    "@slack/web-api": "^7.13.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "nodemon": "^3.1.9",
