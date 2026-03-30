@@ -1,6 +1,42 @@
+<!-- search-meta
+tags: [AnswerService, SearchEmbed, React, TypeScript, data-fetch, pagination]
+apis: [AnswerService, SearchEmbed, getAnswerService, fetchData, getUnderlyingData, useEmbedRef]
+questions:
+  - How do I fetch raw data from ThoughtSpot programmatically without displaying it?
+  - How do I use AnswerService to get data from a ThoughtSpot search?
+  - How do I paginate through ThoughtSpot answer results?
+  - How do I get the underlying source data behind a ThoughtSpot visualization?
+-->
+
 # ThoughtSpot AnswerService Example
 
 This example demonstrates how to use the AnswerService from the ThoughtSpot Visual Embed SDK to programmatically fetch data and interact with ThoughtSpot answers.
+
+## Key Usage
+
+```typescript
+import { SearchEmbed, useEmbedRef } from "@thoughtspot/visual-embed-sdk/react";
+
+// Use embedRef to access AnswerService after search
+const embedRef = useEmbedRef();
+
+const fetchData = async () => {
+  if (embedRef.current) {
+    const service = await embedRef.current.getAnswerService();
+    const data = await service.fetchData();      // paginated raw data
+    const underlying = await service.getUnderlyingData(); // source rows
+    console.log(data);
+  }
+};
+
+return (
+  <SearchEmbed
+    ref={embedRef}
+    frameParams={{ height: "90vh", width: "100%" }}
+    dataSource="your-datasource-id"
+  />
+);
+```
 
 ## Demo
 Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/answer-service)

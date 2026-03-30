@@ -1,3 +1,13 @@
+<!-- search-meta
+tags: [KPI-monitor, webhook, Slack, Python, FastAPI, alerts, notifications]
+apis: [KPIMonitorWebhook, SlackWebhookAPI, FastAPI]
+questions:
+  - How do I send ThoughtSpot KPI monitor alerts to Slack using Python?
+  - How do I build a Python FastAPI webhook for ThoughtSpot KPI alerts?
+  - How do I handle ThoughtSpot KPI webhook payloads in Python?
+  - How do I integrate ThoughtSpot KPI monitor with Slack using FastAPI?
+-->
+
 # Slack webhook (Python)
 
 A simple webhook made with Python and FastAPI that forwards a KPI monitor alert through webhooks to a Slack channel. The message would look like this:
@@ -5,6 +15,29 @@ A simple webhook made with Python and FastAPI that forwards a KPI monitor alert 
 ![Slack message](./img/slack-message.png)
 
 This app exposes a single endpoint `/send-to-slack` that accepts POST requests from KPI Monitor. It then builds a Slack message and sends it to a Slack channel configured in the `.env` file.
+
+## Key Usage
+
+```python
+from fastapi import FastAPI
+from slack_sdk import WebClient
+
+app = FastAPI()
+slack = WebClient(token=os.environ["SLACK_TOKEN"])
+
+# ThoughtSpot KPI Monitor calls this endpoint when an alert fires
+@app.post("/send-to-slack")
+async def send_to_slack(payload: dict):
+    data = payload["data"]["scheduledMetricUpdateWebhookNotification"]
+    rule_name = data["monitorRuleForWebhook"]["ruleName"]
+    change = data["ruleExecutionDetails"]["percentageChange"]
+
+    slack.chat_postMessage(
+        channel=os.environ["SLACK_CHANNEL"],
+        text=f"📊 Alert: {rule_name} — {change}% change detected",
+    )
+    return {"ok": True}
+```
 
 File structure:
 

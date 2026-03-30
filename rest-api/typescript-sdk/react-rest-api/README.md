@@ -1,6 +1,45 @@
+<!-- search-meta
+tags: [typescript-sdk, REST-API, React, TypeScript, liveboard-list, rest-api-sdk]
+apis: [ThoughtSpotRestApi, createBearerAuthenticationConfig, searchLiveboards, REST-API-v2]
+questions:
+  - How do I use the ThoughtSpot REST API SDK in a React application?
+  - How do I fetch a list of liveboards using the ThoughtSpot REST API SDK?
+  - How do I display ThoughtSpot content in React using the REST API?
+  - How do I authenticate with the ThoughtSpot REST API from a React frontend?
+-->
+
 # react-rest-api
 
 This example demonstrates how to use the ThoughtSpot REST API SDK to call ThoughtSpot's v2 REST API in a React application.
+
+## Key Usage
+
+```typescript
+import { createBearerAuthenticationConfig, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk";
+import { useEffect, useState } from "react";
+
+const config = createBearerAuthenticationConfig(
+  "https://your-instance.thoughtspot.cloud",
+  async () => fetchTokenFromYourServer(),
+);
+const tsClient = new ThoughtSpotRestApi(config);
+
+const LiveboardList = () => {
+  const [liveboards, setLiveboards] = useState([]);
+
+  useEffect(() => {
+    tsClient.searchLiveboards({}).then(setLiveboards);
+  }, []);
+
+  return (
+    <ul>
+      {liveboards.map((lb) => (
+        <li key={lb.id}>{lb.name}</li>
+      ))}
+    </ul>
+  );
+};
+```
 
 ## Demo
 

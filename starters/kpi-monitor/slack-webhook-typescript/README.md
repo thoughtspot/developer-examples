@@ -1,3 +1,13 @@
+<!-- search-meta
+tags: [KPI-monitor, webhook, Slack, TypeScript, Express, NodeJS, alerts, notifications]
+apis: [KPIMonitorWebhook, SlackWebhookAPI, Express]
+questions:
+  - How do I send ThoughtSpot KPI monitor alerts to Slack?
+  - How do I build a TypeScript webhook receiver for ThoughtSpot KPI alerts?
+  - How do I integrate ThoughtSpot KPI monitor with Slack notifications?
+  - How do I handle ThoughtSpot webhook payloads in Node.js Express?
+-->
+
 # Slack webhook (Typescript)
 
 A simple webhook made with TypeScript and Express that forwards a KPI monitor alert through webhooks to a Slack channel. The message would look like this:
@@ -5,6 +15,31 @@ A simple webhook made with TypeScript and Express that forwards a KPI monitor al
 ![Slack message](./img/slack-message.png)
 
 This app exposes a single endpoint `/send-to-slack` that accepts POST requests from KPI Monitor. It then builds a Slack message and sends it to a Slack channel configured in the `.env` file.
+
+## Key Usage
+
+```typescript
+import express from "express";
+import { WebClient } from "@slack/web-api";
+
+const app = express();
+const slack = new WebClient(process.env.SLACK_TOKEN);
+
+// ThoughtSpot KPI Monitor calls this endpoint when an alert fires
+app.post("/send-to-slack", async (req, res) => {
+  const { monitorRuleForWebhook, ruleExecutionDetails } = req.body.data
+    .scheduledMetricUpdateWebhookNotification;
+
+  await slack.chat.postMessage({
+    channel: process.env.SLACK_CHANNEL,
+    text: `📊 Alert: ${monitorRuleForWebhook.ruleName} — ${ruleExecutionDetails.percentageChange}% change detected`,
+  });
+
+  res.json({ ok: true });
+});
+
+app.listen(3000);
+```
 
 File structure:
 

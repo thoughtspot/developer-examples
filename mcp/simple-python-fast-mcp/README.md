@@ -1,3 +1,13 @@
+<!-- search-meta
+tags: [MCP, Python, FastMCP, tool-discovery, bearer-token, ThoughtSpot-MCP]
+apis: [ThoughtSpotMCPServer, FastMCP, bearerToken, listTools]
+questions:
+  - How do I connect to ThoughtSpot MCP server using Python?
+  - How do I discover available tools in ThoughtSpot MCP server?
+  - How do I test ThoughtSpot MCP server connectivity in Python?
+  - How do I use FastMCP to connect to ThoughtSpot?
+-->
+
 # Simple Python FastMCP Example
 
 This example demonstrates how to use the FastMCP Python client to connect to ThoughtSpot's Model Context Protocol (MCP) server. It provides a basic implementation that shows how to authenticate, connect, and interact with the MCP server.

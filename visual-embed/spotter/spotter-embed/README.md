@@ -1,6 +1,36 @@
+<!-- search-meta
+tags: [ConversationEmbed, SpotterEmbed, Spotter, React, TypeScript, AI-search, conversational-analytics]
+apis: [ConversationEmbed, init, AuthType, worksheetId]
+questions:
+  - How do I embed the ThoughtSpot Spotter AI conversational search experience?
+  - How do I use ConversationEmbed in a React project?
+  - How do I embed the ThoughtSpot AI analytics chat interface?
+  - How do I connect Spotter to a specific data source in the embed?
+-->
+
 # Spotter Embed
 
-Embed the ThoughtSpot spotter experience inside any app. You can customize the text, logo, and other styles to fit your application.
+Embed the ThoughtSpot Spotter experience. You can customize the text, logo, and other styles as per your theme.
+
+## Key Usage
+
+```typescript
+import { AuthType, init } from "@thoughtspot/visual-embed-sdk";
+import { ConversationEmbed } from "@thoughtspot/visual-embed-sdk/react";
+
+init({
+  thoughtSpotHost: "https://your-instance.thoughtspot.cloud",
+  authType: AuthType.None,
+});
+
+// Embed the Spotter conversational AI experience
+const SpotterPage = () => (
+  <ConversationEmbed
+    worksheetId="your-datasource-id"
+    frameParams={{ width: "100%", height: "100%" }}
+  />
+);
+```
 
 ## Demo
 

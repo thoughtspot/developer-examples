@@ -1,6 +1,37 @@
+<!-- search-meta
+tags: [query-decomposition, BodylessConversation, Spotter, AI-agent, Gemini, streaming, React, TypeScript]
+apis: [BodylessConversation, sendMessage, init, AuthType, queryDecomposition]
+questions:
+  - How do I use ThoughtSpot query decomposition for complex AI queries?
+  - How do I build an AI agent that decomposes questions into ThoughtSpot data queries?
+  - How do I integrate Gemini with ThoughtSpot for conversational data analysis?
+  - How do I stream responses from ThoughtSpot Spotter in a custom AI agent?
+-->
+
 # ThoughtSpot Query Decomposition
 
 This application demonstrates the integration of ThoughtSpot with an AI agent that can analyze your data and provide insights through a conversational interface.
+
+## Key Usage
+
+```typescript
+import { BodylessConversation, init, AuthType } from "@thoughtspot/visual-embed-sdk";
+
+init({
+  thoughtSpotHost: "https://your-instance.thoughtspot.cloud",
+  authType: AuthType.TrustedAuthTokenCookieless,
+  getAuthToken: async () => fetch("/api/token").then(r => r.text()),
+});
+
+const conversation = new BodylessConversation({ worksheetId: "your-datasource-id" });
+
+// Decompose a complex user query into ThoughtSpot data queries
+// Each sub-query returns a visualization rendered inline
+const response = await conversation.sendMessage(
+  "Compare revenue by region and show top products by sales"
+);
+document.getElementById("results").replaceChildren(response.container);
+```
 
 ## Features
 
@@ -56,7 +87,7 @@ npm run dev
   - Add your "username" and "password".
   - Put whatever "validity_time" you want the token to be.
   - Click on "Try it out" on the bottom right.
-  - You should get a token in the response, thats the bearer token. 
+  - You should get a token in the response, thats the bearer token.
 
 
 ## Project Structure

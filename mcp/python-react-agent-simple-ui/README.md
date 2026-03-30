@@ -1,3 +1,13 @@
+<!-- search-meta
+tags: [MCP, Python, React, FastAPI, SSE, streaming, OpenAI, ThoughtSpot-MCP, full-stack]
+apis: [ThoughtSpotMCPServer, OpenAIResponsesAPI, FastAPI, SSE, MCPClient]
+questions:
+  - How do I build a chat UI that connects to ThoughtSpot via MCP?
+  - How do I stream ThoughtSpot MCP responses to a React frontend using SSE?
+  - How do I build a full-stack ThoughtSpot AI chat application with Python and React?
+  - How do I use Server-Sent Events with ThoughtSpot MCP in a FastAPI Python server?
+-->
+
 # Python Agent with Simple React UI
 
 A full-stack example that pairs a **Python (FastAPI) agent** powered by the OpenAI Responses API and ThoughtSpot MCP server with a **React chat UI**.

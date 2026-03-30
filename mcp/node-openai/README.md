@@ -1,3 +1,14 @@
+<!-- search-meta
+tags: [MCP, OpenAI, TypeScript, NodeJS, tool-calling, Azure-OpenAI, ThoughtSpot-MCP]
+apis: [ThoughtSpotMCPServer, OpenAIResponsesAPI, MCPTool]
+questions:
+  - How do I connect OpenAI to ThoughtSpot using MCP?
+  - How do I use ThoughtSpot as a tool in an OpenAI Responses API agent?
+  - How do I set up ThoughtSpot MCP server with Node.js and OpenAI?
+  - How do I query ThoughtSpot data from a Node.js OpenAI application?
+  - How do I use Azure OpenAI with ThoughtSpot MCP server?
+-->
+
 # OpenAI Responses API with ThoughtSpot MCP Server
 
 This example demonstrates how to use the OpenAI TypeScript/Node.js SDK with the ThoughtSpot MCP (Model Context Protocol) server. It shows how to integrate ThoughtSpot's data analysis and visualization capabilities as a tool within OpenAI's Responses API.
@@ -5,6 +16,30 @@ This example demonstrates how to use the OpenAI TypeScript/Node.js SDK with the 
 ## Overview
 
 The example makes an API call to OpenAI's Responses API, configuring the ThoughtSpot MCP server as an available tool. The AI can then interact with ThoughtSpot to perform data analysis tasks.
+
+## Key Usage
+
+```typescript
+import OpenAI from "openai";
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Connect ThoughtSpot MCP as a tool provider
+const response = await client.responses.create({
+  model: "gpt-4o",
+  tools: [
+    {
+      type: "mcp",
+      server_label: "thoughtspot",
+      server_url: "https://mcp.thoughtspot.com/mcp",
+      headers: { Authorization: `Bearer ${process.env.TS_TOKEN}` },
+    },
+  ],
+  input: "What was the revenue by region last quarter?",
+});
+
+console.log(response.output_text);
+```
 
 ## Prerequisites
 
@@ -135,6 +170,3 @@ If you're behind a proxy, you may need to configure proxy settings in the OpenAI
 ## License
 
 See the main repository LICENSE file for details.
-
-
-
