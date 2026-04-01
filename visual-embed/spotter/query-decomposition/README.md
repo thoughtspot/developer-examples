@@ -1,44 +1,75 @@
 <!-- search-meta
-tags: [query-decomposition, BodylessConversation, Spotter, AI-agent, Gemini, streaming, React, TypeScript]
-apis: [BodylessConversation, sendMessage, init, AuthType, queryDecomposition]
+tags: [query-decomposition, AI-agent, Gemini, streaming, React, TypeScript, REST-API, ThoughtSpotRestApi]
+apis: [queryGetDecomposedQuery, singleAnswer, exportAnswerReport, importMetadataTML, ThoughtSpotRestApi, createBearerAuthenticationConfig, GoogleGenerativeAI]
 questions:
-  - How do I use ThoughtSpot query decomposition for complex AI queries?
+  - How do I use ThoughtSpot query decomposition to break a question into sub-queries?
   - How do I build an AI agent that decomposes questions into ThoughtSpot data queries?
   - How do I integrate Gemini with ThoughtSpot for conversational data analysis?
-  - How do I stream responses from ThoughtSpot Spotter in a custom AI agent?
+  - How do I stream Gemini responses with ThoughtSpot data in a React app?
+  - How do I create a ThoughtSpot liveboard programmatically from multiple answers?
+  - How do I use ThoughtSpot singleAnswer and exportAnswerReport in Node.js?
 -->
 
 # ThoughtSpot Query Decomposition
 
-This application demonstrates the integration of ThoughtSpot with an AI agent that can analyze your data and provide insights through a conversational interface.
+A full-stack AI agent that answers business questions by decomposing them into sub-queries using the ThoughtSpot REST API, fetching data for each, and streaming a Gemini-powered analysis with an auto-generated ThoughtSpot Liveboard.
 
 ## Key Usage
 
 ```typescript
-import { BodylessConversation, init, AuthType } from "@thoughtspot/visual-embed-sdk";
+import { ThoughtSpotRestApi, createBearerAuthenticationConfig } from "@thoughtspot/rest-api-sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-init({
-  thoughtSpotHost: "https://your-instance.thoughtspot.cloud",
-  authType: AuthType.TrustedAuthTokenCookieless,
-  getAuthToken: async () => fetch("/api/token").then(r => r.text()),
+const thoughtSpotClient = new ThoughtSpotRestApi(
+  createBearerAuthenticationConfig(THOUGHTSPOT_HOST, async () => BEARER_TOKEN)
+);
+
+// Step 1: Decompose a high-level question into answerable sub-queries
+const result = await thoughtSpotClient.queryGetDecomposedQuery({
+  nlsRequest: { query: "How can I increase sales?" },
+  content: [],
+  worksheetIds: [DATASOURCE_ID],
+});
+const subQuestions = result.decomposedQueryResponse?.decomposedQueries?.map(q => q.query!) ?? [];
+// e.g. ["What is revenue by region?", "What are top products by sales?", ...]
+
+// Step 2: Get answer + CSV data for each sub-question
+const answer = await thoughtSpotClient.singleAnswer({
+  query: subQuestion,
+  metadata_identifier: DATASOURCE_ID,
+});
+const csvData = await thoughtSpotClient.exportAnswerReport({
+  session_identifier: answer.session_identifier!,
+  generation_number: answer.generation_number!,
+  file_format: "CSV",
 });
 
-const conversation = new BodylessConversation({ worksheetId: "your-datasource-id" });
+// Step 3: Create a Liveboard with all answers via TML import
+await thoughtSpotClient.importMetadataTML({
+  metadata_tmls: [JSON.stringify(liveboardTml)],
+  import_policy: "ALL_OR_NONE",
+});
 
-// Decompose a complex user query into ThoughtSpot data queries
-// Each sub-query returns a visualization rendered inline
-const response = await conversation.sendMessage(
-  "Compare revenue by region and show top products by sales"
-);
-document.getElementById("results").replaceChildren(response.container);
+// Step 4: Send answers to Gemini and stream the analysis back to the user
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash",
+  tools: [{ functionDeclarations: [getRelevantDataFunctionDefinition] }],
+});
+const chat = model.startChat();
+const stream = await chat.sendMessageStream(userQuery);
+for await (const chunk of stream.stream) {
+  res.write(chunk.candidates[0].content.parts[0].text); // streamed to client
+}
 ```
 
 ## Features
 
-- Interactive chat interface with streaming responses
-- Integration with ThoughtSpot data APIs
-- ThoughtSpot Query decomposition APIs to decompose high level topical questions into data questions.
-- Real-time data analysis and insights
+- Interactive streaming chat interface built with React + Ant Design
+- Uses `queryGetDecomposedQuery` to break complex business questions into answerable sub-queries
+- Fetches CSV data per sub-query using `singleAnswer` + `exportAnswerReport`
+- Auto-creates a ThoughtSpot Liveboard from all answers and embeds it inline via `importMetadataTML`
+- Gemini function-calling agent orchestrates the full flow and streams a summary with citations
 
 
 ## Getting Started
@@ -123,8 +154,11 @@ npm run dev
 
 ## Documentation
 
-- Links to the Thoughtspot developer docs for the features used in this example.
-- ...
+- [ThoughtSpot REST API SDK](https://developers.thoughtspot.com/docs/rest-api-sdk)
+- [queryGetDecomposedQuery (NLS Query Decomposition)](https://developers.thoughtspot.com/docs/rest-apiv2-reference#_query_decomposed_query)
+- [singleAnswer API](https://developers.thoughtspot.com/docs/rest-apiv2-reference#_single_answer)
+- [importMetadataTML](https://developers.thoughtspot.com/docs/rest-apiv2-reference#_import_metadata_tml)
+- [Google Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling)
 
 ## Run locally
 

@@ -1,33 +1,42 @@
 <!-- search-meta
 tags: [REST-API, user-management, multi-org, TypeScript, NodeJS]
-apis: [createUser, assignUserToOrg, listOrgs, REST-API-v2]
+apis: [importUsers, org_identifiers, REST-API-v2]
 questions:
-  - How do I create users in multiple ThoughtSpot organizations via REST API?
+  - How do I import users into multiple ThoughtSpot organizations via REST API?
   - How do I provision users to specific orgs in ThoughtSpot?
   - How do I manage users across ThoughtSpot orgs using the REST API?
-  - How do I bulk create users in ThoughtSpot with org assignment?
+  - How do I bulk import users in ThoughtSpot with org assignment?
 -->
 
-# create-user-cross-org
+# import-user-multiple-orgs
 
-This repository provides an example of how to create user in any org (not necessarily to be current logged in org) via tenant admin by using ThoughtSpot APIs. This API allows tenant admin to create user in any or multiple as well.
+This repository provides an example of how to import a user into any org (not necessarily the current logged-in org) via tenant admin by using ThoughtSpot APIs. This API allows tenant admin to import users into one or multiple orgs.
 
 ## Key Usage
 
 ```typescript
-// Create a user and assign them to multiple ThoughtSpot orgs
-// POST /api/rest/2.0/users/create
-const user = await fetch(`${THOUGHTSPOT_HOST}/api/rest/2.0/users/create`, {
+// Import a user and assign them to multiple ThoughtSpot orgs
+// POST /api/rest/2.0/users/import
+const response = await fetch(`${THOUGHTSPOT_HOST}/api/rest/2.0/users/import`, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${bearerToken}`,
+    Authorization: bearerToken,
   },
   body: JSON.stringify({
-    name: "new-user@example.com",
-    display_name: "New User",
-    password: "temporary-password",
-    org_identifiers: ["org-id-1", "org-id-2"], // assign to multiple orgs
+    users: [
+      {
+        user_identifier: "new-user@example.com",
+        display_name: "New User",
+        password: "Cloud123!",
+        account_type: "LOCAL_USER",
+        account_status: "ACTIVE",
+        email: "new-user@example.com",
+        org_identifiers: ["org-id-1", "org-id-2"], // assign to multiple orgs
+      },
+    ],
+    dry_run: false,
+    delete_unspecified_users: false,
   }),
 });
 ```

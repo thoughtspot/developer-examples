@@ -1,6 +1,6 @@
 <!-- search-meta
 tags: [AnswerService, SearchEmbed, React, TypeScript, data-fetch, pagination]
-apis: [AnswerService, SearchEmbed, getAnswerService, fetchData, getUnderlyingData, useEmbedRef]
+apis: [AnswerService, SearchEmbed, getAnswerService, fetchData, getAnswer, getUnderlyingDataForPoint, useEmbedRef]
 questions:
   - How do I fetch raw data from ThoughtSpot programmatically without displaying it?
   - How do I use AnswerService to get data from a ThoughtSpot search?
@@ -17,14 +17,27 @@ This example demonstrates how to use the AnswerService from the ThoughtSpot Visu
 ```typescript
 import { SearchEmbed, useEmbedRef } from "@thoughtspot/visual-embed-sdk/react";
 
-// Use embedRef to access AnswerService after search
 const embedRef = useEmbedRef();
 
+// Fetch paginated raw data from the current answer
 const fetchData = async () => {
   if (embedRef.current) {
     const service = await embedRef.current.getAnswerService();
-    const data = await service.fetchData();      // paginated raw data
-    const underlying = await service.getUnderlyingData(); // source rows
+    const data = await service.fetchData();
+    console.log(data);
+  }
+};
+
+// Get underlying source data for the first column in the visualization
+const getUnderlyingData = async () => {
+  if (embedRef.current) {
+    const service = await embedRef.current.getAnswerService();
+    const answer = await service.getAnswer();
+    const columnName = answer?.visualizations?.[0]?.columns?.[0]?.column?.referencedColumns?.[0]?.displayName;
+    if (!columnName) return;
+
+    const underlyingData = await service.getUnderlyingDataForPoint([columnName], []);
+    const data = await underlyingData.fetchData(0, 100);
     console.log(data);
   }
 };
@@ -101,7 +114,8 @@ The AnswerService provides several methods to interact with ThoughtSpot answers:
 
 - `getSourceDetail()`: Get the details about the source used in the answer.
 - `fetchData()`: Fetch data from the answer.
--  `getUnderlyingDataFromPoint()`: Gets the underlying data of the answer
+- `getAnswer()`: Get the answer object, including visualization columns and metadata.
+- `getUnderlyingDataForPoint(columnNames, filters)`: Get underlying source data for specific columns. Returns a service with `fetchData(offset, size)` for pagination.
 
 This example demonstrates most of these methods, but you can extend it to use others as needed.
 
