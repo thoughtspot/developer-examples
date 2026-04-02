@@ -1,3 +1,13 @@
+<!-- search-meta
+tags: [MCP, Python, Google-ADK, trusted-auth, AI-agent, ThoughtSpot-MCP]
+apis: [ThoughtSpotMCPServer, GoogleADK, trustedAuth, MCPToolset]
+questions:
+  - How do I connect a Google ADK agent to ThoughtSpot using MCP?
+  - How do I use ThoughtSpot with Google AI Development Kit?
+  - How do I set up trusted auth for ThoughtSpot MCP with Python?
+  - How do I build a Google ADK agent that queries ThoughtSpot data?
+-->
+
 # Python Google ADK Trusted Auth MCP Client
 
 This is a Google ADK (Agent Development Kit) agent that connects to ThoughtSpot via MCP (Model Context Protocol) to query and retrieve data from ThoughtSpot data models using ThoughtSpot AI capabilities.
@@ -24,7 +34,7 @@ cd mcp/python-google-adk-trusted-auth
    ```bash
    # Copy the template
    cp env.template .env
-   
+
    # Edit .env with your actual values
    TS_SECRET_KEY=your_thoughtspot_secret_key
    TS_HOST=your_thoughtspot_host_here
@@ -62,4 +72,3 @@ This project includes integration with the [ThoughtSpot trusted auth](https://de
 - Google ADK
 - ThoughtSpot MCP server access
 - Valid ThoughtSpot secret key
-

@@ -1,3 +1,13 @@
+<!-- search-meta
+tags: [MCP, Python, OpenAI, chat-completions, AI-agent, ThoughtSpot-MCP]
+apis: [ThoughtSpotMCPServer, OpenAIPython, ChatCompletion, MCPClient]
+questions:
+  - How do I use ThoughtSpot MCP with Python OpenAI SDK?
+  - How do I connect a Python OpenAI agent to ThoughtSpot?
+  - How do I query ThoughtSpot data from a Python OpenAI application?
+  - How do I set up ThoughtSpot as an MCP tool in Python with OpenAI?
+-->
+
 # OpenAI Python API Example
 
 This example demonstrates how to use the OpenAI Python library to make API calls to the chat completions endpoint.
@@ -100,4 +110,3 @@ response = client.chat.completions.create(
 - [OpenAI API Documentation](https://platform.openai.com/docs/api-reference)
 - [OpenAI Python Library](https://github.com/openai/openai-python)
 - [Chat Completions Guide](https://platform.openai.com/docs/guides/chat-completions)
-

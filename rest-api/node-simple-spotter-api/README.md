@@ -1,6 +1,51 @@
+<!-- search-meta
+tags: [Spotter, REST-API, AI-conversation, TypeScript, NodeJS, CSV-export, rest-api-sdk]
+apis: [ThoughtSpotRestApi, createBearerAuthenticationConfig, createConversation, sendMessage, exportAnswerReport]
+questions:
+  - How do I use ThoughtSpot Spotter REST API programmatically in Node.js?
+  - How do I create an AI conversation with ThoughtSpot Spotter via REST API?
+  - How do I export CSV data from a ThoughtSpot Spotter conversation?
+  - How do I use the ThoughtSpot REST API SDK for Spotter in Node.js?
+  - How do I query ThoughtSpot data using the Spotter API without the embed UI?
+-->
+
 # Node Simple Spotter API Examples
 
 This folder contains two example implementations demonstrating how to interact with ThoughtSpot's Spotter AI API using Node.js and TypeScript. Both examples show how to create an AI conversation, send a natural language query, and export the results as CSV.
+
+## Key Usage
+
+```typescript
+import { createBearerAuthenticationConfig, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk";
+
+const config = createBearerAuthenticationConfig(
+  "https://your-instance.thoughtspot.cloud",
+  async () => "your-bearer-token",
+);
+const client = new ThoughtSpotRestApi(config);
+
+// 1. Create an AI conversation
+const conversation = await client.createConversation({
+  metadata_identifier: "your-datasource-id",
+});
+
+// 2. Ask a question
+const response = await client.sendMessage(
+  conversation.conversation_identifier,
+  {
+    metadata_identifier: "your-datasource-id",
+    message: "revenue by region",
+  }
+);
+
+// 3. Export results as CSV
+const csv = await client.exportAnswerReport({
+  session_identifier: response[0].session_identifier,
+  generation_number: response[0].generation_number,
+  file_format: "CSV",
+});
+console.log(await csv.text());
+```
 
 ## Files Overview
 
@@ -22,7 +67,7 @@ This folder contains two example implementations demonstrating how to interact w
    ```
 
 2. **Configure environment variables:**
-   
+
    Create a `.env` file in this directory with the following variables:
    ```bash
    THOUGHTSPOT_HOST=https://your-instance.thoughtspot.cloud
@@ -103,4 +148,3 @@ Ask the ThoughtSpot support to run the flag to remove the header from the export
 - [ThoughtSpot REST API Documentation](https://developers.thoughtspot.com/docs/rest-apiv2-reference)
 - [ThoughtSpot REST API SDK](https://www.npmjs.com/package/@thoughtspot/rest-api-sdk)
 - [Spotter Tutorial](https://developers.thoughtspot.com/docs/tutorials/spotter/integrate-into-chatbot)
-

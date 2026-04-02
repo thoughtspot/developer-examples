@@ -1,11 +1,45 @@
+<!-- search-meta
+tags: [pendo, third-party-tools, analytics, CSP, React, TypeScript, ThirdPartyToolsForEmbed]
+apis: [customVariablesForThirdPartyTools, ThirdPartyToolsForEmbed, CSPScriptSrc, init, AuthType]
+questions:
+  - How do I integrate Pendo analytics with ThoughtSpot embed?
+  - How do I add third-party analytics tools to ThoughtSpot embed?
+  - How do I configure CSP for third-party scripts in ThoughtSpot embed?
+  - How do I pass custom variables to Pendo through ThoughtSpot embed?
+-->
+
 # Pendo Integration with ThoughtSpot Embed
 
-## 🧩 Overview
+## Overview
 
 This project contains a code example for embedded ThoughtSpot developers who are integrating Pendo with a ThoughtSpot Embed instance using the **Third-Party-Tools-For-Embed** feature. This integration allows you to launch Pendo guides and analytics inside an embedded ThoughtSpot instance, enabling product tours, feature announcements, and usage tracking.
 [**Third-Party-Tools-For-Embed**: https://developers.thoughtspot.com/docs/external-tool-script-integration]
 
-## 📦 Prerequisites
+## Key Usage
+
+```typescript
+import { init, AuthType } from "@thoughtspot/visual-embed-sdk";
+
+init({
+  thoughtSpotHost: "https://your-instance.thoughtspot.cloud",
+  authType: AuthType.TrustedAuthTokenCookieless,
+  getAuthToken: async () => fetch("/api/token").then(r => r.text()),
+  // Pass Pendo configuration through ThoughtSpot's third-party tools integration
+  customVariablesForThirdPartyTools: {
+    pendoKey: "your-pendo-client-key",
+    pendoVisitorConfig: {
+      id: "visitor-id",
+      role: "analyst",
+    },
+    pendoAccountConfig: {
+      id: "account-id",
+      name: "Acme Corp",
+    },
+  },
+});
+```
+
+## Prerequisites
 
 This project uses the **Third-Party-Tools-For-Embed** feature, which is **not enabled by default** on your ThoughtSpot cluster.
 
@@ -13,7 +47,7 @@ To enable this feature, please contact ThoughtSpot Support and provide the neces
 
 **Enablement Steps:**
 
-1. Host your [integration script for Pendo](https://support.pendo.io/hc/en-us/articles/360046272771-Developer-s-guide-to-implementing-Pendo-using-the-install-script) on a **publicly accessible URL** that serves JavaScript. (In this example, the hosted script is **[`pendoIntegrationScript.js`](pendoIntegrationScript.js)**.) 
+1. Host your [integration script for Pendo](https://support.pendo.io/hc/en-us/articles/360046272771-Developer-s-guide-to-implementing-Pendo-using-the-install-script) on a **publicly accessible URL** that serves JavaScript. (In this example, the hosted script is **[`pendoIntegrationScript.js`](pendoIntegrationScript.js)**.)
 
    **Alternatively, you can use the pre-hosted script for testing environments:** [https://cdn.jsdelivr.net/gh/quantum29/jsFile@main/Production/pendoIntegration_v1.js](https://cdn.jsdelivr.net/gh/quantum29/jsFile@main/Production/pendoIntegration_v1.js)
 
@@ -23,17 +57,17 @@ To enable this feature, please contact ThoughtSpot Support and provide the neces
 
 4. Enable the feature by editing the `CSPScriptSrc` field. Also, ensure that the domain where your script is hosted is whitelisted.
 
-📘 For step-by-step enablement instructions, refer to the documentation:  
+For step-by-step enablement instructions, refer to the documentation:
 https://developers.thoughtspot.com/docs/external-tool-script-integration
 
 Once the feature is enabled and your script is configured, you can embed your ThoughtSpot instance as usual. The hosted script will automatically execute within the ThoughtSpot ecosystem once authentication completes. Be sure to pass the correct variables using **[customVariablesForThirdPartyTools](https://developers.thoughtspot.com/docs/Interface_EmbedConfig#_customvariablesforthirdpartytools)** in the init() configuration—your **pendoClientKey**, **pendoAccountConfig**, and **pendoVisitorConfig**.
 
-📘 For guidance on writing your PendoAccountConfig and PendoVisitorConfig, refer to the documentation:
+For guidance on writing your PendoAccountConfig and PendoVisitorConfig, refer to the documentation:
 https://support.pendo.io/hc/en-us/articles/21326198721563-Choose-IDs-and-metadata
 
-You can then configure your Pendo guides through the Pendo dashboard. Once configured, the guides will appear inside the embedded ThoughtSpot instance.  
+You can then configure your Pendo guides through the Pendo dashboard. Once configured, the guides will appear inside the embedded ThoughtSpot instance.
 
-## 🚀 Getting Started
+## Getting Started
 
 ```bash
 # 1. Clone the repository
@@ -56,12 +90,12 @@ npm run dev
 
 <img src="./previews/previewFullApp.png" alt="Preview App Embed With Pendo">
 
-## 📚 References
+## References
 
-- [Developer Docs](https://developers.thoughtspot.com/docs/introduction)  
-- [Third-Party Tools for Embed](https://developers.thoughtspot.com/docs/external-tool-script-integration)  
+- [Developer Docs](https://developers.thoughtspot.com/docs/introduction)
+- [Third-Party Tools for Embed](https://developers.thoughtspot.com/docs/external-tool-script-integration)
 - [Embed config – customVariablesForThirdPartyTools](https://developers.thoughtspot.com/docs/Interface_EmbedConfig#_customvariablesforthirdpartytools)
-- [Quick Start Guide for Embed](https://developers.thoughtspot.com/docs/getting-started)  
-- [Developer's Guide to Implementing Pendo Using the Install Script](https://support.pendo.io/hc/en-us/articles/360046272771-Developer-s-guide-to-implementing-Pendo-using-the-install-script)  
+- [Quick Start Guide for Embed](https://developers.thoughtspot.com/docs/getting-started)
+- [Developer's Guide to Implementing Pendo Using the Install Script](https://support.pendo.io/hc/en-us/articles/360046272771-Developer-s-guide-to-implementing-Pendo-using-the-install-script)
 - [Choose IDs and Metadata for Pendo Config](https://support.pendo.io/hc/en-us/articles/21326198721563-Choose-IDs-and-metadata)
 - [Try this on CodeSandbox](https://codesandbox.io/p/devbox/optimistic-mcclintock-lw2qq8)

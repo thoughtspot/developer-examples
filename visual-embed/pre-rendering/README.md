@@ -1,6 +1,19 @@
+<!-- search-meta
+tags: [preRender, prefetch, AppEmbed, LiveboardEmbed, React, TypeScript, performance, PreRenderedAppEmbed]
+apis: [AppEmbed, LiveboardEmbed, PreRenderedAppEmbed, PreRenderedLiveboardEmbed, preRenderId, useInit, AuthType]
+questions:
+  - How do I use preRender to speed up ThoughtSpot embed load time?
+  - How do I prefetch a ThoughtSpot embed before the user navigates to it?
+  - How do I pre-render a liveboard embed on demand in React?
+  - How can I reduce the time to show an embedded ThoughtSpot component?
+  - What is the difference between preRender and normal embed rendering in ThoughtSpot?
+  - How do I embed the full ThoughtSpot application using AppEmbed?
+  - How do I use AppEmbed to embed the entire ThoughtSpot app in React?
+-->
+
 # pre-rendering
 
-This example demonstrates different rendering strategies for ThoughtSpot embeds using React:
+This example demonstrates how to embed the full ThoughtSpot application using AppEmbed with pre-rendering strategies in React to improve perceived load time.
 
 The code is structured into three main embed components:
 
@@ -15,6 +28,41 @@ When you open the demo, you'll see:
 - Live examples showing the loading behavior differences
 
 The app uses React Router for navigation between the different embed examples, allowing you to compare their performance characteristics.
+
+## Key Usage
+
+```typescript
+import { useInit, AuthType, AuthStatus } from "@thoughtspot/visual-embed-sdk/react";
+import { AppEmbed, LiveboardEmbed, PreRenderedAppEmbed, PreRenderedLiveboardEmbed } from "@thoughtspot/visual-embed-sdk/react";
+
+// Step 1: Pre-render embeds at app startup (hidden, loads in background)
+const EmbedInit = ({ children }) => {
+  const authEERef = useInit({
+    thoughtSpotHost: "https://your-instance.thoughtspot.cloud",
+    authType: AuthType.Basic,
+    username: "your-username",
+    password: "your-password",
+  });
+
+  return (
+    <div>
+      {/* These render invisibly in the background */}
+      <PreRenderedAppEmbed preRenderId="pre-render" />
+      <PreRenderedLiveboardEmbed
+        liveboardId="your-liveboard-id"
+        preRenderId="pre-render-with-liveboard-id"
+      />
+      {children}
+    </div>
+  );
+};
+
+// Step 2: Show the pre-rendered embed instantly when user navigates
+const MyPage = () => (
+  // Connects to the already-loaded pre-render — no network wait
+  <AppEmbed preRenderId="pre-render" className="embed-div" />
+);
+```
 
 ## Demo
 

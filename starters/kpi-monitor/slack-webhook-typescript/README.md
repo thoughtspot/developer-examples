@@ -1,3 +1,15 @@
+<!-- search-meta
+tags: [KPI-monitor, webhook, Slack, TypeScript, Express, NodeJS, alerts, notifications]
+apis: [KPIMonitorWebhookPayload, SlackWebhookAPI, Express, notificationType, scheduledMetricUpdateWebhookNotification]
+questions:
+  - How do I send ThoughtSpot KPI monitor alerts to Slack using TypeScript?
+  - How do I build a TypeScript Express webhook for ThoughtSpot KPI alerts?
+  - How do I handle ThoughtSpot KPI webhook payloads in Node.js?
+  - How do I integrate ThoughtSpot KPI monitor with Slack using Express?
+  - How do I filter ThoughtSpot webhook notification types in TypeScript?
+  - How do I send a rich Slack block kit message from a ThoughtSpot KPI alert?
+-->
+
 # Slack webhook (Typescript)
 
 A simple webhook made with TypeScript and Express that forwards a KPI monitor alert through webhooks to a Slack channel. The message would look like this:
@@ -5,6 +17,77 @@ A simple webhook made with TypeScript and Express that forwards a KPI monitor al
 ![Slack message](./img/slack-message.png)
 
 This app exposes a single endpoint `/send-to-slack` that accepts POST requests from KPI Monitor. It then builds a Slack message and sends it to a Slack channel configured in the `.env` file.
+
+## Key Usage
+
+```typescript
+import express, { Request, Response } from "express";
+import { WebClient } from "@slack/web-api";
+
+const app = express();
+const slackClient = new WebClient(process.env.SLACK_TOKEN);
+const slackChannel = process.env.SLACK_CHANNEL;
+
+// Only forward real alert updates — ignore subscription/test events
+const updationNotificationTypes = new Set([
+  "SCHEDULE_METRIC_UPDATE",
+  "THRESHOLD_METRIC_UPDATE",
+  "AUTOMATIC_SELF_SUBSCRIPTION",
+  "THRESHOLD_BY_ATTRIBUTE",
+  "SCHEDULED_BY_ATTRIBUTE",
+  "ANOMALY_METRIC_UPDATE",
+]);
+
+app.post("/send-to-slack", async (req: Request, res: Response) => {
+  const payload = req.body.data;
+  const {
+    currentUser,
+    scheduledMetricUpdateWebhookNotification: {
+      ruleExecutionDetails,
+      modifyUrl,
+      unsubscribeUrl,
+      monitorRuleForWebhook,
+    },
+  } = payload;
+
+  if (!updationNotificationTypes.has(payload.notificationType)) {
+    res.status(200).json({ message: "Not forwarding — not an alert update notification" });
+    return;
+  }
+
+  // Rich Slack block kit message with metric details and action buttons
+  await slackClient.chat.postMessage({
+    channel: slackChannel,
+    text: `Alert: ${monitorRuleForWebhook.ruleName} - ${ruleExecutionDetails.percentageChange} change detected`,
+    blocks: [
+      { type: "header", text: { type: "plain_text", text: `📊 ${monitorRuleForWebhook.ruleName}`, emoji: true } },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Metric:*\n<${monitorRuleForWebhook.metricUrl}|${monitorRuleForWebhook.metricName}>` },
+          { type: "mrkdwn", text: `*Change:*\n${ruleExecutionDetails.percentageChange}` },
+          { type: "mrkdwn", text: `*New Value:*\n${ruleExecutionDetails.currentMetricValue}` },
+          { type: "mrkdwn", text: `*Period:*\n${ruleExecutionDetails.executionTimestamp}` },
+          { type: "mrkdwn", text: `*Schedule:*\n${monitorRuleForWebhook.scheduleString}` },
+          { type: "mrkdwn", text: `*Triggered By:*\n${currentUser.displayName} (${currentUser.email})` },
+        ],
+      },
+      {
+        type: "actions",
+        elements: [
+          { type: "button", text: { type: "plain_text", text: "View Metric", emoji: true }, url: monitorRuleForWebhook.metricUrl },
+          { type: "button", text: { type: "plain_text", text: "Modify Alert", emoji: true }, url: modifyUrl },
+          { type: "button", text: { type: "plain_text", text: "Unsubscribe", emoji: true }, url: unsubscribeUrl, style: "danger" },
+        ],
+      },
+    ],
+  });
+
+  res.status(200).json({ message: `Message forwarded to Slack channel: ${slackChannel}` });
+});
+
+app.listen(3000);
+```
 
 File structure:
 

@@ -1,3 +1,14 @@
+<!-- search-meta
+tags: [Flutter, mobile, Dart, LiveboardEmbed, custom-styles, host-events, embed-events, iOS, Android]
+apis: [ThoughtSpotFlutterSDK, LiveboardEmbed, HostEvent, EmbedEvent, cssVariables, trigger, on]
+questions:
+  - How do I embed ThoughtSpot in a Flutter mobile app?
+  - How do I use the ThoughtSpot Flutter SDK to embed a liveboard?
+  - How do I apply custom styles to ThoughtSpot embed in Flutter?
+  - How do I trigger host events in ThoughtSpot Flutter embed?
+  - How do I handle embed events in a ThoughtSpot Flutter integration?
+-->
+
 # ThoughtSpot Flutter Embed Example
 
 > This example uses the [ThoughtSpot Flutter Embed SDK](https://pub.dev/packages/flutter_embed_sdk) to integrate ThoughtSpot analytics into Flutter applications.

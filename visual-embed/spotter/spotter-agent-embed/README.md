@@ -1,9 +1,43 @@
+<!-- search-meta
+tags: [spotter-agent, BodylessConversation, Gemini, AI-agent, React, TypeScript, programmatic-spotter]
+apis: [BodylessConversation, sendMessage, init, AuthType, TrustedAuthTokenCookieless]
+questions:
+  - How do I use BodylessConversation API in ThoughtSpot embed?
+  - How do I build a custom AI agent that uses ThoughtSpot Spotter programmatically?
+  - How do I send a message to ThoughtSpot Spotter and get a visualization back?
+  - How do I integrate ThoughtSpot data analysis into a Gemini AI agent?
+-->
+
 # spotter-agent-embed
 
 This is a small example of how embed spotter into your own agent if you have one. The example creates a simple agent using Gemini-flash model's function calling capability.
 
 The simple agent makes the decision whether a user's message has analytical intent and should be handled by ThoughtSpot. The decision is passed down to the client which makes
 the actual API call to run the query on ThoughtSpot and return the ThoughtSpot visual using the ThoughtSpot Visual embed SDK.
+
+## Key Usage
+
+```typescript
+import { BodylessConversation, init, AuthType } from "@thoughtspot/visual-embed-sdk";
+
+init({
+  thoughtSpotHost: "https://your-instance.thoughtspot.cloud",
+  authType: AuthType.TrustedAuthTokenCookieless,
+  getAuthToken: async () => {
+    const response = await fetch("/api/thoughtspot-token");
+    return response.text();
+  },
+});
+
+const conversation = new BodylessConversation({
+  worksheetId: "your-datasource-id",
+});
+
+// Send a message and get a rendered visualization back
+const response = await conversation.sendMessage("revenue by region");
+// response.container is a DOM element with the chart rendered inside it
+document.getElementById("chart-area").replaceChildren(response.container);
+```
 
 ## Demo
 
