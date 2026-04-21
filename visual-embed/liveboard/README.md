@@ -1,5 +1,5 @@
 <!-- search-meta
-tags: [LiveboardEmbed, liveboard, React, TypeScript, runtimeFilters, EmbedEvent, HostEvent, visibleActions, hiddenActions, Action]
+tags: [LiveboardEmbed, liveboard, React, TypeScript, runtimeFilters, EmbedEvent, HostEvent, visibleActions, hiddenActions, disabledActions, Action]
 apis: [LiveboardEmbed, EmbedEvent, HostEvent, RuntimeFilterOp, useEmbedRef, init, AuthType, Action, visibleActions, hiddenActions, disabledActions]
 questions:
   - How do I embed a ThoughtSpot liveboard in React?
@@ -8,7 +8,7 @@ questions:
   - How do I embed a liveboard with full height in React?
   - How do I use LiveboardEmbed with tabs?
   - How do I hide or show specific actions in a LiveboardEmbed?
-  - How do I use visibleActions or hiddenActions to control the embed toolbar?
+  - What is the difference between disabledActions and hiddenActions in LiveboardEmbed?
   - How do I disable specific menu actions in an embedded liveboard?
 -->
 
@@ -35,13 +35,13 @@ const embed = new LiveboardEmbed(document.getElementById("ts-embed"), {
   frameParams: { width: "100%", height: "100%" },
   liveboardId: "your-liveboard-id",
 
-  // Show only specific actions in the toolbar
+  // Show only specific actions in the toolbar (allow-list)
   visibleActions: [Action.DownloadAsPdf, Action.Share, Action.DrillDown],
 
-  // Or hide specific actions instead
+  // Hide specific actions — removes them completely from the UI
   // hiddenActions: [Action.Edit, Action.Delete],
 
-  // Disable actions without hiding them
+  // Disable specific actions — keeps them visible but grayed out (non-clickable)
   // disabledActions: [Action.Edit],
 });
 
