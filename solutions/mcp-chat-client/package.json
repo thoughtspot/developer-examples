@@ -17,7 +17,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@vercel/edge": "^1.2.2",
     "antd": "^5.27.1",
-    "hono": "^4.9.2",
+    "hono": "^4.12.12",
     "lodash": "^4.17.21",
     "openai": "^5.16.0",
     "openid-client": "^6.6.4",
