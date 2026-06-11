@@ -45,7 +45,7 @@ embed.render();
 
 ## Demo
 
-Open in [CodeSandbox](https://codesandbox.io/p/sandbox/github/thoughtspot/developer-examples/tree/main/visual-embed/custom-actions)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/custom-actions)
 
 ## Documentation
 

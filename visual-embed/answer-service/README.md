@@ -52,7 +52,7 @@ return (
 ```
 
 ## Demo
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/answer-service)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/answer-service)
 
 ## Features
 - Embeds a ThoughtSpot Search component

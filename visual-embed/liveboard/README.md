@@ -54,7 +54,7 @@ embed.render();
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/liveboard)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/liveboard)
 
 
 ## Documentation

@@ -43,7 +43,7 @@ embed.render();
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/visualization)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/visualization)
 
 
 ## Documentation

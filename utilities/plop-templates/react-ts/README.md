@@ -9,7 +9,7 @@ Include, but not limited to:
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/-- PLOP PATH HERE --)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/-- PLOP PATH HERE --)
 
 ## Documentation
 

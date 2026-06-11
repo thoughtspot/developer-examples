@@ -43,7 +43,7 @@ const App = () => {
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/auth/cookieless)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/auth/cookieless)
 
 ## Documentation
 

@@ -52,7 +52,7 @@ rest-api/create-user-cross-org/
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/rest-api/create-user-cross-org)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/rest-api/create-user-cross-org)
 
 ## Documentation
 

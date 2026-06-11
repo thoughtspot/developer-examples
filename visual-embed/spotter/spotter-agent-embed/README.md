@@ -41,7 +41,7 @@ document.getElementById("chart-area").replaceChildren(response.container);
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/spotter/spotter-agent-embed)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/spotter/spotter-agent-embed)
 
 ## Documentation
 

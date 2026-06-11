@@ -43,7 +43,7 @@ const LiveboardList = () => {
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/rest-api/typescript-sdk/react-rest-api)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/rest-api/typescript-sdk/react-rest-api)
 
 ## Documentation
 

@@ -55,7 +55,7 @@ const App = () => {
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/host-event-parameterized)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/host-event-parameterized)
 
 ## Run locally
 

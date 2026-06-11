@@ -56,7 +56,7 @@ rest-api/jwt-filter-rules/
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/rest-api/jwt-filter-rules)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/rest-api/jwt-filter-rules)
 
 ## Documentation
 

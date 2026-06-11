@@ -108,7 +108,7 @@ slack-webhook-python
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/starters/kpi-monitor/slack-webhook-python)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/starters/kpi-monitor/slack-webhook-python)
 
 ## Documentation
 

@@ -66,7 +66,7 @@ const MyPage = () => (
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/pre-rendering)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/pre-rendering)
 
 ## Documentation
   - [Pre-Render Config](https://developers.thoughtspot.com/docs/Interface_AppViewConfig#_prerenderid)

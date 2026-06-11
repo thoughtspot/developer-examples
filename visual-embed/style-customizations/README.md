@@ -51,7 +51,7 @@ init({
 ```
 
 ## Demo
-Open in [Codesandbox](https://codesandbox.io/p/sandbox/github/thoughtspot/developer-examples/tree/main/visual-embed/style-customizations)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/style-customizations)
 
 ## Documentation
 

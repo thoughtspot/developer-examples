@@ -9,7 +9,7 @@ Include, but not limited to:
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/rest-api/trusted-auth-python)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/rest-api/trusted-auth-python)
 
 ## Documentation
 

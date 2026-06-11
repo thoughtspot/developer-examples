@@ -34,7 +34,7 @@ const SpotterPage = () => (
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/visual-embed/spotter/spotter-embed)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/spotter/spotter-embed)
 
 ## Documentation
 

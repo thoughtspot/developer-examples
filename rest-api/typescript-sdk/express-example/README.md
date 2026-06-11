@@ -61,7 +61,7 @@ app.listen(3000);
 
 ## Demo
 
-Open in [Codesandbox](https://githubbox.com/thoughtspot/developer-examples/tree/main/rest-api/typescript-sdk/express-example)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/rest-api/typescript-sdk/express-example)
 
 ## Documentation
 
