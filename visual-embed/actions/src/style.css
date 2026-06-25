@@ -1,0 +1,84 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  color: #1a1a2e;
+  background-color: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.topbar h1 {
+  font-size: 1.8rem;
+  margin: 0 0 0.25rem;
+}
+
+.topbar p {
+  margin: 0 0 1.25rem;
+  color: #555;
+}
+
+.topbar code {
+  background: #f0f0f5;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mode-btn {
+  border: 1px solid #d0d0dd;
+  border-radius: 8px;
+  padding: 0.55em 1em;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: #f9f9fb;
+  color: #1a1a2e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn:hover {
+  border-color: #646cff;
+}
+
+.mode-btn.active {
+  background: #646cff;
+  border-color: #646cff;
+  color: #fff;
+}
+
+.snippet {
+  background: #1a1a2e;
+  color: #e6e6f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  margin: 0 0 1.25rem;
+}
+
+.embed {
+  height: 600px;
+  border: 1px solid #e0e0ea;
+  border-radius: 8px;
+  overflow: hidden;
+}
