@@ -1,0 +1,17 @@
+# gitleaks allowlist — known historical findings, all credentials ROTATED/REVOKED.
+# These point at past commits; the current working tree uses placeholders.
+# Format: <commit>:<file>:<rule>:<line>  (see `gitleaks detect --verbose` fingerprints)
+
+# Gemini API key (rotated) committed in commit a7bdb56
+a7bdb568a53674ee5dd4772aba81b508663404f6:visual-embed/spotter/spotter-agent-embed/.stackblitzrc:gcp-api-key:5
+a7bdb568a53674ee5dd4772aba81b508663404f6:visual-embed/spotter/query-decomposition/.stackblitzrc:gcp-api-key:5
+# TS bearer token (rotated) committed in commit a7bdb56
+a7bdb568a53674ee5dd4772aba81b508663404f6:visual-embed/spotter/query-decomposition/.stackblitzrc:generic-api-key:9
+
+# Placeholder example value in env.template (not a real secret)
+8fd87fdf3d544c26e3438a1c456069b45f2e5d8b:mcp/python-google-adk-trusted-auth/env.template:generic-api-key:8
+
+# Gemini API key + TS bearer token (rotated) committed in commit 8fd87fd
+8fd87fdf3d544c26e3438a1c456069b45f2e5d8b:visual-embed/spotter/spotter-agent-embed/.env:gcp-api-key:1
+8fd87fdf3d544c26e3438a1c456069b45f2e5d8b:visual-embed/spotter/query-decomposition/.env:generic-api-key:6
+8fd87fdf3d544c26e3438a1c456069b45f2e5d8b:visual-embed/spotter/query-decomposition/.env:gcp-api-key:1
