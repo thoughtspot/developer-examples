@@ -6,7 +6,7 @@
       "version": "20"
     }
   },
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}/demos/csharp_sdk",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}/rest-api/csharp-sdk",
   "postCreateCommand": "cd frontend && npm install",
   "forwardPorts": [5000, 5173],
   "portsAttributes": {

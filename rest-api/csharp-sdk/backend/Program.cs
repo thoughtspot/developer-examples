@@ -28,9 +28,9 @@ using ThoughtSpot.Client.Model;
 //  HttpClient/HttpClientHandler via the legacy constructors.
 // ─────────────────────────────────────────────────────────────────────────────
 
-string host = Environment.GetEnvironmentVariable("TS_HOST") ?? "https://172.32.25.218:8443";
-string user = Environment.GetEnvironmentVariable("TS_USER") ?? "tsadmin";
-string pass = Environment.GetEnvironmentVariable("TS_PASS") ?? "4Xyc1f%[H^3L";
+string host = Environment.GetEnvironmentVariable("TS_HOST") ?? "";
+string user = Environment.GetEnvironmentVariable("TS_USER") ?? "";
+string pass = Environment.GetEnvironmentVariable("TS_PASS") ?? "";
 
 var api = await ThoughtSpotRestApi.CreateAsync(new ApiClientConfiguration
 {
