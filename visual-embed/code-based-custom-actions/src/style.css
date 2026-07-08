@@ -1,0 +1,100 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  color: #1a1a2e;
+  background-color: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.topbar h1 {
+  font-size: 1.8rem;
+  margin: 0 0 0.25rem;
+}
+
+.topbar p {
+  margin: 0 0 1.25rem;
+  color: #555;
+  max-width: 70ch;
+}
+
+.topbar code {
+  background: #f0f0f5;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.embed {
+  height: 640px;
+  border: 1px solid #e0e0ea;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.log {
+  border: 1px solid #e0e0ea;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-y: auto;
+  max-height: 640px;
+}
+
+.log h2 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.log-list .empty {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.log-entry {
+  border: 1px solid #ececf2;
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
+  background: #fafafd;
+}
+
+.log-id {
+  font-weight: 600;
+  color: #646cff;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.log-entry pre {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
