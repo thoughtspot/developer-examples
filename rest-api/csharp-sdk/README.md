@@ -1,4 +1,17 @@
+<!-- search-meta
+tags: [ThoughtSpot, C#, ASP.NET, Vite, React, backend, frontend, Codespaces]
+apis: [ThoughtSpot.Client, ASP.NET Core, Vite, React]
+questions:
+  - How do I connect a React frontend to an ASP.NET Core backend in GitHub Codespaces?
+  - How do I configure ThoughtSpot credentials for a C# SDK demo?
+  - How do I proxy Vite frontend requests to a local ASP.NET Core backend?
+  - How do I run a ThoughtSpot C# SDK full-stack demo in GitHub Codespaces?
+  - How do I use ThoughtSpot API with React and Vite?
+-->
+
 # ThoughtSpot C# SDK — full-stack demo
+
+[Open this repo in GitHub Codespaces](https://github.com/thoughtspot/developer-examples/codespaces/new?ref=SCAL-322334-add-csharp-developer-examples)
 
 A minimal two-process demo covering search users, search liveboards, and
 exporting a liveboard's TML.

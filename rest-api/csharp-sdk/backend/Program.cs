@@ -77,36 +77,12 @@ catch (Exception ex)
     Console.Error.WriteLine("Server will continue running; API endpoints will return 503 until configured.");
 }
 
-// Choose a URL to listen on: prefer ASPNETCORE_URLS, else try default ports, else pick an ephemeral port.
-int FindFreePort()
-{
-    // First try 5000..5010
-    for (int p = 5000; p <= 5010; p++)
-    {
-        try
-        {
-            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, p);
-            listener.Start();
-            listener.Stop();
-            return p;
-        }
-        catch { }
-    }
-
-    // Fallback: let OS pick an ephemeral port
-    var l = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
-    l.Start();
-    int port = ((System.Net.IPEndPoint)l.LocalEndpoint).Port;
-    l.Stop();
-    return port;
-}
-
 // Determine the URL to listen on and configure the host.
 var builder = WebApplication.CreateBuilder(args);
 string? urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
 if (string.IsNullOrWhiteSpace(urls))
 {
-    int port = FindFreePort();
+    string port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
     urls = $"http://127.0.0.1:{port}";
     Console.WriteLine($"No ASPNETCORE_URLS set; binding to {urls}");
     builder.WebHost.UseUrls(urls);

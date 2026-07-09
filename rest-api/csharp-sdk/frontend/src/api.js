@@ -1,5 +1,6 @@
 // Thin fetch wrapper around the ASP.NET Core backend in ../backend.
-const BASE = "http://localhost:5000";
+// In Vite dev mode, an empty base uses the same origin and is proxied by vite.config.js.
+const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 async function handle(res) {
   const body = await res.json().catch(() => null);
