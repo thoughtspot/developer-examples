@@ -79,6 +79,9 @@ web_modules/
 .env.production.local
 .env.local
 
+# Allow the C# SDK demo backend env file to be checked in for convenience
+!rest-api/csharp-sdk/backend/.env
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
