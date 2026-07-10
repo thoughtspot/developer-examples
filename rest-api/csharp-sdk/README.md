@@ -11,7 +11,7 @@ questions:
 
 # ThoughtSpot C# SDK — full-stack demo
 
-[Open this repo in GitHub Codespaces](https://github.com/thoughtspot/developer-examples/codespaces/new?ref=SCAL-322334-add-csharp-developer-examples)
+Open this directory in GitHub Codespaces
 
 A minimal two-process demo covering search users, search liveboards,
 exporting a liveboard's TML, and asking Spotter a natural-language question
