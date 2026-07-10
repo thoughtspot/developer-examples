@@ -13,7 +13,7 @@ export default function App() {
         </div>
         <div>
           <h1 className="app-title">ThoughtSpot C# SDK — Full-Stack Demo</h1>
-          <p className="app-subtitle">ASP.NET Core backend + React frontend, wrapping ThoughtSpot.Client</p>
+          <p className="app-subtitle">ASP.NET Core backend + React frontend, wrapping thoughtspot_rest_api_sdk</p>
           <div className="app-pills">
             <span className="pill">C#</span>
             <span className="pill">ASP.NET Core</span>
@@ -27,7 +27,7 @@ export default function App() {
       <LiveboardsCard />
       <SpotterCard />
 
-      <footer className="app-footer">Built on ThoughtSpot.Client — see backend/Program.cs for the REST calls behind each card.</footer>
+      <footer className="app-footer">Built on thoughtspot_rest_api_sdk — see backend/Program.cs for the REST calls behind each card.</footer>
     </div>
   );
 }

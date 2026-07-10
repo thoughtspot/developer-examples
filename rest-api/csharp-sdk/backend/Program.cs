@@ -1,8 +1,8 @@
 using System.IO;
-using ThoughtSpot.Client;
-using ThoughtSpot.Client.Api;
-using ThoughtSpot.Client.Client;
-using ThoughtSpot.Client.Model;
+using thoughtspot_rest_api_sdk;
+using thoughtspot_rest_api_sdk.Api;
+using thoughtspot_rest_api_sdk.Client;
+using thoughtspot_rest_api_sdk.Model;
 
 
 // Loads key=value lines from a .env file into process environment variables
@@ -221,13 +221,13 @@ app.MapGet("/api/spotter/stream", async (HttpContext ctx, string query, string? 
 
     try
     {
-        // Workaround: ThoughtSpot.Client 0.1.0-beta.4's DataSourceContextInput
-        // always serializes its unused sibling fields (data_source_identifiers,
-        // guid) as explicit JSON nulls. This cluster's request validation
-        // rejects that shape (it falls back to expecting a `worksheet_context`
-        // payload instead). Bypassing the typed DataSourceContext property and
-        // writing the minimal object via AdditionalProperties avoids emitting
-        // those nulls.
+        // Workaround: thoughtspot_rest_api_sdk's DataSourceContextInput always
+        // serializes its unused sibling fields (data_source_identifiers, guid)
+        // as explicit JSON nulls (still true as of 0.1.0-beta.7). This
+        // cluster's request validation rejects that shape (it falls back to
+        // expecting a `worksheet_context` payload instead). Bypassing the
+        // typed DataSourceContext property and writing the minimal object via
+        // AdditionalProperties avoids emitting those nulls.
         var metadataContext = new ContextPayloadV2Input(type: ContextPayloadV2Input.TypeEnum.DATASOURCE);
         metadataContext.AdditionalProperties["data_source_context"] = new Dictionary<string, object>
         {
