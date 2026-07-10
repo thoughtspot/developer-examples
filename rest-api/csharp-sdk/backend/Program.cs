@@ -49,6 +49,7 @@ string host = ThoughtSpotConfiguration.NormalizeHost(hostEnv);
 string user = Environment.GetEnvironmentVariable("VITE_TS_USERNAME") ?? Environment.GetEnvironmentVariable("TS_USER") ?? "";
 string pass = Environment.GetEnvironmentVariable("VITE_TS_PASSWORD") ?? Environment.GetEnvironmentVariable("TS_PASS") ?? "";
 string liveboardId = Environment.GetEnvironmentVariable("VITE_LIVEBOARD_ID") ?? Environment.GetEnvironmentVariable("TS_LIVEBOARD_ID") ?? "";
+string spotterWorksheetId = Environment.GetEnvironmentVariable("VITE_SPOTTER_WORKSHEET_ID") ?? Environment.GetEnvironmentVariable("TS_SPOTTER_WORKSHEET_ID") ?? "";
 
 // Try to create the ThoughtSpot client but don't crash the server if it fails.
 ThoughtSpotRestApi? api = null;
@@ -101,7 +102,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 app.UseCors();
 
-app.MapGet("/api/health", () => Results.Ok(new { host, liveboardId }));
+app.MapGet("/api/health", () => Results.Ok(new { host, liveboardId, spotterWorksheetId }));
 
 Func<IResult> clientNotConfigured = () => Results.Json(new { error = "ThoughtSpot client not configured. See .env.example or set TS_USER/TS_PASS." }, statusCode: 503);
 
@@ -175,6 +176,85 @@ app.MapGet("/api/liveboards/{id}/tml", (string id) =>
     catch (ApiException ex)
     {
         return Results.Json(new { error = FriendlyError(ex) }, statusCode: ex.ErrorCode);
+    }
+});
+
+// 4. Spotter — ask a natural-language question, streamed live via SSE -----------
+//
+//    Creates a fresh agent conversation per question, then relays the
+//    Server-Sent Events from SendAgentConversationMessageStreamingStreamAsync
+//    straight through to the browser as they arrive (no buffering the full
+//    answer server-side first). Each upstream `data: [...]` line is
+//    forwarded verbatim as the default SSE "message" event; a final custom
+//    "done" event (or "ts-error" on failure) tells the frontend when to stop
+//    listening.
+app.MapGet("/api/spotter/stream", async (HttpContext ctx, string query, string? worksheetId) =>
+{
+    if (api == null)
+    {
+        ctx.Response.StatusCode = 503;
+        await ctx.Response.WriteAsJsonAsync(new { error = "ThoughtSpot client not configured. See .env.example or set TS_USER/TS_PASS." });
+        return;
+    }
+
+    string metadataId = string.IsNullOrWhiteSpace(worksheetId) ? spotterWorksheetId : worksheetId;
+    if (string.IsNullOrWhiteSpace(query) || string.IsNullOrWhiteSpace(metadataId))
+    {
+        ctx.Response.StatusCode = 400;
+        await ctx.Response.WriteAsJsonAsync(new { error = "A 'query' and a worksheet id (VITE_SPOTTER_WORKSHEET_ID or ?worksheetId=) are required." });
+        return;
+    }
+
+    ctx.Response.ContentType = "text/event-stream";
+    ctx.Response.Headers.CacheControl = "no-cache";
+    ctx.Response.Headers["X-Accel-Buffering"] = "no";
+
+    async Task WriteEventAsync(string? eventName, string data)
+    {
+        if (!string.IsNullOrEmpty(eventName))
+        {
+            await ctx.Response.WriteAsync($"event: {eventName}\n", ctx.RequestAborted);
+        }
+        await ctx.Response.WriteAsync($"data: {data}\n\n", ctx.RequestAborted);
+        await ctx.Response.Body.FlushAsync(ctx.RequestAborted);
+    }
+
+    try
+    {
+        // Workaround: ThoughtSpot.Client 0.1.0-beta.4's DataSourceContextInput
+        // always serializes its unused sibling fields (data_source_identifiers,
+        // guid) as explicit JSON nulls. This cluster's request validation
+        // rejects that shape (it falls back to expecting a `worksheet_context`
+        // payload instead). Bypassing the typed DataSourceContext property and
+        // writing the minimal object via AdditionalProperties avoids emitting
+        // those nulls.
+        var metadataContext = new ContextPayloadV2Input(type: ContextPayloadV2Input.TypeEnum.DATASOURCE);
+        metadataContext.AdditionalProperties["data_source_context"] = new Dictionary<string, object>
+        {
+            ["data_source_identifier"] = metadataId,
+        };
+
+        AgentConversation conversation = api.CreateAgentConversation(new CreateAgentConversationRequest(
+            metadataContext: metadataContext,
+            conversationSettings: new ConversationSettingsInput()));
+
+        var streamRequest = new SendAgentConversationMessageStreamingRequest(messages: new List<string> { query });
+
+        await foreach (var payload in api.SendAgentConversationMessageStreamingStreamAsync(
+            conversation.ConversationIdentifier, streamRequest, ctx.RequestAborted))
+        {
+            await WriteEventAsync(null, payload);
+        }
+
+        await WriteEventAsync("done", "{}");
+    }
+    catch (ApiException ex)
+    {
+        await WriteEventAsync("ts-error", System.Text.Json.JsonSerializer.Serialize(new { error = FriendlyError(ex) }));
+    }
+    catch (OperationCanceledException)
+    {
+        // Client navigated away / closed the EventSource — nothing to write.
     }
 });
 
