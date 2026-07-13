@@ -39,7 +39,7 @@ init({
 
 const LIVEBOARD_ID = import.meta.env.VITE_LIVEBOARD_ID;
 
-type Mode = 'all' | 'visible' | 'hidden' | 'disabled';
+type Mode = 'all' | 'visible' | 'hidden' | 'disabled' | 'cascading';
 
 const MODES: { id: Mode; label: string; snippet: string }[] = [
   {
@@ -72,6 +72,20 @@ const MODES: { id: Mode; label: string; snippet: string }[] = [
 disabledActionReason: 'Not available in this demo'
 // stay visible but non-clickable`,
   },
+  {
+    id: 'cascading',
+    label: 'Cascading menus (Sync / TML)',
+    snippet: `// Hide the WHOLE "Sync" cascading menu: hiding ALL children
+// of a cascading parent removes the parent item itself.
+hiddenActions: [
+  Action.SyncToSheets, Action.SyncToOtherApps, Action.ManagePipelines, // viz "..." menu
+  Action.SyncToSlack, Action.SyncToTeams,                              // Liveboard header menu
+],
+// Disable the "TML" cascading menu: disabling children NEVER
+// collapses the parent — "TML >" stays, children greyed out.
+disabledActions: [Action.ExportTML, Action.UpdateTML, Action.EditTML],
+disabledActionReason: 'TML editing is admin-only in this demo'`,
+  },
 ];
 
 // 2. Build the LiveboardEmbed view-config for the selected mode.
@@ -97,6 +111,31 @@ function buildConfig(mode: Mode): LiveboardViewConfig {
         ...base,
         disabledActions: [Action.DownloadAsPdf, Action.Share],
         disabledActionReason: 'Not available in this demo',
+      };
+    case 'cascading':
+      // Cascading (nested) menus: some actions are CHILDREN of a parent menu
+      // item (e.g. Sync > Sync to Sheets). The parent is derived from its
+      // children:
+      //   - hiding ALL children removes the parent menu entirely;
+      //   - with exactly ONE visible child, the child replaces the parent
+      //     inline (no submenu);
+      //   - DISABLING children keeps them in the submenu greyed-out, so the
+      //     parent stays visible.
+      // hiddenActions + disabledActions CAN be combined (only visibleActions
+      // and hiddenActions are mutually exclusive).
+      return {
+        ...base,
+        hiddenActions: [
+          // Sync cascade on the visualization "..." menu:
+          Action.SyncToSheets,
+          Action.SyncToOtherApps,
+          Action.ManagePipelines,
+          // Sync cascade on the Liveboard header menu:
+          Action.SyncToSlack,
+          Action.SyncToTeams,
+        ],
+        disabledActions: [Action.ExportTML, Action.UpdateTML, Action.EditTML],
+        disabledActionReason: 'TML editing is admin-only in this demo',
       };
     case 'all':
     default:

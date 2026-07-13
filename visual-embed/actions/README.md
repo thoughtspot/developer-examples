@@ -1,6 +1,6 @@
 <!-- search-meta
-tags: [Action, actions, menu actions, visibleActions, hiddenActions, disabledActions, disabledActionReason, LiveboardEmbed, AppEmbed, SearchEmbed, SpotterEmbed, allow-list, deny-list, toolbar, context menu, TypeScript, Web, Visual Embed SDK]
-apis: [init, AuthType, LiveboardEmbed, Action, visibleActions, hiddenActions, disabledActions, disabledActionReason, EmbedEvent, ViewConfig, LiveboardViewConfig]
+tags: [Action, actions, menu actions, visibleActions, hiddenActions, disabledActions, disabledActionReason, cascading menu, nested menu, submenu, Sync, TML, Schedule, Publish, SyncToSheets, SyncToOtherApps, ManagePipelines, SyncToSlack, SyncToTeams, ExportTML, UpdateTML, EditTML, SchedulesList, ManagePublishing, Unpublish, LiveboardEmbed, AppEmbed, SearchEmbed, SpotterEmbed, allow-list, deny-list, toolbar, context menu, TypeScript, Web, Visual Embed SDK]
+apis: [init, AuthType, LiveboardEmbed, Action, visibleActions, hiddenActions, disabledActions, disabledActionReason, EmbedEvent, ViewConfig, LiveboardViewConfig, Action.SyncToSheets, Action.SyncToOtherApps, Action.ManagePipelines, Action.SyncToSlack, Action.SyncToTeams, Action.ExportTML, Action.UpdateTML, Action.EditTML, Action.Schedule, Action.SchedulesList, Action.ManagePublishing, Action.Unpublish, Action.TML, Action.Publish]
 questions:
   - How do I show only specific actions in an embedded ThoughtSpot view?
   - How do I hide actions like Share or Edit in a LiveboardEmbed?
@@ -14,11 +14,24 @@ questions:
   - Do visibleActions and hiddenActions work together?
   - How do I hide a child action like Download as PDF?
   - How do I control the action menu in AppEmbed, SearchEmbed, or SpotterEmbed?
+  - How do I hide the entire Sync menu in an embedded Liveboard or visualization?
+  - How do I hide all sync actions (Sync to Sheets, Sync to other apps, Manage pipelines, Sync to Slack, Sync to Teams)?
+  - How do I hide the Sync menu but keep Manage pipelines available?
+  - How do I hide Sync actions and disable TML actions at the same time, and what does each do?
+  - Why is the Sync menu still visible after I put all sync actions in disabledActions?
+  - Why did the Sync submenu turn into a single flat menu item after hiding some children?
+  - What are the cascading (nested) menu actions and their child actions?
+  - Why is there no Action.Sync member in the Action enum?
+  - How do I hide the TML menu (Export TML, Update TML, Edit TML) on a Liveboard?
+  - How do I hide schedule actions (Schedule, Manage schedules) on a Liveboard header?
+  - How do I hide publish actions (Manage publishing, Unpublish) on a Liveboard?
+  - What happens when only one child of a cascading menu remains visible?
+  - Can I combine hiddenActions and disabledActions on the same embed?
 -->
 
 # actions
 
-A TypeScript + Vite example that shows how to control the **built-in action menu** of an embedded ThoughtSpot view using the [`Action`](https://developers.thoughtspot.com/docs/Enumeration_Action) enum. The demo embeds a Liveboard and lets you flip between allow-list, deny-list, and disabled modes so you can watch the toolbar and `...` (more) menu change live.
+A TypeScript + Vite example that shows how to control the **built-in action menu** of an embedded ThoughtSpot view using the [`Action`](https://developers.thoughtspot.com/docs/Enumeration_Action) enum — including **cascading (nested) menus** like Sync, TML, Schedule, and Publish. The demo embeds a Liveboard and lets you flip between allow-list, deny-list, disabled, and cascading modes so you can watch the toolbar and `...` (more) menu change live.
 
 ## What are "actions"?
 
@@ -73,6 +86,27 @@ const embed = new LiveboardEmbed(document.getElementById("ts-embed")!, {
   // 3) Greyed-out but visible, with a hover reason.
   // disabledActions: [Action.DownloadAsPdf, Action.Share],
   // disabledActionReason: "Not available in this demo",
+
+  // 4) CASCADING (nested) menus — parents are derived from their children;
+  //    there is NO Action.Sync member, control cascades via the children.
+  //    Full parent -> children inventory:
+  //      Sync (viz "..." menu)      -> Action.SyncToSheets, Action.SyncToOtherApps, Action.ManagePipelines
+  //      Sync (Liveboard header)    -> Action.SyncToSlack, Action.SyncToTeams
+  //      TML (Liveboard header)     -> Action.ExportTML, Action.UpdateTML, Action.EditTML
+  //      Schedule (Liveboard header)-> Action.Schedule, Action.SchedulesList
+  //      Publish (Liveboard header) -> Action.ManagePublishing, Action.Unpublish
+  //    Rules: hiding ALL children removes the parent menu entirely; exactly
+  //    ONE visible child replaces the parent inline (no submenu); DISABLING
+  //    children greys them out inside the submenu but the parent stays.
+  //    Only Action.TML and Action.Publish are targetable parents themselves.
+  //    hiddenActions + disabledActions CAN be combined — e.g. hide the whole
+  //    Sync menu everywhere AND disable TML with a tooltip:
+  // hiddenActions: [
+  //   Action.SyncToSheets, Action.SyncToOtherApps, Action.ManagePipelines,
+  //   Action.SyncToSlack, Action.SyncToTeams,
+  // ],
+  // disabledActions: [Action.ExportTML, Action.UpdateTML, Action.EditTML],
+  // disabledActionReason: "TML editing is admin-only in this workspace",
 });
 
 embed.on(EmbedEvent.Error, (e) => console.error("Embed error:", e));
@@ -104,10 +138,55 @@ A quick reference of frequently-curated actions (the enum has 150+ members — s
 | `Action.MakeACopy` | Make a copy |
 | `Action.AskAi` / `Action.SpotterViz` | Spotter entry points |
 
+## Cascading (nested) menu actions
+
+Some menu items are **cascading**: a parent entry (e.g. **Sync ›**) that opens a submenu of child actions. The parent is **derived from its children** — in most cases there is no `Action` member for the parent itself (there is no `Action.Sync`), so you control the cascade entirely through its children:
+
+| Surface | Parent menu item | Child `Action` members |
+| --- | --- | --- |
+| Visualization / Answer `...` menu | **Sync ›** | `Action.SyncToSheets`, `Action.SyncToOtherApps`, `Action.ManagePipelines` |
+| Liveboard header menu | **Sync ›** | `Action.SyncToSlack`, `Action.SyncToTeams` |
+| Liveboard header menu | **TML ›** | `Action.ExportTML`, `Action.UpdateTML`, `Action.EditTML` |
+| Liveboard header menu | **Schedule ›** | `Action.Schedule`, `Action.SchedulesList` |
+| Liveboard header menu | **Publish ›** | `Action.ManagePublishing`, `Action.Unpublish` |
+
+Note the **Sync** parent appears on two surfaces with *different* children. Two parents are also directly targetable as actions themselves: `Action.TML` and `Action.Publish` (Liveboard surface only); `Sync` and `Schedule` parents are derived-only.
+
+### The three cascade rules
+
+1. **Hiding ALL children removes the parent menu entirely.** `hiddenActions` with every child of a cascade → no **Sync ›** at all.
+2. **Exactly ONE visible child replaces the parent inline.** Hide two of the three viz-menu sync children and the survivor (e.g. **Manage pipelines**) renders as a flat menu item — no submenu.
+3. **Disabling children never collapses the parent.** `disabledActions` greys children out *inside* the submenu; the parent stays. If you want the menu gone, use `hiddenActions`, not `disabledActions`.
+
+### Worked example: hide Sync everywhere, disable TML with a reason
+
+```typescript
+const embed = new LiveboardEmbed(container, {
+  liveboardId: "<liveboard-guid>",
+
+  // HIDE the whole Sync feature. Rule 1: all children hidden -> both
+  // "Sync >" menus (viz menu AND Liveboard header) disappear entirely.
+  hiddenActions: [
+    Action.SyncToSheets,     // viz menu child
+    Action.SyncToOtherApps,  // viz menu child
+    Action.ManagePipelines,  // viz menu child (pipeline management lives under Sync)
+    Action.SyncToSlack,      // Liveboard header child
+    Action.SyncToTeams,      // Liveboard header child
+  ],
+
+  // DISABLE TML. Rule 3: "TML >" stays in the Liveboard header menu, its
+  // three children visible but greyed out with a hover tooltip.
+  disabledActions: [Action.ExportTML, Action.UpdateTML, Action.EditTML],
+  disabledActionReason: "TML editing is admin-only in this workspace",
+});
+```
+
+`hiddenActions` + `disabledActions` **can** be combined (only `visibleActions` + `hiddenActions` are mutually exclusive). Want to hide the sync *destinations* but keep pipeline management? Hide only `SyncToSheets` + `SyncToOtherApps` — rule 2 kicks in and **Manage pipelines** becomes a flat item.
+
 ## Features
 
 - Plain **TypeScript + Vite** — no framework, minimal dependencies.
-- One-click switching between `all`, `visibleActions`, `hiddenActions`, and `disabledActions` modes.
+- One-click switching between `all`, `visibleActions`, `hiddenActions`, `disabledActions`, and cascading-menu (Sync/TML) modes.
 - Re-renders the `LiveboardEmbed` on each switch so the toolbar/menu visibly updates.
 - Shows the live view-config snippet for the selected mode above the embed.
 - Listens for `EmbedEvent.Error` and logs to the console.
@@ -141,7 +220,7 @@ Just pass the same options to whichever embed component you're constructing.
 ## Gotchas
 
 - **Don't combine** `visibleActions` and `hiddenActions` on the same embed — pick one strategy.
-- **Parent vs child actions.** Some actions are children of a parent menu. To control a child like `Action.DownloadAsPdf`, the parent (`Action.Download`) generally needs to be present too. For TML options, the parent `Action.TML` must be included for the cascading menu items to appear.
+- **Parent vs child actions.** Some actions are children of a cascading parent menu (see the "Cascading (nested) menu actions" section above for the full parent → children inventory and the three cascade rules). Most cascade parents (like Sync) have no `Action` member — control them through their children; `Action.TML` and `Action.Publish` are the two directly-targetable parents.
 - **Allow-list is future-proof, deny-list is not.** New ThoughtSpot releases add new actions; with `visibleActions` they stay hidden automatically, with `hiddenActions` they will appear unless you add them.
 - **An action only shows if the user has permission and the feature is enabled** — hiding it in the SDK is a UI control, not a security boundary. Enforce real authorization server-side / via ThoughtSpot roles.
 
