@@ -34,7 +34,11 @@ function App() {
   const handleUpdateRuntimeFilters = async () => {
     try {
       await liveboardRef.current.trigger(HostEvent.UpdateRuntimeFilters, [
-        { columnName: "state", operator: RuntimeFilterOp.EQ, values: ["michigan"] },
+        {
+          columnName: "state",
+          operator: RuntimeFilterOp.EQ,
+          values: ["michigan"],
+        },
       ]);
       console.log("Runtime filters updated");
     } catch (e) {
@@ -47,7 +51,9 @@ function App() {
   const handleUpdateExistingFilters = async () => {
     try {
       await liveboardRef.current.trigger(HostEvent.UpdateFilters, {
-        filters: [{ column: "item type", oper: "IN", values: ["shoes", "boots"] }],
+        filters: [
+          { column: "item type", oper: "IN", values: ["shoes", "boots"] },
+        ],
       });
       console.log("Existing filters updated");
     } catch (e) {
@@ -73,12 +79,14 @@ function App() {
   useEffect(() => {
     const embed = liveboardRef.current;
     if (!embed) return;
-    const subscribed = embed.subscribedEvent(HostEvent.UpdateFilters) as EmbedEvent;
+    const subscribed = embed.subscribedEvent(
+      HostEvent.UpdateFilters,
+    ) as EmbedEvent;
     const onReady = () => {
       console.log("UpdateFilters is ready to trigger");
       embed.trigger(HostEvent.UpdateFilters, {
         filters: [
-          { column: "date", oper: "EQ", values: ["JULY", "2023"], type: "MONTH_YEAR" },
+          { column: "item type", oper: "IN", values: ["shoes", "boots"] },
         ],
       });
     };
@@ -114,7 +122,11 @@ function App() {
             // AT INIT — filters/parameters known upfront go in the view config:
             // no events or timing involved. Prefer this whenever possible.
             runtimeFilters={[
-              { columnName: "state", operator: RuntimeFilterOp.EQ, values: ["california"] },
+              {
+                columnName: "state",
+                operator: RuntimeFilterOp.EQ,
+                values: ["california"],
+              },
             ]}
             runtimeParameters={[{ name: "Discount", value: 0.1 }]}
             // Required for the subscribedEvent readiness pattern (SDK 1.45.2+ / TS 26.3.0.cl+).
