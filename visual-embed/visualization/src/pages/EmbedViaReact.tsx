@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import Header from "../components/Header";
 import { EmbedEvent, HostEvent, LiveboardEmbed, RuntimeFilterOp, useEmbedRef } from "@thoughtspot/visual-embed-sdk/react";
 
@@ -18,11 +19,24 @@ function EmbedViaReact() {
         console.log(EmbedEvent.Load, {});
     };
 
-    const onLiveboardRendered = () => {
-        ref.current.trigger(HostEvent.Delete, {
-            vizId: import.meta.env.VITE_LIVEBOARD_VIZ_ID
-        });
-      };
+    // Standard pattern for triggering a host event at load time: listen for the
+    // "<Event> Subscribed" ready signal via subscribedEvent() — it fires the moment
+    // the embedded app has registered its handler, so the trigger cannot be dropped.
+    // Requires useHostEventsV2 on the embed (SDK 1.45.2+ / ThoughtSpot 26.3.0.cl+).
+    useEffect(() => {
+        const embed = ref.current;
+        if (!embed) return;
+        const subscribed = embed.subscribedEvent(HostEvent.Delete) as EmbedEvent;
+        const onReady = () => {
+            embed.trigger(HostEvent.Delete, {
+                vizId: import.meta.env.VITE_LIVEBOARD_VIZ_ID
+            });
+        };
+        embed.on(subscribed, onReady);
+        return () => {
+            embed.off(subscribed, onReady);
+        };
+    }, []);
 
     return (
         <>
@@ -37,7 +51,7 @@ function EmbedViaReact() {
                     runtimeFilters={runtimeFilters}
                     liveboardId={import.meta.env.VITE_LIVEBOARD_ID}
                     vizId={import.meta.env.VITE_LIVEBOARD_VIZ_ID}
-                    onLiveboardRendered={onLiveboardRendered}
+                    useHostEventsV2
                     onLoad={onLoad} />
             </div>
         </>

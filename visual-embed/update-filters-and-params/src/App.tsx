@@ -73,7 +73,10 @@ function App() {
     }
   };
 
-  // READINESS — trigger UpdateFilters the moment the embedded app is ready for it.
+  // READINESS — the standard pattern for triggering ANY host event at load time,
+  // on ANY embed type (LiveboardEmbed, SearchEmbed, AppEmbed, SpotterEmbed — the
+  // method is on the shared embed base class). Same pattern for UpdateParameters,
+  // UpdateRuntimeFilters, or any other host event.
   // The "<Event> Subscribed" signal ONLY fires when useHostEventsV2 is enabled on
   // the embed (see the prop below); without the flag this listener never runs.
   useEffect(() => {

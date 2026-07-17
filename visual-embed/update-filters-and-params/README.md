@@ -1,6 +1,6 @@
 <!-- search-meta
 tags: [filters, parameters, runtime-filters, runtime-parameters, host-events, useHostEventsV2, subscribed-event, timing, UpdateFilters, UpdateRuntimeFilters, UpdateParameters, React, TypeScript]
-apis: [runtimeFilters, runtimeParameters, HostEvent, UpdateRuntimeFilters, UpdateFilters, UpdateParameters, RuntimeFilterOp, RuntimeParameter, subscribedEvent, useHostEventsV2, LiveboardEmbed, SearchEmbed, useEmbedRef, trigger, on]
+apis: [runtimeFilters, runtimeParameters, HostEvent, UpdateRuntimeFilters, UpdateFilters, UpdateParameters, RuntimeFilterOp, RuntimeParameter, subscribedEvent, useHostEventsV2, LiveboardEmbed, SearchEmbed, AppEmbed, SpotterEmbed, useEmbedRef, trigger, on]
 questions:
   - How do I apply filters programmatically on an embedded Liveboard or Search?
   - How do I update filters on a ThoughtSpot embed after it has loaded?
@@ -11,7 +11,9 @@ questions:
   - What is the difference between UpdateRuntimeFilters and UpdateFilters?
   - Why is HostEvent.UpdateFilters not firing or not working in my embed?
   - When is it safe to trigger a host event after the embed loads?
+  - What is the recommended way to trigger any host event at load time?
   - How do I use subscribedEvent to know a host event is ready?
+  - Does subscribedEvent work on SearchEmbed, AppEmbed, and SpotterEmbed too?
   - Do I need useHostEventsV2 for the Subscribed embed event to fire?
   - How do I update runtime filters from a button in my app?
 -->
@@ -28,10 +30,11 @@ Working patterns and a decision guide for applying **filters and parameters** to
 | Filters change after load (button, external UI) | **`HostEvent.UpdateRuntimeFilters`** — array of `{ columnName, operator, values }` | SDK 1.9.0 / TS 8.1.0.cl |
 | Updating values of a filter that already exists on the Liveboard | **`HostEvent.UpdateFilters`** — `{ filters: [{ column, oper, values }] }` | SDK 1.23.0 / TS 9.4.0.cl |
 | Parameter values change after load | **`HostEvent.UpdateParameters`** — array of `{ name, value, isVisibleToUser? }` | SDK 1.29.0 / TS 10.1.0.cl |
-| You need the exact moment a host event is safe to trigger | **`embed.subscribedEvent(HostEvent.X)`** listener — **only fires when `useHostEventsV2: true` is set in the embed view config** | SDK 1.45.2+ / TS 26.3.0.cl+ |
+| Triggering **any** host event at load time — the standard, recommended pattern | **`embed.subscribedEvent(HostEvent.X)`** listener — fires the exact moment the event is safe to trigger. **Only fires when `useHostEventsV2: true` is set in the embed view config** | SDK 1.45.2+ / TS 26.3.0.cl+ |
 
 Good to know:
 
+- **The `subscribedEvent` readiness pattern works on every embed type** — it is defined on the shared embed base class, so `LiveboardEmbed`, `SearchEmbed`, `SearchBarEmbed`, `AppEmbed`, and `SpotterEmbed` all support it. Prefer it over ad-hoc `Load`/`Data`/`LiveboardRendered` timing for any load-time trigger.
 - **`UpdateRuntimeFilters` resets the embedded object to its original state** before applying the new conditions — user changes such as drill-downs are cleared.
 - If multiple columns share a name, disambiguate with the `WORKSHEET_NAME::COLUMN_NAME` format in `UpdateFilters` (e.g. `"(Sample) Retail - Apparel::city"`).
 - **Common pitfall:** wiring the `Subscribed` readiness listener **without** enabling `useHostEventsV2` — the listener silently never fires. On clusters older than 26.3.0.cl, trigger from `EmbedEvent.Load`/`EmbedEvent.Data` instead, guarded so it runs once.
@@ -83,8 +86,11 @@ const App = () => {
     ]);
   };
 
-  // READINESS — fires the moment the embedded app has registered its handler for
-  // the host event, so triggering is guaranteed safe.
+  // READINESS — the standard pattern for triggering ANY host event at load time,
+  // on ANY embed type (LiveboardEmbed, SearchEmbed, AppEmbed, SpotterEmbed — the
+  // method is on the shared embed base class). Fires the moment the embedded app
+  // has registered its handler, so the trigger cannot be dropped. Same pattern for
+  // UpdateParameters, UpdateRuntimeFilters, or any other host event.
   // REQUIRES useHostEventsV2: true on the embed (see props below) — without the
   // flag this "<Event> Subscribed" signal NEVER fires.
   useEffect(() => {
