@@ -46,7 +46,7 @@ const App = () => {
 };
 ```
 
-> **Triggering host events at load time?** These examples are button-driven, so no readiness handling is needed. For triggers fired automatically at load, use the `subscribedEvent` readiness pattern (requires `useHostEventsV2: true`) — see [update-filters-and-params](../update-filters-and-params/README.md).
+> **Triggering host events at load time?** These examples are button-driven, so no readiness handling is needed. For triggers fired automatically at load, use the `subscribedEvent` readiness pattern (no `useHostEventsV2` flag required) — see [update-filters-and-params](../update-filters-and-params/README.md).
 
 ## Documentation
 
