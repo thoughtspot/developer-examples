@@ -20,7 +20,7 @@ questions:
 
 # update-filters-and-params
 
-Working patterns and a decision guide for applying **filters and parameters** to embedded ThoughtSpot content programmatically — at init via `runtimeFilters` / `runtimeParameters`, and after load via the `UpdateRuntimeFilters`, `UpdateFilters`, and `UpdateParameters` host events, including the `subscribedEvent` readiness pattern (requires `useHostEventsV2: true`).
+Working patterns and a decision guide for applying **filters and parameters** to embedded ThoughtSpot content programmatically — at init via `runtimeFilters` / `runtimeParameters`, and after load via the `UpdateRuntimeFilters`, `UpdateFilters`, and `UpdateParameters` host events, including the `subscribedEvent` readiness pattern.
 
 ## Which mechanism to use
 
@@ -30,14 +30,15 @@ Working patterns and a decision guide for applying **filters and parameters** to
 | Filters change after load (button, external UI) | **`HostEvent.UpdateRuntimeFilters`** — array of `{ columnName, operator, values }` | SDK 1.9.0 / TS 8.1.0.cl |
 | Updating values of a filter that already exists on the Liveboard | **`HostEvent.UpdateFilters`** — `{ filters: [{ column, oper, values }] }` | SDK 1.23.0 / TS 9.4.0.cl |
 | Parameter values change after load | **`HostEvent.UpdateParameters`** — array of `{ name, value, isVisibleToUser? }` | SDK 1.29.0 / TS 10.1.0.cl |
-| Triggering **any** host event at load time — the standard, recommended pattern | **`embed.subscribedEvent(HostEvent.X)`** listener — fires the exact moment the event is safe to trigger. **Only fires when `useHostEventsV2: true` is set in the embed view config** | SDK 1.45.2+ / TS 26.3.0.cl+ |
+| Triggering **any** host event at load time — the standard, recommended pattern | **`embed.subscribedEvent(HostEvent.X)`** listener — fires the exact moment the event is safe to trigger. No `useHostEventsV2` flag required. | SDK 1.48.0+ / TS 26.4.0.cl+ |
 
 Good to know:
 
 - **The `subscribedEvent` readiness pattern works on every embed type** — it is defined on the shared embed base class, so `LiveboardEmbed`, `SearchEmbed`, `SearchBarEmbed`, `AppEmbed`, and `SpotterEmbed` all support it. Prefer it over ad-hoc `Load`/`Data`/`LiveboardRendered` timing for any load-time trigger.
 - **`UpdateRuntimeFilters` resets the embedded object to its original state** before applying the new conditions — user changes such as drill-downs are cleared.
 - If multiple columns share a name, disambiguate with the `WORKSHEET_NAME::COLUMN_NAME` format in `UpdateFilters` (e.g. `"(Sample) Retail - Apparel::city"`).
-- **Common pitfall:** wiring the `Subscribed` readiness listener **without** enabling `useHostEventsV2` — the listener silently never fires. On clusters older than 26.3.0.cl, trigger from `EmbedEvent.Load`/`EmbedEvent.Data` instead, guarded so it runs once.
+- **`useHostEventsV2` is NOT required for the `subscribedEvent` readiness pattern.** The `Subscribed` signal fires without it. `useHostEventsV2` is a separate, independent view-config flag that opts into the host-events v2 API — it is not a prerequisite for subscribing to events.
+- **Version note:** the `Subscribed` embed event requires SDK 1.48.0+ / TS 26.4.0.cl+. On older clusters, trigger from `EmbedEvent.Load`/`EmbedEvent.Data` instead, guarded so it runs once.
 
 ## Key Usage
 
@@ -91,8 +92,7 @@ const App = () => {
   // method is on the shared embed base class). Fires the moment the embedded app
   // has registered its handler, so the trigger cannot be dropped. Same pattern for
   // UpdateParameters, UpdateRuntimeFilters, or any other host event.
-  // REQUIRES useHostEventsV2: true on the embed (see props below) — without the
-  // flag this "<Event> Subscribed" signal NEVER fires.
+  // Note: the subscribedEvent pattern does NOT require useHostEventsV2.
   useEffect(() => {
     const embed = embedRef.current;
     if (!embed) return;
@@ -122,8 +122,6 @@ const App = () => {
           { columnName: "state", operator: RuntimeFilterOp.EQ, values: ["california"] },
         ]}
         runtimeParameters={[{ name: "Discount", value: 0.1 }]}
-        // Required for the subscribedEvent readiness pattern (SDK 1.45.2+ / TS 26.3.0.cl+).
-        useHostEventsV2
       />
     </>
   );

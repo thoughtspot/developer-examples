@@ -77,8 +77,8 @@ function App() {
   // on ANY embed type (LiveboardEmbed, SearchEmbed, AppEmbed, SpotterEmbed — the
   // method is on the shared embed base class). Same pattern for UpdateParameters,
   // UpdateRuntimeFilters, or any other host event.
-  // The "<Event> Subscribed" signal ONLY fires when useHostEventsV2 is enabled on
-  // the embed (see the prop below); without the flag this listener never runs.
+  // Note: the subscribedEvent pattern does NOT require useHostEventsV2. The
+  // "<Event> Subscribed" signal fires on its own (SDK 1.48.0+ / TS 26.4.0.cl+).
   useEffect(() => {
     const embed = liveboardRef.current;
     if (!embed) return;
@@ -132,8 +132,6 @@ function App() {
               },
             ]}
             runtimeParameters={[{ name: "Discount", value: 0.1 }]}
-            // Required for the subscribedEvent readiness pattern (SDK 1.45.2+ / TS 26.3.0.cl+).
-            useHostEventsV2
           />
         </div>
       </div>
