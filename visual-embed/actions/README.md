@@ -7,6 +7,11 @@ questions:
   - What is the difference between hiddenActions and disabledActions?
   - When should I use visibleActions vs hiddenActions?
   - How do I grey out (disable) an action and show a reason on hover?
+  - How do I disable the Share action?
+  - How do I disable (grey out) Share or Download instead of hiding it?
+  - How do I disable an action but keep it visible in the menu?
+  - Should I use disabledActions or hiddenActions to disable an action?
+  - I disabled an action but it disappeared from the UI — which config should I use?
   - What is the Action enum in the Visual Embed SDK?
   - How do I use visibleActions as an allow-list to restrict the toolbar?
   - How do I remove the Download or Share button from an embedded Liveboard?
@@ -55,6 +60,27 @@ When you embed ThoughtSpot inside your own app you usually want to **curate** wh
 - **Show a small, fixed set of actions** → `visibleActions` (allow-list). Safest for locked-down viewer experiences because new actions added in future ThoughtSpot releases stay hidden by default.
 - **Keep almost everything, drop a few** → `hiddenActions` (deny-list). Convenient, but remember that future releases may introduce new actions you didn't explicitly hide.
 - **Signal that an action exists but isn't available right now** (entitlement, role, demo) → `disabledActions` + `disabledActionReason`.
+
+> 🚫 **"Disable" ≠ "hide".** These are two different requests — pick the one you actually mean:
+>
+> | You want… | Use | Result |
+> | --- | --- | --- |
+> | Share **greyed out but still visible** | `disabledActions: [Action.Share]` | User sees Share, can't click it |
+> | Share **gone from the menu** | `hiddenActions: [Action.Share]` | User never sees Share |
+>
+> ```typescript
+> // DISABLE Share — stays visible, greyed out, with a tooltip
+> disabledActions: [Action.Share],
+> disabledActionReason: "Sharing is managed by your admin",
+>
+> // HIDE Share — removed from the UI entirely
+> // hiddenActions: [Action.Share],
+> ```
+>
+> Reaching for `hiddenActions` when you were asked to *disable* is the most common mistake here.
+> Neither option is a security control — they only change what the UI renders. A user can still
+> reach the underlying capability via the REST API or a direct URL. Enforce real restrictions with
+> ThoughtSpot sharing and privileges.
 
 ## Key Usage
 
