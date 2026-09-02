@@ -137,3 +137,8 @@ dist
 *.egg-info
 __pycache__
 .env*.local
+
+# Local chat history databases (mcp/python-react-agent-simple-ui)
+*.db
+*.db-wal
+*.db-shm
