@@ -17,7 +17,7 @@
     "@thoughtspot/visual-embed-sdk": "latest",
     "antd": "^5.24.2",
     "antd-style": "^3.7.1",
-    "express": "^4.21.2",
+    "express": "^4.22.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-layout-kit": "^1.9.1"
