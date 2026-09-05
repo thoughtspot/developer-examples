@@ -13,7 +13,7 @@
   "license": "MIT",
   "dependencies": {
     "@slack/web-api": "^7.9.1",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2"
