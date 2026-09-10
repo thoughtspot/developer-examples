@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TSE — Add Filter (Edit Mode) Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f8;
+      color: #1a1a1a;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e4e8;
+    }
+    header h1 {
+      font-size: 16px;
+      margin: 0;
+    }
+    #addFilterBtn {
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      background: #4285f4;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #addFilterBtn:disabled {
+      background: #a9c3f5;
+      cursor: not-allowed;
+    }
+    #layout {
+      display: flex;
+      height: calc(100vh - 53px);
+    }
+    #embed-wrapper {
+      position: relative;
+      flex: 1 1 auto;
+      height: 100%;
+    }
+    #ts-embed {
+      width: 100%;
+      height: 100%;
+    }
+    #embed-loader {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.85);
+    }
+    #embed-loader[hidden] {
+      display: none;
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #d7dce3;
+      border-top-color: #4285f4;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    #embed-loader-text {
+      font-size: 13px;
+      color: #4a4f57;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Liveboard Embed — Add Filter Demo</h1>
+    <button id="addFilterBtn" disabled>Add Filter</button>
+  </header>
+  <div id="layout">
+    <div id="embed-wrapper">
+      <div id="ts-embed"></div>
+      <div id="embed-loader" hidden>
+        <div class="spinner"></div>
+        <span id="embed-loader-text">Working…</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
