@@ -6,8 +6,7 @@ import {
   HostEvent,
 } from "@thoughtspot/visual-embed-sdk";
 
-const THOUGHTSPOT_HOST = "http://localhost:5001";
-const LIVEBOARD_ID = "9bd202f5-d431-44bf-9a07-b4f7be372125";
+const LIVEBOARD_ID = import.meta.env.VITE_LIVEBOARD_ID;
 
 const addFilterBtn = document.getElementById("addFilterBtn");
 const embedLoaderEl = document.getElementById("embed-loader");
@@ -62,8 +61,10 @@ async function triggerOnceReady(embed, hostEvent, readyFlag) {
 }
 
 init({
-  thoughtSpotHost: THOUGHTSPOT_HOST,
-  authType: AuthType.None,
+  thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,
+  authType: AuthType.Basic,
+  username: import.meta.env.VITE_THOUGHTSPOT_USERNAME,
+  password: import.meta.env.VITE_THOUGHTSPOT_PASSWORD,
 });
 
 const liveboardEmbed = new LiveboardEmbed(document.getElementById("ts-embed"), {

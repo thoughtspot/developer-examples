@@ -20,13 +20,16 @@ npm run dev
 
 Open http://localhost:8642 for `vanilla/`, or http://localhost:8643 for `react/`.
 
-Set your Liveboard ID if you need a different one — `LIVEBOARD_ID` in `vanilla/src/main.js` or `react/src/App.jsx`:
+Set your cluster host, credentials, and Liveboard ID in `vanilla/.env` or `react/.env`:
 
-```js
-const LIVEBOARD_ID = "be3e31a1-4db4-4c30-ab81-60cb92c4f835"; // replace with a real Liveboard GUID
+```
+VITE_THOUGHTSPOT_HOST=https://training.thoughtspot.cloud
+VITE_THOUGHTSPOT_USERNAME=code-sandbox
+VITE_THOUGHTSPOT_PASSWORD="PASSWORD"
+VITE_LIVEBOARD_ID=b504e160-3025-4508-a76a-1beb1f4b5eed
 ```
 
-The cluster (`https://nebula-agentspotdev.thoughtspotdev.cloud`) and `AuthType.None` are already configured — this assumes you already have a valid ThoughtSpot session cookie in the browser (e.g. logged in via the cluster UI in the same browser). Swap `AuthType.None` for your org's real auth type (SSO/trusted auth) in production.
+`AuthType.Basic` is already configured with the credentials above. Swap it for your org's real auth type (SSO/trusted auth).
 
 The logged-in user must have edit permission on the Liveboard for the Edit/OpenAddFilterModal sequence to succeed.
 

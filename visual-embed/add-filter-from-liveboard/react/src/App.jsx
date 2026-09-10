@@ -7,8 +7,7 @@ import {
   HostEvent,
 } from "@thoughtspot/visual-embed-sdk/react";
 
-const THOUGHTSPOT_HOST = "http://localhost:5001";
-const LIVEBOARD_ID = "9bd202f5-d431-44bf-9a07-b4f7be372125";
+const LIVEBOARD_ID = import.meta.env.VITE_LIVEBOARD_ID;
 
 const FRAME_PARAMS = { width: "100%", height: "100%" };
 
@@ -21,8 +20,10 @@ const MIN_LOADER_VISIBLE_MS = 400;
 // configured) before that effect ever ran, throwing "Error parsing
 // ThoughtSpot host".
 init({
-  thoughtSpotHost: THOUGHTSPOT_HOST,
-  authType: AuthType.None,
+  thoughtSpotHost: import.meta.env.VITE_THOUGHTSPOT_HOST,
+  authType: AuthType.Basic,
+  username: import.meta.env.VITE_THOUGHTSPOT_USERNAME,
+  password: import.meta.env.VITE_THOUGHTSPOT_PASSWORD,
 });
 
 export default function App() {
