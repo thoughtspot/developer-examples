@@ -1,0 +1,25 @@
+{
+  "name": "node-proxy-trusted-auth",
+  "private": true,
+  "version": "0.0.0",
+  "description": "White-label MCP proxy for ThoughtSpot using trusted auth (secret key) token exchange",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@thoughtspot/rest-api-sdk": "2.28.0",
+    "dotenv": "17.2.3",
+    "express": "4.22.3",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.0",
+    "@types/node": "22.10.2",
+    "tsx": "4.20.6",
+    "typescript": "5.7.2"
+  }
+}
