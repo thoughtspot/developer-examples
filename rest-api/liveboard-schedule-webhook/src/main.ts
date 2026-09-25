@@ -14,6 +14,10 @@ import { pathToFileURL } from 'node:url';
 
 const MAX_BYTES = 25 * 1024 * 1024; // ThoughtSpot delivers up to 25 MB
 
+// Names from a delivery (filenames, msgUniqueId) made safe for use on disk:
+// no directories, no "..", only [A-Za-z0-9_.-].
+const safeName = (name: string) => path.basename(name).replace(/[^\w.-]/g, '_').replace(/^\.*$/, '_');
+
 interface StoredFile {
   filename: string;
   contentType: string;
@@ -60,8 +64,8 @@ function parseMultipart(req: Request, dir: string) {
     bb.on('file', (name, stream, info) => {
       stream.on('limit', () => (tooLarge = true));
       if (name !== 'file') return void stream.resume();
-      const filename = path.basename(info.filename || `attachment-${files.length}`);
-      const file = { filename, contentType: info.mimeType, path: path.join(dir, `${files.length}-${filename}`) };
+      const filename = safeName(info.filename || 'attachment');
+      const file = { filename, contentType: info.mimeType, path: path.join(dir, `attachment-${files.length}`) };
       files.push(file);
       const write = pipeline(stream, createWriteStream(file.path));
       write.catch(() => {}); // reported through Promise.all below
@@ -117,7 +121,7 @@ async function fetchStored(file: StoredFile, dest: string): Promise<void> {
 async function upload(file: LocalFile, event: WebhookEvent, key: string): Promise<void> {
   const folderId = process.env.DRIVE_FOLDER_ID;
   if (!folderId) {
-    const dir = path.join(process.env.OUT_DIR ?? 'out', key.slice(0, 8));
+    const dir = path.join(process.env.OUT_DIR ?? 'out', safeName(key).slice(0, 8));
     await mkdir(dir, { recursive: true });
     await copyFile(file.path, path.join(dir, file.filename));
     return;
@@ -148,9 +152,9 @@ async function processDelivery(event: WebhookEvent, key: string, files: LocalFil
         console.error(`[${event.eventId}] ${file.filename} was not stored: ${file.errorMessage}`);
         continue;
       }
-      const dest = path.join(dir, `stored-${i}-${path.basename(file.filename)}`);
+      const dest = path.join(dir, `stored-${i}`);
       await fetchStored(file, dest);
-      files.push({ filename: file.filename, contentType: file.contentType, path: dest });
+      files.push({ filename: safeName(file.filename), contentType: file.contentType, path: dest });
     }
     for (const file of files) {
       await upload(file, event, key);
