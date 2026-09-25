@@ -18,6 +18,15 @@ const MAX_BYTES = 25 * 1024 * 1024; // ThoughtSpot delivers up to 25 MB
 // no directories, no "..", only [A-Za-z0-9_.-].
 const safeName = (name: string) => path.basename(name).replace(/[^\w.-]/g, '_').replace(/^\.*$/, '_');
 
+// Temp files live in a per-delivery mkdtemp dir directly under os.tmpdir().
+// Checked at every read and write, so no other path can reach the disk.
+const TMP_ROOT = path.resolve(os.tmpdir());
+function tempFile(p: string): string {
+  const resolved = path.resolve(p);
+  if (path.dirname(path.dirname(resolved)) !== TMP_ROOT) throw new Error(`unexpected temp path ${p}`);
+  return resolved;
+}
+
 interface StoredFile {
   filename: string;
   contentType: string;
@@ -67,7 +76,7 @@ function parseMultipart(req: Request, dir: string) {
       const filename = safeName(info.filename || 'attachment');
       const file = { filename, contentType: info.mimeType, path: path.join(dir, `attachment-${files.length}`) };
       files.push(file);
-      const write = pipeline(stream, createWriteStream(file.path));
+      const write = pipeline(stream, createWriteStream(tempFile(file.path)));
       write.catch(() => {}); // reported through Promise.all below
       writes.push(write);
     });
@@ -110,7 +119,7 @@ async function fetchStored(file: StoredFile, dest: string): Promise<void> {
   const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
   const s3 = new S3Client({ region: file.region });
   const object = await s3.send(new GetObjectCommand({ Bucket: file.bucketName, Key: file.objectKey }));
-  await pipeline(object.Body as NodeJS.ReadableStream, createWriteStream(dest));
+  await pipeline(object.Body as NodeJS.ReadableStream, createWriteStream(tempFile(dest)));
 }
 
 // ---- Downstream ----------------------------------------------------------------
@@ -131,7 +140,7 @@ async function upload(file: LocalFile, event: WebhookEvent, key: string): Promis
   const name = `${event.metadataObject.name} - ${event.data.scheduleDetails?.name ?? 'schedule'} - ${event.timestamp} - ${file.filename}`;
   await client.files.create({
     requestBody: { name, parents: [folderId] },
-    media: { mimeType: file.contentType, body: createReadStream(file.path) },
+    media: { mimeType: file.contentType, body: createReadStream(tempFile(file.path)) },
     supportsAllDrives: true,
   });
 }
