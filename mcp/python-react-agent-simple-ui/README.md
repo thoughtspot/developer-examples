@@ -114,7 +114,7 @@ init({
 startAutoMCPFrameRenderer({ frameParams: { height: "600px" } });
 ```
 
-Then put an `<iframe src="{iframe_url}">` wherever an answer belongs - the renderer does the rest. See [Chart rendering](#chart-rendering-with-startautomcpframerenderer).
+Then put an `<iframe src="{iframe_url}" srcdoc="Loading chart…">` wherever an answer belongs - the renderer does the rest. The `srcdoc` keeps the browser from loading the URL unauthenticated before the swap (see [Chart rendering](#chart-rendering-with-startautomcpframerenderer)).
 
 #### 7. (Optional) Persist chat history
 
@@ -472,6 +472,8 @@ The client injects each answer's iframe as markup rather than rendering `<iframe
 ```
 
 `answerHtml()` builds the `<iframe>` from `answerSrc()`: the live `iframe_url` when there is one, else an embed route from `frame_params`, else - for a stored answer - `tsmcpConversationId` plus `tsmcpAnswerIndex`.
+
+The placeholder iframe also carries a `srcdoc` ("Loading chart…"). `srcdoc` takes precedence over `src`, so the browser never loads the placeholder's ThoughtSpot URL itself - the renderer only reads it. Without it the placeholder loads ThoughtSpot unauthenticated until the swap: ThoughtSpot redirects it to the SSO login, which refuses to be framed, so the frame shows an error and the console fills with CSP `frame-ancestors` violations. For a stored answer that window is the renderer's two conversation-service calls - 25-35 s on a loaded cluster.
 
 ### Visual embed customization
 

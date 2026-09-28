@@ -182,7 +182,7 @@ init({
 // ThoughtSpot MCP server adds to every `iframe_url` - and replaces each one in place
 // with a fully configured, authenticated ThoughtSpot embed. This is what lets the
 // server hand us a bare URL and still get a real interactive chart.
-startAutoMCPFrameRenderer({
+const mcpFrameObserver = startAutoMCPFrameRenderer({
   frameParams: {
     height: "600px",
   },
@@ -190,6 +190,11 @@ startAutoMCPFrameRenderer({
   // to init() do not reach it, so the theme has to be repeated here.
   ...embedTheme,
 });
+
+// In dev, Vite hot-reloads this module by running it again. Without this, every
+// reload leaves the previous observer attached, and each one resolves every chart -
+// duplicating the conversation-service calls once per reload since the page loaded.
+import.meta.hot?.dispose(() => mcpFrameObserver.disconnect());
 
 const escapeAttr = (value: unknown) =>
   String(value ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;");
@@ -233,6 +238,21 @@ const answerSrc = (
 };
 
 /**
+ * What the placeholder iframe shows until the renderer swaps it for the real embed.
+ *
+ * `srcdoc` takes precedence over `src`, so the browser never loads `src` itself - the
+ * renderer only reads it. Without this the placeholder loads ThoughtSpot directly and
+ * unauthenticated: ThoughtSpot redirects it to the SSO login page, which refuses to be
+ * framed, and the frame shows an error with CSP violations in the console for as long
+ * as resolving the answer takes. For a stored answer that is one ThoughtSpot round trip
+ * to look up the conversation and another to load the answer - 25s+ on a loaded cluster.
+ */
+const PLACEHOLDER_DOC =
+  '<!doctype html><html style="color-scheme:light dark"><body style="margin:0;' +
+  "height:100vh;display:flex;align-items:center;justify-content:center;" +
+  'font:14px system-ui,sans-serif;color:#9aa0a6">Loading chart…</body></html>';
+
+/**
  * Markup for one MCP answer iframe.
  *
  * startAutoMCPFrameRenderer swaps the iframe element via replaceWith(), so React must
@@ -242,7 +262,9 @@ const answerSrc = (
 const answerHtml = (answer: Answer, conversationSessionId: string | null) => {
   const src = answerSrc(answer, conversationSessionId);
   if (!src) return "";
-  return `<iframe src="${escapeAttr(src)}" title="${escapeAttr(
+  return `<iframe src="${escapeAttr(src)}" srcdoc="${escapeAttr(
+    PLACEHOLDER_DOC,
+  )}" title="${escapeAttr(
     answer.title || "ThoughtSpot answer",
   )}" style="width:100%;border:none"></iframe>`;
 };
