@@ -110,7 +110,7 @@ npm run dev
 
 | Variable | Description |
 | --- | --- |
-| `RECEIVER_TOKEN` | Bearer token ThoughtSpot sends to the receiver; the receiver rejects other requests |
+| `RECEIVER_TOKEN` | Required. Bearer token ThoughtSpot sends to the receiver; the receiver rejects requests without it |
 | `DRIVE_FOLDER_ID` | Drive folder to upload to. It must be in a shared drive, with the service account as a member. Leave empty to write to `out/` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Service-account key file for Drive |
 | `TS_HOST`, `TS_TOKEN` | Your ThoughtSpot instance, and a bearer token for the setup calls |
@@ -154,7 +154,7 @@ npm start
 These can be added on top of `src/main.ts`:
 - GCS storage destinations;
 - signature verification: the docs don't specify what is signed or how;
-- a durable queue and shared dedupe store, needed for more than one receiver instance.
+- a durable queue and shared dedupe store: the in-memory ones here are lost on restart and don't work across receiver instances.
 
 ## Technology labels
 

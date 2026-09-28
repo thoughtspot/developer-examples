@@ -33,15 +33,15 @@ const commands: Record<string, () => Promise<unknown>> = {
           },
         },
       }),
-    } as any),
+    }),
 
   // Org-level when ORG_IDENTIFIER is set (overrides cluster level); cluster-wide needs ADMINISTRATION.
   'route-schedules': () => {
-    const preferences = [{ event_type: 'LIVEBOARD_SCHEDULE', channels: ['WEBHOOK'] }];
+    const preferences = [{ event_type: 'LIVEBOARD_SCHEDULE' as const, channels: ['WEBHOOK' as const] }];
     return client.configureCommunicationChannelPreferences(
-      (env.ORG_IDENTIFIER
-        ? { org_preferences: [{ org_identifier: env.ORG_IDENTIFIER, operation: 'REPLACE', preferences }] }
-        : { cluster_preferences: preferences }) as any,
+      env.ORG_IDENTIFIER
+        ? { org_preferences: [{ org_identifier: env.ORG_IDENTIFIER, operation: 'REPLACE' as const, preferences }] }
+        : { cluster_preferences: preferences },
     );
   },
 

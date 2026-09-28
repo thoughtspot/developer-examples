@@ -147,10 +147,12 @@ async function upload(file: LocalFile, event: WebhookEvent, key: string): Promis
 
 // ---- The webhook endpoint ----------------------------------------------------------
 
-const seen = new Set<string>(); // use a shared store if you run several replicas
+// In memory only: grows with every delivery, is lost on restart and isn't shared
+// between instances. Use a shared store (Redis, a DB table) in production.
+const seen = new Set<string>();
 let queue: Promise<void> = Promise.resolve();
 
-// Resolves once every accepted delivery has been processed.
+// Resolves once every delivery accepted so far has been processed.
 export const idle = () => queue;
 
 async function processDelivery(event: WebhookEvent, key: string, files: LocalFile[], stored: StoredFile[], dir: string) {
@@ -170,7 +172,7 @@ async function processDelivery(event: WebhookEvent, key: string, files: LocalFil
       console.log(`[${event.eventId}] delivered ${file.filename}`);
     }
   } catch (err) {
-    seen.delete(key); // let a redelivery try again
+    seen.delete(key); // let a redelivery try again; files already uploaded are uploaded again
     console.error(`[${event.eventId}] processing failed: ${(err as Error).message}`);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -184,7 +186,7 @@ function reply(res: Response, status: number, message: string) {
 
 function authorized(req: Request): boolean {
   const token = process.env.RECEIVER_TOKEN; // the webhook's BEARER_TOKEN
-  if (!token) return true;
+  if (!token) return false;
   const got = Buffer.from(req.get('authorization') ?? '');
   const want = Buffer.from(`Bearer ${token}`);
   return got.length === want.length && timingSafeEqual(got, want);
@@ -229,7 +231,9 @@ app.post(
     // Acknowledge first, then upload in the background.
     reply(res, 200, 'Webhook received successfully');
     console.log(`[${event.eventId}] received "${event.metadataObject?.name}": ${files.length} attachment(s), ${stored.length} stored file(s)`);
-    queue = queue.then(() => processDelivery(event, key, files, stored, dir));
+    queue = queue
+      .then(() => processDelivery(event, key, files, stored, dir))
+      .catch((err) => console.error(`[${event.eventId}] cleanup failed: ${(err as Error).message}`));
   },
 );
 
@@ -239,6 +243,7 @@ app.use((err: { status?: number; message: string }, _req: Request, res: Response
 );
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (!process.env.RECEIVER_TOKEN) throw new Error('RECEIVER_TOKEN is required (see .env.example)');
   const port = Number(process.env.PORT ?? 3000);
   app.listen(port, (err) => {
     if (err) throw err;
