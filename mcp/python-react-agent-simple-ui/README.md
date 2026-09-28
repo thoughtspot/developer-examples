@@ -468,8 +468,17 @@ This works for both paths into the DOM: charts the server streams as `answer` ev
 The client injects each answer's iframe as markup rather than rendering `<iframe>` as JSX. The renderer swaps the element with `replaceWith()`, so React must not own that node - React owns only the wrapper:
 
 ```tsx
-<div dangerouslySetInnerHTML={{ __html: answerHtml(answer, sessionId) }} />
+function AnswerFrame({ html }: { html: string }) {
+  // Created once per mount: a fresh { __html } object on every render makes React
+  // rewrite the markup, which throws away the embed and re-resolves the answer.
+  const [markup] = useState(() => ({ __html: html }));
+  return <div dangerouslySetInnerHTML={markup} />;
+}
+
+<AnswerFrame key={html} html={html} />  // html = answerHtml(answer, sessionId)
 ```
+
+Keep that prop object stable. An inline `dangerouslySetInnerHTML={{ __html: ... }}` is re-applied on every re-render of the message list - every keystroke and every streamed delta - and each time the renderer resolves the chart from scratch (two ThoughtSpot calls per chart; a stored answer's take tens of seconds).
 
 `answerHtml()` builds the `<iframe>` from `answerSrc()`: the live `iframe_url` when there is one, else an embed route from `frame_params`, else - for a stored answer - `tsmcpConversationId` plus `tsmcpAnswerIndex`.
 

@@ -252,13 +252,7 @@ const PLACEHOLDER_DOC =
   "height:100vh;display:flex;align-items:center;justify-content:center;" +
   'font:14px system-ui,sans-serif;color:#9aa0a6">Loading chart…</body></html>';
 
-/**
- * Markup for one MCP answer iframe.
- *
- * startAutoMCPFrameRenderer swaps the iframe element via replaceWith(), so React must
- * not own that node. Injecting the markup with dangerouslySetInnerHTML leaves React
- * owning only the wrapper, and the renderer's DOM observer upgrades the iframe in place.
- */
+/** Markup for one MCP answer iframe - AnswerFrame puts it in the DOM. */
 const answerHtml = (answer: Answer, conversationSessionId: string | null) => {
   const src = answerSrc(answer, conversationSessionId);
   if (!src) return "";
@@ -268,6 +262,28 @@ const answerHtml = (answer: Answer, conversationSessionId: string | null) => {
     answer.title || "ThoughtSpot answer",
   )}" style="width:100%;border:none"></iframe>`;
 };
+
+/**
+ * One MCP answer's iframe, written into the DOM exactly once.
+ *
+ * startAutoMCPFrameRenderer swaps the iframe for the real embed via replaceWith(), so
+ * React must not own that node - it owns only this wrapper, filled with
+ * `dangerouslySetInnerHTML`. React re-applies that prop whenever it receives a new
+ * object, and a fresh `{ __html }` literal is a new object on every render of the message
+ * list - each keystroke, each streamed delta. Every re-application throws the embed away
+ * and the renderer resolves the answer again from scratch: two ThoughtSpot calls per
+ * chart, and a stored answer's take tens of seconds.
+ *
+ * So the prop object is created once per mount and kept in state (which also survives
+ * dev Fast Refresh). Callers key this by `html`, so a different answer gets a fresh
+ * wrapper. The markup goes in before the wrapper is attached, so the renderer sees the
+ * iframe once - writing it from an effect instead would show it twice, via the attached
+ * container and via the iframe itself, and resolve it twice.
+ */
+function AnswerFrame({ html }: { html: string }) {
+  const [markup] = useState(() => ({ __html: html }));
+  return <div dangerouslySetInnerHTML={markup} />;
+}
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -618,11 +634,10 @@ function App() {
                             {answer.title && (
                               <figcaption>{answer.title}</figcaption>
                             )}
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: answerHtml(answer, sessionId),
-                              }}
-                            />
+                            {(() => {
+                              const html = answerHtml(answer, sessionId);
+                              return <AnswerFrame key={html} html={html} />;
+                            })()}
                           </figure>
                         ))}
                         {msg.content ? (
