@@ -110,7 +110,7 @@ npm run dev
 
 | Variable | Description |
 | --- | --- |
-| `RECEIVER_TOKEN` | Required. Bearer token ThoughtSpot sends to the receiver; the receiver rejects requests without it |
+| `RECEIVER_TOKEN` | Bearer token ThoughtSpot sends to the receiver; the receiver rejects requests without it. If unset, the endpoint accepts requests from anyone, so only leave it empty for local testing |
 | `DRIVE_FOLDER_ID` | Drive folder to upload to. It must be in a shared drive, with the service account as a member. Leave empty to write to `out/` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Service-account key file for Drive |
 | `TS_HOST`, `TS_TOKEN` | Your ThoughtSpot instance, and a bearer token for the setup calls |

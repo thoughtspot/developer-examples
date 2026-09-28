@@ -186,7 +186,7 @@ function reply(res: Response, status: number, message: string) {
 
 function authorized(req: Request): boolean {
   const token = process.env.RECEIVER_TOKEN; // the webhook's BEARER_TOKEN
-  if (!token) return false;
+  if (!token) return true;
   const got = Buffer.from(req.get('authorization') ?? '');
   const want = Buffer.from(`Bearer ${token}`);
   return got.length === want.length && timingSafeEqual(got, want);
@@ -243,7 +243,6 @@ app.use((err: { status?: number; message: string }, _req: Request, res: Response
 );
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (!process.env.RECEIVER_TOKEN) throw new Error('RECEIVER_TOKEN is required (see .env.example)');
   const port = Number(process.env.PORT ?? 3000);
   app.listen(port, (err) => {
     if (err) throw err;
