@@ -6,6 +6,7 @@ import { DEMO_USER_USERNAME } from "./constants";
 // (App.tsx) both resolve through this function, so they authenticate with
 // the exact same bearer token instead of each minting their own.
 let cachedTokenResponse: Token | null = null;
+let inFlightRequest: Promise<Token> | null = null;
 
 export const getCachedAuthToken = async (): Promise<string> => {
   // Reuse the cached token while it still has 30s left on its lifetime.
@@ -13,10 +14,17 @@ export const getCachedAuthToken = async (): Promise<string> => {
     return cachedTokenResponse.token;
   }
 
-  const response = await fetch("/api/thoughtspot-token", {
-    headers: { "x-my-username": DEMO_USER_USERNAME },
-  });
-  const data = await response.json();
+  if (!inFlightRequest) {
+    inFlightRequest = fetch("/api/thoughtspot-token", {
+      headers: { "x-my-username": DEMO_USER_USERNAME },
+    })
+      .then((response) => response.json())
+      .finally(() => {
+        inFlightRequest = null;
+      });
+  }
+
+  const data = await inFlightRequest;
   cachedTokenResponse = data;
   return data.token;
 };
