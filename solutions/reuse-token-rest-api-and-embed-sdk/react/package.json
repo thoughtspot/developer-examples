@@ -6,20 +6,17 @@
   "scripts": {
     "dev": "vite --port 3000",
     "build": "tsc -b && vite build",
-    "token-server": "tsx --env-file=.env api/token-server.ts",
+    "token-server": "npm run --prefix .. token-server",
     "preview": "vite preview",
     "start": "npm run token-server & vite"
   },
   "dependencies": {
     "@thoughtspot/rest-api-sdk": "^2.12.1",
     "@thoughtspot/visual-embed-sdk": "latest",
-    "express": "^4.21.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tsx": "^4.19.3"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",

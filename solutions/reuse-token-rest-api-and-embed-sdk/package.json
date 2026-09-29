@@ -1,0 +1,18 @@
+{
+  "name": "reuse-token-rest-api-and-embed-sdk",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "token-server": "tsx --env-file=.env api/token-server.ts"
+  },
+  "dependencies": {
+    "@thoughtspot/rest-api-sdk": "^2.12.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "tsx": "^4.19.3",
+    "typescript": "~5.7.2"
+  }
+}
