@@ -1,0 +1,68 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e2e4e8;
+}
+
+header img {
+  height: 24px;
+}
+
+header h1 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.back-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.liveboard-list {
+  list-style: none;
+  margin: 0;
+  padding: 12px 20px;
+  max-width: 640px;
+}
+
+.liveboard-list li + li {
+  border-top: 1px solid #e2e4e8;
+}
+
+.liveboard-list button {
+  width: 100%;
+  text-align: left;
+  padding: 14px 8px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.liveboard-list button:hover {
+  background: rgba(66, 133, 244, 0.08);
+}
+
+.embed-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ts-embed {
+  width: 100%;
+  height: 100%;
+}
+
+.status {
+  padding: 20px;
+  color: #666;
+}

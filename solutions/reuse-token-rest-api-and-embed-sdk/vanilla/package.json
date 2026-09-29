@@ -1,0 +1,24 @@
+{
+  "name": "reuse-token-rest-api-and-embed-sdk-vanilla",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3001",
+    "build": "tsc -b && vite build",
+    "token-server": "tsx --env-file=.env api/token-server.ts",
+    "preview": "vite preview",
+    "start": "npm run token-server & vite"
+  },
+  "dependencies": {
+    "@thoughtspot/rest-api-sdk": "^2.12.1",
+    "@thoughtspot/visual-embed-sdk": "latest",
+    "express": "^4.21.2",
+    "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.5"
+  }
+}
