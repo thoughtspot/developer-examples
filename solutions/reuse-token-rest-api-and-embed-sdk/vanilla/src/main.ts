@@ -1,7 +1,6 @@
 import { init, AuthType, LiveboardEmbed } from "@thoughtspot/visual-embed-sdk";
 import { THOUGHTSPOT_HOST } from "./constants";
-import { getCachedAuthToken } from "./get-auth-token";
-import { getThoughtSpotClient } from "./thoughtspot-client";
+import { getCachedAuthToken, getThoughtSpotClient } from "./get-auth-token";
 
 interface Liveboard {
   id: string;
@@ -18,6 +17,12 @@ init({
   authType: AuthType.TrustedAuthTokenCookieless,
   getAuthToken: getCachedAuthToken,
 });
+
+async function getLiveboards(): Promise<Liveboard[]> {
+  const client = getThoughtSpotClient();
+  const results = await client.searchMetadata({ metadata: [{ type: "LIVEBOARD" }] });
+  return results.map((r) => ({ id: r.metadata_id!, name: r.metadata_name! }));
+}
 
 function showList() {
   embedWrapperEl.hidden = true;
@@ -39,33 +44,28 @@ function showLiveboard(liveboard: Liveboard) {
   liveboardEmbed.render();
 }
 
+function renderLiveboardList(liveboards: Liveboard[]) {
+  if (liveboards.length === 0) {
+    statusEl.textContent = "No liveboards found.";
+    return;
+  }
+
+  statusEl.hidden = true;
+  listEl.hidden = false;
+  liveboards.forEach((liveboard) => {
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.textContent = liveboard.name;
+    button.addEventListener("click", () => showLiveboard(liveboard));
+    li.appendChild(button);
+    listEl.appendChild(li);
+  });
+}
+
 backBtn.addEventListener("click", showList);
 
-const client = getThoughtSpotClient();
-client
-  .searchMetadata({ metadata: [{ type: "LIVEBOARD" }] })
-  .then((results) => {
-    const liveboards: Liveboard[] = results.map((r) => ({
-      id: r.metadata_id!,
-      name: r.metadata_name!,
-    }));
-
-    if (liveboards.length === 0) {
-      statusEl.textContent = "No liveboards found.";
-      return;
-    }
-
-    statusEl.hidden = true;
-    listEl.hidden = false;
-    liveboards.forEach((liveboard) => {
-      const li = document.createElement("li");
-      const button = document.createElement("button");
-      button.textContent = liveboard.name;
-      button.addEventListener("click", () => showLiveboard(liveboard));
-      li.appendChild(button);
-      listEl.appendChild(li);
-    });
-  })
+getLiveboards()
+  .then(renderLiveboardList)
   .catch((error) => {
     console.error("Error fetching liveboards:", error);
     statusEl.textContent = "Error fetching liveboards.";

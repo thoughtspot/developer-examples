@@ -3,12 +3,17 @@ import "./App.css";
 import tsLogo from "/ts-logo.svg";
 import { AuthType, LiveboardEmbed, useInit } from "@thoughtspot/visual-embed-sdk/react";
 import { THOUGHTSPOT_HOST } from "./constants";
-import { getCachedAuthToken } from "./get-auth-token";
-import { getThoughtSpotClient } from "./thoughtspot-client";
+import { getCachedAuthToken, getThoughtSpotClient } from "./get-auth-token";
 
 interface Liveboard {
   id: string;
   name: string;
+}
+
+async function getLiveboards(): Promise<Liveboard[]> {
+  const client = getThoughtSpotClient();
+  const results = await client.searchMetadata({ metadata: [{ type: "LIVEBOARD" }] });
+  return results.map((r) => ({ id: r.metadata_id!, name: r.metadata_name! }));
 }
 
 export default function App() {
@@ -16,14 +21,8 @@ export default function App() {
   const [selectedLiveboard, setSelectedLiveboard] = useState<Liveboard | null>(null);
 
   useEffect(() => {
-    const client = getThoughtSpotClient();
-    client
-      .searchMetadata({ metadata: [{ type: "LIVEBOARD" }] })
-      .then((results) =>
-        setLiveboards(
-          results.map((r) => ({ id: r.metadata_id!, name: r.metadata_name! })),
-        ),
-      )
+    getLiveboards()
+      .then(setLiveboards)
       .catch((error) => {
         console.error("Error fetching liveboards:", error);
         setLiveboards([]);
