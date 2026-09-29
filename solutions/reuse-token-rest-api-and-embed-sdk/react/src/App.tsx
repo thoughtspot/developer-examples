@@ -16,8 +16,6 @@ export default function App() {
   const [selectedLiveboard, setSelectedLiveboard] = useState<Liveboard | null>(null);
 
   useEffect(() => {
-    // Listing liveboards via the REST API SDK client also resolves the
-    // shared token for the first time, before any embed is ever rendered.
     const client = getThoughtSpotClient();
     client
       .searchMetadata({ metadata: [{ type: "LIVEBOARD" }] })
@@ -77,9 +75,6 @@ function LiveboardList({
 }
 
 function LiveboardView({ liveboard }: { liveboard: Liveboard }) {
-  // Cookieless auth reuses `getCachedAuthToken` — the same function the REST
-  // API SDK client uses above — so the embed authenticates with the token
-  // that's already cached rather than minting a new one.
   useInit({
     thoughtSpotHost: THOUGHTSPOT_HOST,
     authType: AuthType.TrustedAuthTokenCookieless,
