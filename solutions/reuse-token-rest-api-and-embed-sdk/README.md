@@ -59,6 +59,11 @@ Open http://localhost:3001 for `vanilla/`, or http://localhost:3000 for `react/`
 
 `sample.env` ships with a public ThoughtSpot training-instance demo user — fill in `DEMO_USER_PASSWORD`. For your own cluster, set `VITE_THOUGHTSPOT_HOST`, `VITE_DEMO_USER_USERNAME`, and either `DEMO_USER_PASSWORD` or `VITE_THOUGHTSPOT_SECRET_KEY` (recommended for production — see [Trusted authentication](https://developers.thoughtspot.com/docs/trusted-auth-secret-key)).
 
+### Troubleshooting
+
+- **`ECONNREFUSED` on `/api/thoughtspot-token` right after `npm run start`** — harmless startup race: Vite's dev server boots faster than the token server. Reload once you see `Token server listening on http://localhost:4000` in the terminal.
+- **`DEPTH_ZERO_SELF_SIGNED_CERT`** — your network (often a corporate VPN) is TLS-intercepting with its own root cert, so Node rejects the ThoughtSpot cluster's certificate. Uncomment `NODE_TLS_REJECT_UNAUTHORIZED=0` in `.env` (dev-only, never in production).
+
 ## Files
 
 - `api/token-server.ts` — Express endpoint (shared by both apps) that mints one bearer token via `getFullAccessToken`.

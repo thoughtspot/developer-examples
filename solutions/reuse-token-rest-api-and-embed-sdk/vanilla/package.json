@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite --port 3001",
     "build": "tsc -b && vite build",
-    "token-server": "npm run --prefix .. token-server",
+    "token-server": "npm install --prefix .. && npm run --prefix .. token-server",
     "preview": "vite preview",
-    "start": "npm run token-server & vite"
+    "start": "npm run token-server & npm run dev"
   },
   "dependencies": {
     "@thoughtspot/rest-api-sdk": "^2.12.1",

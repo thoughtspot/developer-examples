@@ -1,10 +1,15 @@
 import express from "express";
-import { createBasicConfig, ThoughtSpotRestApi } from "@thoughtspot/rest-api-sdk";
+import {
+  createBasicConfig,
+  ThoughtSpotRestApi,
+} from "@thoughtspot/rest-api-sdk";
 
 const app = express();
 
 const PORT = process.env.VITE_SERVER_PORT || 4000;
-const THOUGHTSPOT_HOST = process.env.VITE_THOUGHTSPOT_HOST || "https://training.thoughtspot.cloud";
+const THOUGHTSPOT_HOST = (
+  process.env.VITE_THOUGHTSPOT_HOST || "https://training.thoughtspot.cloud"
+).replace(/\/+$/, "");
 const DEMO_USER_PASSWORD = process.env.DEMO_USER_PASSWORD;
 const SECRET_KEY = process.env.VITE_THOUGHTSPOT_SECRET_KEY;
 
@@ -36,7 +41,12 @@ app.get("/api/thoughtspot-token", async (req, res) => {
       ...credentials,
     });
 
-    res.status(200).json({ token: data.token, expiration_time_in_millis: data.expiration_time_in_millis });
+    res
+      .status(200)
+      .json({
+        token: data.token,
+        expiration_time_in_millis: data.expiration_time_in_millis,
+      });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: (e as Error).message });
