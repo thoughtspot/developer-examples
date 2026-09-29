@@ -13,6 +13,8 @@ Two equivalent implementations of the same flow live side by side:
 ## Run it
 
 ```bash
+cp sample.env .env   # shared by both vanilla/ and react/
+
 cd vanilla   # or: cd react
 npm install
 npm run dev
@@ -20,7 +22,7 @@ npm run dev
 
 Open http://localhost:8642 for `vanilla/`, or http://localhost:8643 for `react/`.
 
-Set your cluster host, credentials, and Liveboard ID in `vanilla/.env` or `react/.env`:
+Set your cluster host, credentials, and Liveboard ID in the shared `.env` at the example root:
 
 ```
 VITE_THOUGHTSPOT_HOST=https://training.thoughtspot.cloud
@@ -51,6 +53,8 @@ Instead: fire the trigger without awaiting it, and rely on the SDK's own signals
 - **Pre-26.8** — `Subscribed` is memoized and only ever fires once per embed lifetime, so it won't refire after a Cancel. Both implementations fall back to triggering `OpenAddFilterModal` unconditionally after `OPEN_ADD_FILTER_MODAL_FALLBACK_TIMEOUT_MS` if the flag hasn't flipped back to true.
 
 ## Files
+
+- `sample.env` — copy to `.env` at this same root; both `vanilla/` and `react/` read it via Vite's `envDir`.
 
 ### `vanilla/`
 
