@@ -1,0 +1,21 @@
+{
+  "name": "reuse-token-rest-api-and-embed-sdk-vanilla",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3001",
+    "build": "tsc -b && vite build",
+    "token-server": "npm install --prefix .. && npm run --prefix .. token-server",
+    "preview": "vite preview",
+    "start": "npm run token-server & npm run dev"
+  },
+  "dependencies": {
+    "@thoughtspot/rest-api-sdk": "^2.12.1",
+    "@thoughtspot/visual-embed-sdk": "latest"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.3.5"
+  }
+}
