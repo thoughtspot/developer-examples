@@ -35,12 +35,29 @@ interface Answer {
   answer_index?: number | null;
 }
 
+/**
+ * One step of the Analytics Agent's own work, as the Spotter MCP server reports it:
+ * a progress note, a stretch of its reasoning, or a query it tried before settling
+ * on the answer. Not Claude's reasoning.
+ */
+interface WorkStep {
+  kind: "step" | "thought" | "query";
+  text: string;
+  query?: string | null;
+  /** A query's chart, on live steps only - stored steps are resolved on expand. */
+  iframe_url?: string | null;
+  frame_params?: FrameParams | null;
+}
+
 type Role = "user" | "assistant";
 
 interface Message {
   role: Role;
   content: string;
   answers?: Answer[];
+  work?: WorkStep[];
+  /** Stored turns only: ThoughtSpot's id for each Show work query, in order. */
+  workAnswerIds?: string[];
   isError?: boolean;
 }
 
@@ -52,7 +69,13 @@ interface ConversationSummary {
 interface ConversationDetail {
   id: string;
   analytical_session_id?: string | null;
-  turns?: { role: Role; content: string; answers?: Answer[] }[];
+  turns?: {
+    role: Role;
+    content: string;
+    answers?: Answer[];
+    work?: WorkStep[];
+    work_answer_ids?: string[];
+  }[];
 }
 
 /** Server-sent events on the /api/chat stream. */
@@ -60,6 +83,7 @@ type StreamEvent =
   | { type: "delta"; text: string }
   | { type: "status"; message: string }
   | ({ type: "answer" } & Answer)
+  | ({ type: "work" } & WorkStep)
   | { type: "done"; response_id: string }
   | { type: "error"; message: string };
 
@@ -101,6 +125,7 @@ const embedDarkVariables: Record<string, string> = {
   "--ts-var-spotterviz-text-primary": DARK_TEXT,
   "--ts-var-spotterviz-text-secondary": DARK_TEXT_MUTED,
   "--ts-var-spotterviz-border-color": DARK_BORDER,
+  "--ts-var-chip-color": DARK_SURFACE,
 };
 
 // The conversational-answer content wrapper paints its own white background, and no
@@ -195,6 +220,263 @@ const mcpFrameObserver = startAutoMCPFrameRenderer({
 // reload leaves the previous observer attached, and each one resolves every chart -
 // duplicating the conversation-service calls once per reload since the page loaded.
 import.meta.hot?.dispose(() => mcpFrameObserver.disconnect());
+
+/**
+ * Add one streamed step to a turn's work. Reasoning arrives a few words per event,
+ * so a `thought` continues the previous one - the server's `append_work` applies the
+ * same rule, so a replayed turn matches what streamed live.
+ */
+const appendWork = (work: WorkStep[], step: WorkStep): WorkStep[] => {
+  const last = work[work.length - 1];
+  if (step.kind === "thought" && last?.kind === "thought") {
+    return [...work.slice(0, -1), { ...last, text: last.text + step.text }];
+  }
+  return [
+    ...work,
+    {
+      kind: step.kind,
+      text: step.text,
+      query: step.query,
+      iframe_url: step.iframe_url,
+      frame_params: step.frame_params,
+    },
+  ];
+};
+
+/** One row of the Show work timeline. Consecutive queries fold into one row. */
+type WorkRow =
+  | { kind: "thought"; text: string }
+  | { kind: "step"; text: string }
+  | { kind: "queries"; queries: { step: WorkStep; index: number }[] };
+
+const workRows = (work: WorkStep[]): WorkRow[] => {
+  const rows: WorkRow[] = [];
+  // A query's position among the turn's queries is how the server finds it again.
+  let queryIndex = 0;
+  for (const step of work) {
+    const text = step.text.trim();
+    const last = rows[rows.length - 1];
+    if (step.kind === "query") {
+      const query = { step, index: queryIndex++ };
+      if (last?.kind === "queries") last.queries.push(query);
+      else rows.push({ kind: "queries", queries: [query] });
+    } else if (text) {
+      // Reasoning often arrives with leading blank lines - drop them, and skip
+      // a thought that is only whitespace.
+      rows.push({ kind: step.kind, text });
+    }
+  }
+  return rows;
+};
+
+const ICON_PATHS = {
+  search: "M7 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm3.5-1.5L14 14",
+  memory:
+    "M4.5 12.5a3 3 0 0 1-.4-6 4 4 0 0 1 7.8 0 3 3 0 0 1-.4 6M8 8v6m-2-2 2 2 2-2",
+  chart: "M8 2v6h6A6 6 0 1 1 8 2zm2-.5A5 5 0 0 1 14.5 6H10z",
+  chevron: "M6 4l4 4-4 4",
+};
+
+function WorkIcon({ name }: { name: keyof typeof ICON_PATHS }) {
+  return (
+    <svg className="work-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path d={ICON_PATHS[name]} />
+    </svg>
+  );
+}
+
+/** Picks an icon for a progress step from its wording. */
+const stepIcon = (text: string): keyof typeof ICON_PATHS => {
+  if (/memor/i.test(text)) return "memory";
+  if (/search|context|schema/i.test(text)) return "search";
+  return "chart";
+};
+
+/**
+ * The Analytics Agent's steps behind an answer, collapsed until asked for. Queries
+ * are shown as text, never as charts: only the settled answer is a real one.
+ */
+/** Where a stored turn's thinking answers are loaded from. */
+interface WorkSource {
+  conversationId: string | null;
+  answerIds: string[];
+}
+
+/**
+ * In-flight and finished thinking-answer loads, by conversation and answer id.
+ * Loading re-runs the answer on ThoughtSpot and takes tens of seconds, so a
+ * remount (React StrictMode, reopening the row) must not start it again.
+ */
+const workAnswerLoads = new Map<string, Promise<FrameParams>>();
+
+const loadWorkAnswer = (conversationId: string, answerId: string) => {
+  const key = `${conversationId}/${answerId}`;
+  let load = workAnswerLoads.get(key);
+  if (!load) {
+    load = fetch(
+      `${HISTORY_URL}/${conversationId}/work-answers/${encodeURIComponent(answerId)}`,
+    ).then(async (response) => {
+      if (!response.ok) throw new Error(String(response.status));
+      return ((await response.json()) as { frame_params: FrameParams }).frame_params;
+    });
+    // A failure is not kept, so expanding the row again retries.
+    load.catch(() => workAnswerLoads.delete(key));
+    workAnswerLoads.set(key, load);
+  }
+  return load;
+};
+
+/**
+ * The chart for one query the Agent tried. A live step carries its URL. A stored
+ * one does not - it would have expired - so the server loads that thinking answer
+ * again by its position. Thinking answers are outside the SDK's stored-answer
+ * index, which counts only settled answers, so they cannot use that path.
+ */
+function WorkQueryChart({
+  step,
+  index,
+  source,
+}: {
+  step: WorkStep;
+  index: number;
+  source: WorkSource;
+}) {
+  const liveSrc = answerSrc(step, null);
+  const answerId = source.answerIds[index];
+  const conversationId = source.conversationId;
+  const [resolved, setResolved] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  // Bumped by Retry to run the load again; the failed load is already evicted.
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (liveSrc || !conversationId || !answerId) return;
+    let cancelled = false;
+    setFailed(false);
+    loadWorkAnswer(conversationId, answerId)
+      .then((frame_params) => {
+        if (!cancelled) setResolved(answerHtml({ ...step, frame_params }, null));
+      })
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [liveSrc, conversationId, answerId, step, attempt]);
+
+  const html = liveSrc ? answerHtml(step, null) : resolved;
+  // Nothing to load: a stored step ThoughtSpot has no answer for.
+  if (!liveSrc && (!conversationId || !answerId)) return null;
+  if (failed) {
+    return (
+      <p className="work-chart-note">
+        Could not load this chart.{" "}
+        <button className="work-retry" onClick={() => setAttempt((n) => n + 1)}>
+          Retry
+        </button>
+      </p>
+    );
+  }
+  if (!html) return <p className="work-chart-note">Loading chart…</p>;
+  return (
+    <div className="work-chart">
+      <AnswerFrame key={html} html={html} />
+    </div>
+  );
+}
+
+/**
+ * One "Visualized data" row. Its charts mount the first time it is expanded, and
+ * stay mounted after - closing and reopening must not load them again.
+ */
+function WorkQueries({
+  queries,
+  source,
+}: {
+  queries: { step: WorkStep; index: number }[];
+  source: WorkSource;
+}) {
+  const [opened, setOpened] = useState(false);
+  const count = queries.length;
+  return (
+    <details
+      className="work-body work-queries"
+      onToggle={(e) => e.currentTarget.open && setOpened(true)}
+    >
+      <summary>
+        {count === 1 ? "Visualized data" : `Created ${count} visualizations`}
+        <WorkIcon name="chevron" />
+      </summary>
+      {queries.map(({ step, index }) => (
+        <div key={index} className="work-query">
+          {step.text && <div className="work-query-title">{step.text}</div>}
+          {step.query && <code>{step.query}</code>}
+          {opened && <WorkQueryChart step={step} index={index} source={source} />}
+        </div>
+      ))}
+    </details>
+  );
+}
+
+function ShowWork({
+  work,
+  finished,
+  source,
+}: {
+  work: WorkStep[];
+  finished: boolean;
+  source: WorkSource;
+}) {
+  const rows = workRows(work);
+  if (!rows.length) return null;
+  return (
+    <details className="show-work">
+      <summary>
+        Show work
+        <WorkIcon name="chevron" />
+      </summary>
+      <ul className="work-timeline">
+        {rows.map((row, i) => {
+          if (row.kind === "thought") {
+            return (
+              <li key={i} className="work-thought">
+                <span className="work-marker work-dot" />
+                <div className="work-body">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {row.text}
+                  </ReactMarkdown>
+                </div>
+              </li>
+            );
+          }
+          if (row.kind === "step") {
+            return (
+              <li key={i} className="work-step">
+                <span className="work-marker">
+                  <WorkIcon name={stepIcon(row.text)} />
+                </span>
+                <div className="work-body">{row.text}</div>
+              </li>
+            );
+          }
+          return (
+            <li key={i} className="work-step">
+              <span className="work-marker">
+                <WorkIcon name="chart" />
+              </span>
+              <WorkQueries queries={row.queries} source={source} />
+            </li>
+          );
+        })}
+        {finished && (
+          <li className="work-step work-finished">
+            <span className="work-marker work-dot" />
+            <div className="work-body">Finished</div>
+          </li>
+        )}
+      </ul>
+    </details>
+  );
+}
 
 const escapeAttr = (value: unknown) =>
   String(value ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;");
@@ -344,6 +626,8 @@ function App() {
             role: turn.role,
             content: turn.content,
             answers: turn.answers || [],
+            work: turn.work || [],
+            workAnswerIds: turn.work_answer_ids || [],
           })),
         );
         setResponseId(data.id);
@@ -406,7 +690,7 @@ function App() {
     setMessages((prev) => [
       ...prev,
       { role: "user", content: userMessage },
-      { role: "assistant", content: "", answers: [] },
+      { role: "assistant", content: "", answers: [], work: [] },
     ]);
 
     try {
@@ -478,6 +762,17 @@ function App() {
                 });
                 break;
               }
+              case "work":
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  const last = updated[updated.length - 1];
+                  updated[updated.length - 1] = {
+                    ...last,
+                    work: appendWork(last.work || [], data),
+                  };
+                  return updated;
+                });
+                break;
               case "done":
                 setResponseId(data.response_id);
                 setStatus("");
@@ -492,6 +787,7 @@ function App() {
                     role: "assistant",
                     content: `Error: ${data.message}`,
                     answers: last.answers || [],
+                    work: last.work || [],
                     isError: true,
                   };
                   return updated;
@@ -623,6 +919,17 @@ function App() {
                       <p>{msg.content}</p>
                     ) : (
                       <>
+                        {!!msg.work?.length && (
+                          <ShowWork
+                            work={msg.work}
+                            // The last turn is still streaming while a send is in flight.
+                            finished={!(isLoading && i === messages.length - 1)}
+                            source={{
+                              conversationId: responseId,
+                              answerIds: msg.workAnswerIds || [],
+                            }}
+                          />
+                        )}
                         {(msg.answers || []).map((answer) => (
                           <figure
                             className="answer"
@@ -649,7 +956,8 @@ function App() {
                             {msg.content}
                           </ReactMarkdown>
                         ) : (
-                          !(msg.answers || []).length && (
+                          !(msg.answers || []).length &&
+                          !(msg.work || []).length && (
                             <span className="typing-cursor" />
                           )
                         )}

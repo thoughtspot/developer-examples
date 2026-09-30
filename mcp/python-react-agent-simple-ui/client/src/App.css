@@ -503,6 +503,174 @@ body {
   border: none;
 }
 
+/* "Show work" - the Analytics Agent's steps as a timeline, collapsed by default */
+.show-work {
+  margin: 2px 0 14px;
+  font-size: 14px;
+}
+
+.show-work summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  color: var(--text-secondary);
+}
+
+.show-work summary::-webkit-details-marker {
+  display: none;
+}
+
+.show-work summary:hover {
+  color: var(--text);
+}
+
+.show-work summary > .work-icon {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
+.show-work[open] > summary > .work-icon,
+.work-queries[open] > summary > .work-icon {
+  transform: rotate(90deg);
+}
+
+.show-work .work-timeline {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.show-work .work-timeline > li {
+  position: relative;
+  margin: 0;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+/* The connector between markers. */
+.show-work .work-timeline > li:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 22px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--border);
+}
+
+.show-work .work-timeline > li:last-child {
+  padding-bottom: 0;
+}
+
+.work-marker {
+  flex: 0 0 16px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.work-dot::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.work-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.work-body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Reasoning is markdown; keep it as tight as the rest of the timeline. */
+.work-thought .work-body p,
+.work-thought .work-body ul,
+.work-thought .work-body ol {
+  margin: 0 0 6px;
+}
+
+.work-thought .work-body > :last-child {
+  margin-bottom: 0;
+}
+
+.work-thought .work-body ul,
+.work-thought .work-body ol {
+  padding-left: 20px;
+}
+
+.work-queries > summary {
+  color: var(--text);
+}
+
+.work-query {
+  margin-top: 8px;
+}
+
+.work-query-title {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.work-query code {
+  display: block;
+  white-space: pre-wrap;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.work-chart {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.work-chart iframe {
+  display: block;
+  width: 100%;
+  border: none;
+}
+
+.work-chart-note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.work-retry {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--primary);
+  cursor: pointer;
+}
+
 /* ---- Chat history sidebar ---- */
 
 .shell {

@@ -231,6 +231,13 @@ The ThoughtSpot Analytics Agent answers asynchronously: `send_session_message` r
 
 Instead `autopoll_session_updates()` does it in-process: it polls with backoff until the Agent is done, accumulates every update, and hands Claude **one** consolidated tool result. Progress streams to the UI as `status` events while it waits - the Agent's steps ("Searching for Datasets", ...), not its reasoning prose, which arrives in word-sized chunks. The model still receives the full reasoning in the tool result.
 
+The chat-history backend also keeps that reasoning for the UI. `emit_work_event()` sends each step, each stretch of reasoning prose, and each query the Agent tried before settling as a `work` event, and the client shows them in a collapsible **Show work** section above the answer. This is the Analytics Agent's own work as the Spotter MCP server reports it — it has nothing to do with Claude's extended thinking. Each group of tried queries is a **Visualized data** row. Its charts load only when the row is expanded:
+
+- **Live:** the `work` event carries the thinking answer's own `iframe_url` / `frame_params`, so the chart renders immediately.
+- **Replayed:** those URLs expire with the answer (about 8 hours), so they are never stored. `GET /api/conversations/{id}` returns each turn's `work_answer_ids` — ThoughtSpot's ids for its thinking answers, in step order. Expanding a row calls `GET /api/conversations/{id}/work-answers/{answer_id}`, which loads that answer again through the conversation service and returns fresh embed ids. Loading re-runs the query, so it can take 30s+ on a busy cluster; the client starts each load once and reuses it.
+
+Thinking answers stay out of the turn's `answers` list: stored answers are resolved by their position among the *non-thinking* answers (by the SDK too), so counting a thinking answer there would shift every later chart onto the wrong one.
+
 ```python
 POLL_INITIAL_DELAY = 0.75   # seconds before the first re-poll
 POLL_MAX_DELAY = 4.0        # backoff cap; resets whenever new updates arrive
@@ -286,6 +293,7 @@ Other Claude API details worth noting:
 | `delta` | `text` | Streamed assistant text |
 | `status` | `message` | Thinking, tool start, Analytics Agent step, or reconnecting |
 | `answer` | `answer_id`, `title`, `query`, `iframe_url`, `frame_params` | A chart to render. `frame_params` carries the embed ids when there is no ready-made `iframe_url` |
+| `work` | `kind`, `text`, `query`, `iframe_url`, `frame_params` | One step of the Analytics Agent's work, for **Show work** (chat-history backend only). `kind` is `step` (progress), `thought` (reasoning prose — consecutive ones join into one), or `query` (a query tried before the final answer) |
 | `done` | `response_id` | Turn complete; pass `response_id` back for follow-ups |
 | `error` | `message` | Fatal error for this turn |
 
@@ -335,7 +343,7 @@ ALLOWED_TOOLS = ["create_analysis_session", "send_session_message", "get_session
 | Field | Present when | Description |
 |-------|--------------|-------------|
 | `type` | always | `text`, `text_chunk`, `answer`, or `step_notification` |
-| `is_thinking` | always | Whether this update is part of the Agent's reasoning rather than its final answer. The server shows reasoning *steps* in the UI as status text, and passes the reasoning prose to the model only. |
+| `is_thinking` | always | Whether this update is part of the Agent's reasoning rather than its final answer. The server shows reasoning *steps* in the UI as status text and passes the reasoning prose to the model. The chat-history backend also keeps both for the **Show work** section. |
 | `text` | `text`, `text_chunk`, `step_notification` | Message text. Consecutive `text_chunk` values are concatenated by the server before the model sees them. |
 | `answer_id` | `answer` | Identifier to pass to `create_dashboard`. |
 | `answer_title` | `answer` | Human-readable title. |
@@ -370,7 +378,7 @@ Two tables, because the browser and the model need different things:
 | `conversations` | `id`, `title`, `created_at`, `updated_at` | The sidebar list. `title` is the first line of the first user message. |
 | | `analytical_session_id` | The ThoughtSpot session, so a reopened conversation continues in the same one. |
 | | `claude_messages` | The **raw** Claude message list — `tool_use` / `tool_result` / `thinking` blocks included — replayed into the next request so follow-ups keep full context after a restart. |
-| `turns` | `role`, `content`, `answers` | What the UI renders. `answers` holds each chart's title and query - **not** its `iframe_url`, which expires with the ThoughtSpot answer (about 8 hours). |
+| `turns` | `role`, `content`, `answers`, `work` | What the UI renders. `answers` holds each chart's title - **not** its `iframe_url`, which expires with the ThoughtSpot answer (about 8 hours). `work` holds the Analytics Agent's steps for **Show work**; `db_init()` adds the column to databases created before it existed. |
 
 `turns` cascades on delete (`PRAGMA foreign_keys=ON`), so removing a conversation removes its transcript.
 
@@ -401,7 +409,8 @@ In-memory `conversations` / `analytical_sessions` dicts stay as a hot cache in f
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/api/conversations` | List conversations, newest first. Returns `id`, `title`, timestamps, `turn_count`. |
-| `GET` | `/api/conversations/{id}` | One conversation with its `turns` (each `role`, `content`, `answers` with `answer_index`). |
+| `GET` | `/api/conversations/{id}` | One conversation with its `turns` (each `role`, `content`, `answers` with `answer_index`, `work`, `work_answer_ids`). |
+| `GET` | `/api/conversations/{id}/work-answers/{answer_id}` | Fresh `frame_params` for one thinking answer, so an expanded **Visualized data** row can render it. |
 | `PATCH` | `/api/conversations/{id}` | Rename. Body: `{"title": "..."}`. |
 | `DELETE` | `/api/conversations/{id}` | Delete the conversation and its turns. |
 | `GET` | `/api/ts-token` | A freshly minted ThoughtSpot token for the Visual Embed SDK (both servers). |
@@ -447,6 +456,7 @@ The React client is shared across both backends:
 - Renders assistant text as **markdown** (tables, code blocks, and raw HTML via `rehypeRaw`)
 - Renders ThoughtSpot charts from `answer` events as auto-upgraded embeds
 - Shows **real-time status** — Claude thinking, tool calls, and Analytics Agent progress
+- Shows a collapsible **Show work** section with the Analytics Agent's steps, reasoning and tried queries, when the backend sends `work` events
 - Tracks `response_id` across turns for multi-turn continuity
 - Shows a **chat history sidebar** when the backend exposes `/api/conversations` — click to reopen a chat (charts and all), `×` to delete. A loading indicator shows while a stored chat is fetched. Against the backend without history the probe fails and the sidebar is simply not rendered.
 

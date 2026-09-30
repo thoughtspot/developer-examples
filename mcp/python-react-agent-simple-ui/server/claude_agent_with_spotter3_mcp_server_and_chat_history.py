@@ -32,6 +32,7 @@ MCP server: https://github.com/thoughtspot/mcp-server
 
 import asyncio
 import json
+from urllib.parse import quote
 import os
 import sqlite3
 import time
@@ -678,6 +679,7 @@ CREATE TABLE IF NOT EXISTS turns (
     role            TEXT NOT NULL,
     content         TEXT NOT NULL DEFAULT '',
     answers         TEXT NOT NULL DEFAULT '[]',
+    work            TEXT NOT NULL DEFAULT '[]',
     created_at      TEXT NOT NULL
 );
 
@@ -702,6 +704,11 @@ def db_connect() -> sqlite3.Connection:
 def db_init() -> None:
     with closing(db_connect()) as conn, conn:
         conn.executescript(SCHEMA)
+        # `CREATE TABLE IF NOT EXISTS` leaves a database from before `work` existed
+        # untouched, so add the column there.
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(turns)")}
+        if "work" not in columns:
+            conn.execute("ALTER TABLE turns ADD COLUMN work TEXT NOT NULL DEFAULT '[]'")
     print(f"[History] SQLite at {DB_PATH}")
 
 
@@ -740,12 +747,14 @@ def db_start_conversation(conv_id: str, first_message: str) -> None:
         )
 
 
-def db_add_turn(conv_id: str, role: str, content: str, answers: list[dict]) -> None:
+def db_add_turn(
+    conv_id: str, role: str, content: str, answers: list[dict], work: list[dict] | None = None
+) -> None:
     with closing(db_connect()) as conn, conn:
         conn.execute(
-            "INSERT INTO turns (conversation_id, role, content, answers, created_at)"
-            " VALUES (?, ?, ?, ?, ?)",
-            (conv_id, role, content, json.dumps(answers), now_iso()),
+            "INSERT INTO turns (conversation_id, role, content, answers, work, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (conv_id, role, content, json.dumps(answers), json.dumps(work or []), now_iso()),
         )
         conn.execute(
             "UPDATE conversations SET updated_at = ? WHERE id = ?", (now_iso(), conv_id)
@@ -810,7 +819,7 @@ def db_get_conversation(conv_id: str) -> dict | None:
         if not row:
             return None
         turns = conn.execute(
-            "SELECT role, content, answers, created_at FROM turns"
+            "SELECT role, content, answers, work, created_at FROM turns"
             " WHERE conversation_id = ? ORDER BY id",
             (conv_id,),
         ).fetchall()
@@ -826,11 +835,20 @@ def db_get_conversation(conv_id: str) -> dict | None:
                 "role": turn["role"],
                 "content": turn["content"],
                 "answers": answers,
+                "work": json.loads(turn["work"] or "[]"),
                 "created_at": turn["created_at"],
             }
         )
 
     return {**dict(row), "turns": replayed_turns}
+
+
+def db_get_session_id(conv_id: str) -> str | None:
+    with closing(db_connect()) as conn:
+        row = conn.execute(
+            "SELECT analytical_session_id FROM conversations WHERE id = ?", (conv_id,)
+        ).fetchone()
+    return row["analytical_session_id"] if row else None
 
 
 def db_delete_conversation(conv_id: str) -> bool:
@@ -892,6 +910,8 @@ class StreamRecorder:
         self.queue = queue
         self.text_parts: list[str] = []
         self.answers: list[dict] = []
+        # The Analytics Agent's own steps, for the UI's "Show work" section.
+        self.work: list[dict] = []
         self.persisted = False  # guards against writing the assistant turn twice
 
     def send(self, event: dict) -> None:
@@ -903,15 +923,34 @@ class StreamRecorder:
                 {
                     "answer_id": event.get("answer_id"),
                     "title": event.get("title"),
-                    "query": event.get("query"),
                     "iframe_url": event.get("iframe_url"),
                 }
             )
+        elif kind == "work":
+            append_work(self.work, event)
         self.queue.put_nowait(event)
 
     @property
     def text(self) -> str:
         return "".join(self.text_parts)
+
+
+def append_work(work: list[dict], event: dict) -> None:
+    """Add one `work` event to a turn's work list, the way the client does.
+
+    Reasoning prose streams a few words per event, so a `thought` continues the
+    previous one instead of starting a new step. The client applies the same rule,
+    which keeps the live and replayed views identical.
+    """
+    kind = event.get("kind")
+    text = event.get("text") or ""
+    if kind == "thought" and work and work[-1].get("kind") == "thought":
+        work[-1]["text"] += text
+        return
+    step = {"kind": kind, "text": text}
+    if event.get("query"):
+        step["query"] = event["query"]
+    work.append(step)
 
 
 def storable_answers(answers: list[dict]) -> list[dict]:
@@ -925,9 +964,12 @@ def storable_answers(answers: list[dict]) -> list[dict]:
     We therefore persist only the durable parts. On replay the client asks the
     Visual Embed SDK to resolve a live URL from the conversation id plus the
     answer's position, so the chart is re-run against current data.
+
+    `query` is dropped too: nothing reads it on replay. Stripping it here, rather than
+    only not recording it, also keeps it out of responses for rows written before.
     """
     return [
-        {k: v for k, v in answer.items() if k not in ("iframe_url", "answer_id")}
+        {k: v for k, v in answer.items() if k not in ("iframe_url", "answer_id", "query")}
         for answer in answers
     ]
 
@@ -1034,11 +1076,54 @@ def merge_text_chunks(updates: list[dict]) -> list[dict]:
     return merged
 
 
+def emit_work_event(update: dict, recorder: StreamRecorder) -> None:
+    """Record one update as a step of the Agent's work, for the "Show work" section.
+
+    This is the Analytics Agent's own reasoning, as the MCP server reports it - not
+    Claude's. Steps are text only. A thinking answer in particular must never become
+    an iframe or join `recorder.answers`: stored answers are resolved by their
+    position among the non-thinking ones, so counting a thinking answer there would
+    shift every later chart onto the wrong answer.
+    """
+    kind = update.get("type")
+    metadata = update_metadata(update)
+    if kind == "answer":
+        # The settled answer is the chart itself; only the attempts before it are work.
+        if not is_thinking_update(update):
+            return
+        # Sent even without a title: replay finds this answer by its position among
+        # the turn's thinking answers, so every one of them needs a step.
+        recorder.send(
+            {
+                "type": "work",
+                "kind": "query",
+                "text": (update.get("answer_title") or update.get("title") or "").strip(),
+                "query": (update.get("answer_query") or metadata.get("sage_query") or "").strip(),
+                # Live only - `append_work` drops these, since they expire with the
+                # answer. A replayed step is resolved through /work-answers instead.
+                "iframe_url": update.get("iframe_url"),
+                "frame_params": answer_frame_params(update),
+            }
+        )
+    elif kind in ("step_notification", "notification"):
+        text = (
+            update.get("text") or metadata.get("tool_title") or metadata.get("title") or ""
+        ).strip()
+        if text:
+            recorder.send({"type": "work", "kind": "step", "text": text})
+    elif kind in ("text", *TEXT_CHUNK_TYPES) and is_thinking_update(update):
+        # Chunks are word-sized; keep their spacing, and let append_work join them.
+        text = update.get("text") or ""
+        if text:
+            recorder.send({"type": "work", "kind": "thought", "text": text})
+
+
 def emit_update_events(updates: list[dict], recorder: StreamRecorder) -> None:
     """Stream Analytics Agent progress to the browser while we poll."""
     for update in updates:
         if not isinstance(update, dict):
             continue
+        emit_work_event(update, recorder)
         kind = update.get("type")
         if kind == "answer":
             # The Agent emits an `answer` for each intermediate query it tries while
@@ -1380,9 +1465,14 @@ async def persist_turn(
         return
     recorder.persisted = True
 
-    if recorder.text or recorder.answers:
+    if recorder.text or recorder.answers or recorder.work:
         await asyncio.to_thread(
-            db_add_turn, conv_id, "assistant", recorder.text, storable_answers(recorder.answers)
+            db_add_turn,
+            conv_id,
+            "assistant",
+            recorder.text,
+            storable_answers(recorder.answers),
+            recorder.work,
         )
     if history is not None:
         await asyncio.to_thread(
@@ -1450,42 +1540,90 @@ async def chat(request: ChatRequest):
 # ── Chat history endpoints ──────────────────────────────────────────────────────
 
 
-async def ts_answers_per_message(session_id: str) -> list[int] | None:
-    """How many real answers ThoughtSpot holds for each turn of a conversation.
+def ts_headers(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
-    Returns one count per conversation message, oldest first, or None if the
-    conversation cannot be read.
-    """
+
+async def ts_conversation_messages(session_id: str) -> list[dict] | None:
+    """A ThoughtSpot conversation's messages, oldest first, or None if unreadable."""
     url = (
         f"{TS_HOST.rstrip('/')}/api/rest/2.0/ai/agent/conversations/"
         f"{session_id}/messages"
     )
     try:
         async with httpx2.AsyncClient(timeout=httpx2.Timeout(10.0, read=45.0)) as client:
-            response = await client.get(
-                url,
-                headers={
-                    "Authorization": f"Bearer {await server_token()}",
-                    "Accept": "application/json",
-                },
-            )
+            response = await client.get(url, headers=ts_headers(await server_token()))
         if response.status_code != 200:
             print(f"[History] getConversation {session_id} -> {response.status_code}")
             return None
-        return [
-            sum(
-                1
-                for item in (message.get("response_items") or [])
-                if item.get("type") == "answer" and item.get("is_thinking") is False
-            )
-            for message in (response.json().get("messages") or [])
-        ]
-    except (httpx2.HTTPError, ValueError, TypeError) as exc:
+        messages = response.json().get("messages")
+        return messages if isinstance(messages, list) else []
+    except (httpx2.HTTPError, ValueError, TypeError, AttributeError) as exc:
         print(f"[History] getConversation {session_id} failed: {type(exc).__name__}: {exc}")
         return None
 
 
-def reconcile_answers(conversation: dict, ts_counts: list[int] | None) -> dict:
+def answer_items(message: dict, thinking: bool) -> list[dict]:
+    """A message's answer items that are (or are not) the Agent's thinking answers.
+
+    Compared with `is` on purpose: an item missing `is_thinking` counts as neither.
+    Items without an `answer_id` are skipped too. Both are the rules the Visual Embed
+    SDK applies when it replays stored answers, so our counts match its indexes.
+    """
+    items = message.get("response_items") if isinstance(message, dict) else None
+    return [
+        item
+        for item in (items or [])
+        if isinstance(item, dict)
+        and item.get("type") == "answer"
+        and item.get("is_thinking") is thinking
+        and item.get("answer_id")
+    ]
+
+
+async def ts_load_answer(session_id: str, answer_id: str) -> dict | None:
+    """Live embed ids for one answer of a conversation, or None if it cannot load.
+
+    The answer object behind a stored URL expires after about 8 hours; loading it
+    again through the conversation service gives fresh ids for the same answer. This
+    is the call the Visual Embed SDK makes when it replays a stored answer.
+    """
+    url = (
+        f"{TS_HOST.rstrip('/')}/conversation/v2/{session_id}"
+        f"/message/{quote(answer_id, safe='')}/load/public"
+    )
+    try:
+        # Loading re-runs the answer's query; 45s+ is common on a loaded cluster.
+        async with httpx2.AsyncClient(timeout=httpx2.Timeout(10.0, read=120.0)) as client:
+            response = await client.post(
+                url,
+                headers={
+                    **ts_headers(await server_token()),
+                    "Content-Type": "application/json",
+                    "x-requested-by": "ThoughtSpot",
+                },
+                json={"type": "TS_ANSWER"},
+            )
+        if response.status_code != 200:
+            print(f"[History] load answer {answer_id} -> {response.status_code}")
+            return None
+        answer = (response.json() or {}).get("answer") or {}
+    except (httpx2.HTTPError, ValueError, TypeError, AttributeError) as exc:
+        print(f"[History] load answer {answer_id} failed: {type(exc).__name__}: {exc}")
+        return None
+
+    ac_state = answer.get("ac_state") or {}
+    params = {
+        "session_id": answer.get("session_identifier"),
+        "gen_no": answer.get("generation_number"),
+        "ac_session_id": ac_state.get("transaction_identifier"),
+        "ac_gen_no": ac_state.get("generation_number"),
+    }
+    # All four are needed to build the embed route; a partial set renders an error.
+    return params if all(params.values()) else None
+
+
+def reconcile_answers(conversation: dict, ts_messages: list[dict] | None) -> dict:
     """Align a stored conversation with the answers ThoughtSpot actually holds.
 
     Two things make the stored copy an unreliable source of truth:
@@ -1501,7 +1639,7 @@ def reconcile_answers(conversation: dict, ts_counts: list[int] | None) -> dict:
     renders them, and the SDK resolves each one by its index.
     """
     turns = conversation.get("turns") or []
-    if ts_counts is None:
+    if ts_messages is None:
         # Fall back to the stored shape rather than dropping charts entirely.
         index = 0
         for turn in turns:
@@ -1515,7 +1653,13 @@ def reconcile_answers(conversation: dict, ts_counts: list[int] | None) -> dict:
     assistant_turns = [turn for turn in turns if turn.get("role") == "assistant"]
     index = 0
     for position, turn in enumerate(assistant_turns):
-        expected = ts_counts[position] if position < len(ts_counts) else 0
+        message = ts_messages[position] if position < len(ts_messages) else {}
+        expected = len(answer_items(message, thinking=False))
+        # The thinking answers behind this turn's Show work queries, in the order the
+        # steps were recorded. The client loads one by id when its row is expanded.
+        turn["work_answer_ids"] = [
+            item["answer_id"] for item in answer_items(message, thinking=True)
+        ]
         answers = turn.get("answers") or []
         # Titles we recorded, padded out to the count ThoughtSpot reports.
         merged = answers[:expected] + [{} for _ in range(max(0, expected - len(answers)))]
@@ -1538,8 +1682,26 @@ async def get_conversation(conv_id: str):
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     session_id = conversation.get("analytical_session_id")
-    ts_counts = await ts_answers_per_message(session_id) if session_id else None
-    return reconcile_answers(conversation, ts_counts)
+    ts_messages = await ts_conversation_messages(session_id) if session_id else None
+    return reconcile_answers(conversation, ts_messages)
+
+
+@app.get("/api/conversations/{conv_id}/work-answers/{answer_id}")
+async def get_work_answer(conv_id: str, answer_id: str):
+    """Live embed ids for a thinking answer shown in a stored turn's Show work.
+
+    `answer_id` comes from the turn's `work_answer_ids`. The client asks only when a
+    step is expanded, so a reopened chat does not load every intermediate chart up
+    front. ThoughtSpot checks the answer belongs to the conversation.
+    """
+    session_id = await asyncio.to_thread(db_get_session_id, conv_id)
+    if not session_id:
+        raise HTTPException(status_code=404, detail="Conversation has no ThoughtSpot session")
+
+    frame_params = await ts_load_answer(session_id, answer_id)
+    if not frame_params:
+        raise HTTPException(status_code=502, detail="Could not load that answer")
+    return {"frame_params": frame_params}
 
 
 @app.patch("/api/conversations/{conv_id}")
