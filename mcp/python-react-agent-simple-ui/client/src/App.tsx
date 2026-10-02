@@ -13,8 +13,16 @@ import {
   init,
   AuthType,
   startAutoMCPFrameRenderer,
+  type AutoMCPFrameRendererViewConfig,
   type CustomisationsInterface,
 } from "@thoughtspot/visual-embed-sdk";
+import {
+  getTheme,
+  subscribeToTheme,
+  toggleTheme,
+  useTheme,
+  type Theme,
+} from "./theme";
 
 /** Ids the embed route needs when a raw MCP update carries no ready-made URL. */
 interface FrameParams {
@@ -95,11 +103,8 @@ const HISTORY_URL = "/api/conversations";
 const TOKEN_URL = "/api/ts-token";
 
 // The embed renders inside ThoughtSpot's own iframe, so our CSS cannot reach it - it
-// only follows the `--ts-var-*` variables handed to init(). Read the system theme once
-// here and pass a matching palette. Keep these in step with App.css's dark tokens.
-const prefersDark =
-  window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-
+// only follows the `--ts-var-*` variables handed to the SDK. Keep these in step with
+// App.css's dark tokens.
 const DARK_SURFACE = "#171a21";
 const DARK_TEXT = "#e8eaed";
 const DARK_TEXT_MUTED = "#9aa0a6";
@@ -133,13 +138,11 @@ const embedDarkVariables: Record<string, string> = {
 // a raw selector reaches it. The class is a CSS module, so the runtime name carries a
 // hash suffix: match on substring, not equality.
 //
-// KNOWN INERT on champagne-master-aws.thoughtspotstaging.cloud (cluster 26.8): no
-// customCSS reaches these frames there - neither `variables` nor `rules_UNSTABLE`,
-// whether passed to init() or to startAutoMCPFrameRenderer. Verified with probe colors
-// on a light-mode browser: the embed rendered fully default. CSP `style-src` allows
-// `unsafe-inline`, so the block is upstream - most likely the CSS customization
-// framework not being enabled for the org (Develop > Customizations). Left in place
-// because it is correct per the SDK docs and starts working once that is enabled.
+// Checked on champagne-master-aws.thoughtspotstaging.cloud (SDK 1.52.1): the dark
+// `variables` apply there and the chart frame renders dark. An earlier check on the same
+// cluster found no customCSS reaching these frames at all; if that returns, the likely
+// cause is the CSS customization framework being off for the org (Develop >
+// Customizations), not this code.
 //
 // rules_UNSTABLE is exactly that - unstable. These selectors are internal ThoughtSpot
 // class names and can change on a cluster upgrade, at which point the padding goes white
@@ -151,20 +154,34 @@ const embedDarkRules: Record<string, Record<string, string>> = {
   },
 };
 
-// Spread into both init() and the auto-frame renderer - empty under a light system
-// theme, so ThoughtSpot's own default styling applies untouched.
-const embedTheme: { customizations?: CustomisationsInterface } = prefersDark
-  ? {
-      customizations: {
-        style: {
-          customCSS: {
-            variables: embedDarkVariables,
-            rules_UNSTABLE: embedDarkRules,
-          },
-        },
-      },
-    }
-  : {};
+const embedDarkCustomizations: CustomisationsInterface = {
+  style: {
+    customCSS: {
+      variables: embedDarkVariables,
+      rules_UNSTABLE: embedDarkRules,
+    },
+  },
+};
+
+// The view config every chart frame is built from. The renderer reads it each time it
+// creates a frame, so setting `customizations` here themes every frame created from then
+// on - the toggle re-creates the frames already on screen (see AnswerFrame). Light leaves
+// it unset, so ThoughtSpot's own default styling applies untouched. It is not set in
+// init() on purpose: init() runs once, so a theme set there could never change.
+const embedViewConfig: AutoMCPFrameRendererViewConfig = {
+  frameParams: {
+    height: "600px",
+  },
+};
+
+const setEmbedTheme = (theme: Theme) => {
+  embedViewConfig.customizations =
+    theme === "dark" ? embedDarkCustomizations : undefined;
+};
+setEmbedTheme(getTheme());
+// Registered before React subscribes to the theme, so the frames the next render creates
+// already see the new palette.
+const unsubscribeEmbedTheme = subscribeToTheme(() => setEmbedTheme(getTheme()));
 
 init({
   thoughtSpotHost: import.meta.env.VITE_TS_HOST,
@@ -181,7 +198,6 @@ init({
   // Fetch a replacement before the current token expires, so the embed never lands
   // in a signed-out state mid-session.
   autoLogin: true,
-  ...embedTheme,
   // Customize the style of the ThoughtSpot embed
   // The example below will make secondary buttons square and yellow
   // As well as make the menu background yellow and the menu item hover background yellow
@@ -207,19 +223,15 @@ init({
 // ThoughtSpot MCP server adds to every `iframe_url` - and replaces each one in place
 // with a fully configured, authenticated ThoughtSpot embed. This is what lets the
 // server hand us a bare URL and still get a real interactive chart.
-const mcpFrameObserver = startAutoMCPFrameRenderer({
-  frameParams: {
-    height: "600px",
-  },
-  // The renderer builds its own embed with this view config; the customizations passed
-  // to init() do not reach it, so the theme has to be repeated here.
-  ...embedTheme,
-});
+const mcpFrameObserver = startAutoMCPFrameRenderer(embedViewConfig);
 
 // In dev, Vite hot-reloads this module by running it again. Without this, every
 // reload leaves the previous observer attached, and each one resolves every chart -
 // duplicating the conversation-service calls once per reload since the page loaded.
-import.meta.hot?.dispose(() => mcpFrameObserver.disconnect());
+import.meta.hot?.dispose(() => {
+  mcpFrameObserver.disconnect();
+  unsubscribeEmbedTheme();
+});
 
 /**
  * Add one streamed step to a turn's work. Reasoning arrives a few words per event,
@@ -341,10 +353,11 @@ function WorkQueryChart({
   index: number;
   source: WorkSource;
 }) {
+  const theme = useTheme();
   const liveSrc = answerSrc(step, null);
   const answerId = source.answerIds[index];
   const conversationId = source.conversationId;
-  const [resolved, setResolved] = useState<string | null>(null);
+  const [resolved, setResolved] = useState<FrameParams | null>(null);
   const [failed, setFailed] = useState(false);
   // Bumped by Retry to run the load again; the failed load is already evicted.
   const [attempt, setAttempt] = useState(0);
@@ -355,7 +368,7 @@ function WorkQueryChart({
     setFailed(false);
     loadWorkAnswer(conversationId, answerId)
       .then((frame_params) => {
-        if (!cancelled) setResolved(answerHtml({ ...step, frame_params }, null));
+        if (!cancelled) setResolved(frame_params);
       })
       .catch(() => !cancelled && setFailed(true));
     return () => {
@@ -363,7 +376,9 @@ function WorkQueryChart({
     };
   }, [liveSrc, conversationId, answerId, step, attempt]);
 
-  const html = liveSrc ? answerHtml(step, null) : resolved;
+  const html = liveSrc
+    ? answerHtml(step, null, theme)
+    : resolved && answerHtml({ ...step, frame_params: resolved }, null, theme);
   // Nothing to load: a stored step ThoughtSpot has no answer for.
   if (!liveSrc && (!conversationId || !answerId)) return null;
   if (failed) {
@@ -529,17 +544,29 @@ const answerSrc = (
  * as resolving the answer takes. For a stored answer that is one ThoughtSpot round trip
  * to look up the conversation and another to load the answer - 25s+ on a loaded cluster.
  */
-const PLACEHOLDER_DOC =
-  '<!doctype html><html style="color-scheme:light dark"><body style="margin:0;' +
+const placeholderDoc = (theme: Theme) =>
+  `<!doctype html><html style="color-scheme:${theme}"><body style="margin:0;` +
   "height:100vh;display:flex;align-items:center;justify-content:center;" +
-  'font:14px system-ui,sans-serif;color:#9aa0a6">Loading chart…</body></html>';
+  `font:14px system-ui,sans-serif;color:#9aa0a6;background:${
+    theme === "dark" ? DARK_SURFACE : "#ffffff"
+  }">Loading chart…</body></html>`;
 
-/** Markup for one MCP answer iframe - AnswerFrame puts it in the DOM. */
-const answerHtml = (answer: Answer, conversationSessionId: string | null) => {
+/**
+ * Markup for one MCP answer iframe - AnswerFrame puts it in the DOM.
+ *
+ * The theme is part of the markup (through the placeholder), so a theme change changes
+ * the markup, and callers key AnswerFrame by it: the toggle re-creates every frame, and
+ * the renderer builds each again with the new palette.
+ */
+const answerHtml = (
+  answer: Answer,
+  conversationSessionId: string | null,
+  theme: Theme,
+) => {
   const src = answerSrc(answer, conversationSessionId);
   if (!src) return "";
   return `<iframe src="${escapeAttr(src)}" srcdoc="${escapeAttr(
-    PLACEHOLDER_DOC,
+    placeholderDoc(theme),
   )}" title="${escapeAttr(
     answer.title || "ThoughtSpot answer",
   )}" style="width:100%;border:none"></iframe>`;
@@ -567,7 +594,34 @@ function AnswerFrame({ html }: { html: string }) {
   return <div dangerouslySetInnerHTML={markup} />;
 }
 
+/** The icon for the mode a click switches to: a sun in dark mode, a moon in light. */
+function ThemeIcon({ theme }: { theme: Theme }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {theme === "dark" ? (
+        <>
+          <circle cx="8" cy="8" r="2.75" />
+          <path d="M8 1.5v1.75M8 12.75v1.75M1.5 8h1.75M12.75 8h1.75M3.4 3.4l1.25 1.25M11.35 11.35l1.25 1.25M3.4 12.6l1.25-1.25M11.35 4.65l1.25-1.25" />
+        </>
+      ) : (
+        <path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1z" />
+      )}
+    </svg>
+  );
+}
+
 function App() {
+  const theme = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -881,11 +935,21 @@ function App() {
         <header className="header">
           <div className="header-inner">
             <h1>ThoughtSpot Agent</h1>
-            {messages.length > 0 && (
-              <button className="new-chat-btn" onClick={startNewChat}>
-                New Chat
+            <div className="header-actions">
+              {messages.length > 0 && (
+                <button className="new-chat-btn" onClick={startNewChat}>
+                  New Chat
+                </button>
+              )}
+              <button
+                className="theme-toggle"
+                onClick={toggleTheme}
+                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              >
+                <ThemeIcon theme={theme} />
               </button>
-            )}
+            </div>
           </div>
         </header>
 
@@ -942,7 +1006,7 @@ function App() {
                               <figcaption>{answer.title}</figcaption>
                             )}
                             {(() => {
-                              const html = answerHtml(answer, sessionId);
+                              const html = answerHtml(answer, sessionId, theme);
                               return <AnswerFrame key={html} html={html} />;
                             })()}
                           </figure>

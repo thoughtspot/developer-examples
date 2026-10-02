@@ -1,7 +1,9 @@
-/* Light is the base palette. Only the tokens change under a dark system theme -
-   every rule below is written against these variables, so nothing else forks. */
+/* Light is the base palette. Only the tokens change under `data-theme="dark"` - every
+   rule below is written against these variables, so nothing else forks. theme.ts sets the
+   attribute (the toggle, else the system theme). The embedded charts follow the same
+   palette through `--ts-var-*` variables in App.tsx - keep the two in step. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   --primary: #4f46e5;
   --primary-light: #eef2ff;
@@ -19,24 +21,24 @@
   --delete-hover: #c0392b;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Indigo lightened so it keeps contrast against the dark surface. */
-    --primary: #818cf8;
-    --primary-light: #312e81;
-    --primary-ring: rgba(129, 140, 248, 0.15);
-    --bg: #0f1115;
-    --surface: #171a21;
-    --text: #e8eaed;
-    --text-secondary: #9aa0a6;
-    --border: #2a2f3a;
-    --error: #f87171;
-    --hover: rgba(255, 255, 255, 0.06);
-    --hover-strong: rgba(255, 255, 255, 0.1);
-    --code-bg: #0b0d11;
-    --code-text: #e8eaed;
-    --delete-hover: #f87171;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark; /* native scrollbars and form controls */
+
+  /* Indigo lightened so it keeps contrast against the dark surface. */
+  --primary: #818cf8;
+  --primary-light: #312e81;
+  --primary-ring: rgba(129, 140, 248, 0.15);
+  --bg: #0f1115;
+  --surface: #171a21;
+  --text: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --border: #2a2f3a;
+  --error: #f87171;
+  --hover: rgba(255, 255, 255, 0.06);
+  --hover-strong: rgba(255, 255, 255, 0.1);
+  --code-bg: #0b0d11;
+  --code-text: #e8eaed;
+  --delete-hover: #f87171;
 }
 
 * {
@@ -99,6 +101,37 @@ body {
   background: var(--bg);
   color: var(--text);
   border-color: var(--text-secondary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+
+.theme-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--text-secondary);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* ---- Chat area ---- */

@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "spotter-backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd mcp/python-react-agent-simple-ui/server && exec ../.venv/bin/python -m uvicorn claude_agent_with_spotter3_mcp_server:app --reload --port 8001"
+      ],
+      "port": 8001
+    },
+    {
+      "name": "spotter-history-backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd mcp/python-react-agent-simple-ui/server && exec ../.venv/bin/python -m uvicorn claude_agent_with_spotter3_mcp_server_and_chat_history:app --reload --port 8001"
+      ],
+      "port": 8001
+    },
+    {
+      "name": "spotter-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd mcp/python-react-agent-simple-ui/client && exec npm run dev"
+      ],
+      "port": 8000
+    }
+  ]
+}

@@ -16,7 +16,7 @@ questions:
 
 # Python Agent with Simple React UI
 
-A full-stack example that pairs a **Python (FastAPI) agent** with a **React chat UI**, running against the ThoughtSpot MCP server's **Spotter 3** toolset. Two backends are included:
+A full-stack example that pairs a **Python (FastAPI) agent** with a **React chat UI**, running against the ThoughtSpot MCP server's **Spotter 3** toolset. Two backends are included. Both build on the shared agent in `server/spotter3_core.py` (tokens, MCP session, Claude tool loop, SSE), so copy that file along with whichever backend you take:
 
 | Backend                 | File                                                               | What it gives you                                          |
 |-------------------------|--------------------------------------------------------------------|------------------------------------------------------------|
@@ -35,7 +35,7 @@ The backend streams responses to the frontend using Server-Sent Events (SSE), gi
 
 ## Claude + the Spotter 3 MCP Server
 
-`claude_agent_with_spotter3_mcp_server.py` uses Anthropic's Claude API with a **client-side agentic loop** — the FastAPI process connects directly to the [ThoughtSpot MCP server](https://github.com/thoughtspot/mcp-server) using custom HTTP headers (`Authorization` + `x-ts-host`). This is required because Anthropic's server-side MCP connector cannot send custom headers.
+`spotter3_core.py` (shared by both backends) runs Anthropic's Claude API with a **client-side agentic loop** — the FastAPI process connects directly to the [ThoughtSpot MCP server](https://github.com/thoughtspot/mcp-server) using custom HTTP headers (`Authorization` + `x-ts-host`). This is required because Anthropic's server-side MCP connector cannot send custom headers.
 
 ### Architecture
 
@@ -86,7 +86,7 @@ Copy `mint_token()`, `server_token()` and the `/api/ts-token` endpoint.
 
 #### 4. Hand the tools to your LLM
 
-- Convert `list_tools()` to your model's tool format (`build_tools()`), run the tool loop (`agent_loop()`), and return all parallel tool results in one message.
+- Convert `list_tools()` to your model's tool format (`build_tools()`), run the tool loop (`run_agent()`), and return all parallel tool results in one message.
 - **Poll `get_session_updates` in your code, not in the model.** `send_session_message` returns immediately and the Analytics Agent answers asynchronously; `autopoll_session_updates()` polls to completion and gives the model one consolidated result.
 - **Strip `iframe_url` from what the model sees** (`strip_rendered_answers()`) - your UI renders the chart, so the model only needs to summarize it.
 
@@ -203,8 +203,6 @@ Sanity check the MCP connection without the model:
 curl -s http://localhost:8001/api/tools | python -m json.tool
 ```
 
-To see where a turn's time goes, the chat-history server logs `[Timing]` lines: MCP session, each model call, each tool call, and the turn total.
-
 ### How it Works
 
 #### MCP endpoint and API version
@@ -271,7 +269,7 @@ Full message history (tool interactions included) is kept in memory per `conv_id
 
 #### Agentic loop
 
-`agent_loop()` runs until `stop_reason != "tool_use"`:
+`run_agent()` runs until `stop_reason != "tool_use"`:
 
 1. Stream from `claude_client.beta.messages.stream(...)` with the MCP tool definitions
 2. Emit `delta` (text) and `status` (thinking / tool start) SSE events
@@ -301,7 +299,7 @@ Other Claude API details worth noting:
 
 #### Change the Claude model
 
-Set `ANTHROPIC_MODEL` in `.env`, or edit the constant:
+Set `ANTHROPIC_MODEL` in `.env`, or edit the constant in `server/spotter3_core.py`:
 
 ```python
 MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
@@ -311,7 +309,7 @@ MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
 
 #### System prompt
 
-Edit `SYSTEM_PROMPT` to change tone, focus, or datasource:
+Edit `SYSTEM_PROMPT` in `server/spotter3_core.py` to change tone, focus, or datasource:
 
 ```python
 # Uncomment to force one datasource for every question in this app:
@@ -320,7 +318,7 @@ Edit `SYSTEM_PROMPT` to change tone, focus, or datasource:
 
 #### Restrict available tools
 
-`ALLOWED_TOOLS = None` (the default) passes through whatever the server exposes, which is usually right — the tool list is version-negotiated, so a hardcoded list silently drops tools added in later API versions. Set it to a list of names to restrict the agent:
+`ALLOWED_TOOLS = None` (the default) passes through whatever the server exposes, which is usually right — the tool list is version-negotiated, so a hardcoded list silently drops tools added in later API versions. Set it, in `server/spotter3_core.py`, to a list of names to restrict the agent:
 
 ```python
 ALLOWED_TOOLS = ["create_analysis_session", "send_session_message", "get_session_updates"]
@@ -429,8 +427,9 @@ python-react-agent-simple-ui/
 ├── .env                                                           # Shared env vars (create from env.template)
 ├── env.template                                                   # Environment variable template
 ├── server/
-│   ├── claude_agent_with_spotter3_mcp_server.py                   # FastAPI + Claude API + client-side MCP
-│   ├── claude_agent_with_spotter3_mcp_server_and_chat_history.py  # the same, plus SQLite chat history
+│   ├── spotter3_core.py                                           # the agent: tokens, MCP session, Claude tool loop, SSE
+│   ├── claude_agent_with_spotter3_mcp_server.py                   # /api/chat with in-memory history
+│   ├── claude_agent_with_spotter3_mcp_server_and_chat_history.py  # /api/chat + SQLite history, /api/conversations*
 │   ├── chat_history.db                                            # created on first run (gitignored)
 │   └── requirements.txt                                           # Python dependencies
 ├── client/
@@ -458,6 +457,7 @@ The React client is shared across both backends:
 - Shows **real-time status** — Claude thinking, tool calls, and Analytics Agent progress
 - Shows a collapsible **Show work** section with the Analytics Agent's steps, reasoning and tried queries, when the backend sends `work` events
 - Tracks `response_id` across turns for multi-turn continuity
+- Has a **light / dark toggle** in the header. The choice is remembered in `localStorage`; until you pick one the app follows the system theme. The app palette is CSS variables in `App.css`, and the charts follow through `--ts-var-*` variables (see [Visual embed customization](#visual-embed-customization)). Toggling re-creates the charts on screen, so stored ones load again.
 - Shows a **chat history sidebar** when the backend exposes `/api/conversations` — click to reopen a chat (charts and all), `×` to delete. A loading indicator shows while a stored chat is fetched. Against the backend without history the probe fails and the sidebar is simply not rendered.
 
 ### Chart rendering with `startAutoMCPFrameRenderer`
@@ -496,7 +496,7 @@ The placeholder iframe also carries a `srcdoc` ("Loading chart…"). `srcdoc` ta
 
 ### Visual embed customization
 
-ThoughtSpot embed styling is configured at the top of `client/src/App.tsx`. The same `customizations` must go to both `init()` and `startAutoMCPFrameRenderer()` - the renderer builds its own embeds, so styling passed only to `init()` does not reach the charts. `App.tsx` does this with a shared `embedTheme` object (a dark palette when the system theme is dark). `getAuthToken` fetches a fresh token from `/api/ts-token` on every call (see [step 2](#2-mint-thoughtspot-tokens-on-your-server)):
+ThoughtSpot embed styling is configured at the top of `client/src/App.tsx`. The same `customizations` must go to both `init()` and `startAutoMCPFrameRenderer()` - the renderer builds its own embeds, so styling passed only to `init()` does not reach the charts. `App.tsx` themes the charts through the renderer's view config (`embedViewConfig`) rather than `init()`: the renderer reads that object each time it builds a frame, so the header's light/dark toggle can change it (dark `--ts-var-*` variables for dark, none for light) and re-create the charts already on screen. `getAuthToken` fetches a fresh token from `/api/ts-token` on every call (see [step 2](#2-mint-thoughtspot-tokens-on-your-server)):
 
 ```ts
 init({
