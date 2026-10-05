@@ -540,7 +540,7 @@ init({
 | Only legacy tools (`getAnswer`, …) appear | You are on a `/bearer/*` URL; use `/token/mcp?api-version=2026-05-01`  |
 | `list_orgs` / `switch_org` missing        | Expected — they are OAuth-only and hidden on `/token/*`                |
 | `ImportError: streamable_http_client`     | Old `mcp` package; `pip install -r requirements.txt` (needs `mcp>=2.1.1`) |
-| Charts never appear                       | Check the browser console for the Visual Embed SDK, and that `npm install` picked up `@thoughtspot/visual-embed-sdk@^1.52.1` |
+| Charts never appear                       | Check the browser console for the Visual Embed SDK, and that `npm install` picked up `@thoughtspot/visual-embed-sdk@1.53.0` |
 | Answers render twice                      | The model emitted its own `<iframe>` too — reinforce that rule in `SYSTEM_PROMPT` |
 | History sidebar missing                   | You are running `claude_agent_with_spotter3_mcp_server`; run `claude_agent_with_spotter3_mcp_server_and_chat_history` for history |
 | History empty after restart               | `CHAT_HISTORY_DB` points somewhere new, or the process cannot write to `server/` |
