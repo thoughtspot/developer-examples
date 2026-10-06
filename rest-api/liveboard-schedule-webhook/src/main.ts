@@ -107,6 +107,9 @@ async function takeManifest(event: WebhookEvent, attachments: LocalFile[]): Prom
 // Reads a storage-mode object with the receiver's own credentials (AWS default
 // chain; needs s3:GetObject). ThoughtSpot's role can only write.
 // LOCAL_BUCKET_DIR swaps S3 for a folder on disk (used by the demo).
+// To read from GCS or another store, change this function.
+// No size limit here: the objects are files ThoughtSpot wrote (up to 25 MB);
+// scope the receiver's IAM access to the webhook bucket and prefix.
 async function fetchStored(file: StoredFile, dest: string): Promise<void> {
   if (process.env.LOCAL_BUCKET_DIR) {
     const bucket = path.resolve(process.env.LOCAL_BUCKET_DIR, file.bucketName!);
@@ -117,6 +120,7 @@ async function fetchStored(file: StoredFile, dest: string): Promise<void> {
   }
   if (file.provider !== 'AWS_S3') throw new Error(`${file.provider} is not handled by this example`);
   const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+  // Created per file for brevity; reuse one client in production.
   const s3 = new S3Client({ region: file.region });
   const object = await s3.send(new GetObjectCommand({ Bucket: file.bucketName, Key: file.objectKey }));
   await pipeline(object.Body as NodeJS.ReadableStream, createWriteStream(tempFile(dest)));
@@ -136,6 +140,7 @@ async function upload(file: LocalFile, event: WebhookEvent, key: string): Promis
     return;
   }
   const { drive, auth } = await import('@googleapis/drive');
+  // Created per file for brevity; reuse one client in production.
   const client = drive({ version: 'v3', auth: new auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/drive'] }) });
   const name = `${event.metadataObject.name} - ${event.data.scheduleDetails?.name ?? 'schedule'} - ${event.timestamp} - ${file.filename}`;
   await client.files.create({
