@@ -27,6 +27,22 @@ function tempFile(p: string): string {
   return resolved;
 }
 
+// Deliveries are acknowledged before their files are read and uploaded, so
+// ThoughtSpot won't resend one if that later work fails. Give each S3 read and
+// Drive upload a few attempts, backing off 1 s, 2 s and 4 s, before giving up.
+const RETRY_DELAYS_MS = [1000, 2000, 4000];
+async function withRetries(what: string, attempt: () => Promise<void>): Promise<void> {
+  for (let i = 0; ; i++) {
+    try {
+      return await attempt();
+    } catch (err) {
+      if (i === RETRY_DELAYS_MS.length) throw err;
+      console.warn(`${what} failed (${(err as Error).message}); retrying in ${RETRY_DELAYS_MS[i] / 1000} s`);
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[i]));
+    }
+  }
+}
+
 interface StoredFile {
   filename: string;
   contentType: string;
@@ -122,8 +138,10 @@ async function fetchStored(file: StoredFile, dest: string): Promise<void> {
   const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
   // Created per file for brevity; reuse one client in production.
   const s3 = new S3Client({ region: file.region });
-  const object = await s3.send(new GetObjectCommand({ Bucket: file.bucketName, Key: file.objectKey }));
-  await pipeline(object.Body as NodeJS.ReadableStream, createWriteStream(tempFile(dest)));
+  await withRetries(`reading s3://${file.bucketName}/${file.objectKey}`, async () => {
+    const object = await s3.send(new GetObjectCommand({ Bucket: file.bucketName, Key: file.objectKey }));
+    await pipeline(object.Body as NodeJS.ReadableStream, createWriteStream(tempFile(dest)));
+  });
 }
 
 // ---- Downstream ----------------------------------------------------------------
@@ -143,24 +161,44 @@ async function upload(file: LocalFile, event: WebhookEvent, key: string): Promis
   // Created per file for brevity; reuse one client in production.
   const client = drive({ version: 'v3', auth: new auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/drive'] }) });
   const name = `${event.metadataObject.name} - ${event.data.scheduleDetails?.name ?? 'schedule'} - ${event.timestamp} - ${file.filename}`;
-  await client.files.create({
-    requestBody: { name, parents: [folderId] },
-    media: { mimeType: file.contentType, body: createReadStream(tempFile(file.path)) },
-    supportsAllDrives: true,
+  await withRetries(`uploading ${file.filename} to Drive`, async () => {
+    await client.files.create({
+      requestBody: { name, parents: [folderId] },
+      media: { mimeType: file.contentType, body: createReadStream(tempFile(file.path)) },
+      supportsAllDrives: true,
+    });
   });
 }
 
 // ---- The webhook endpoint ----------------------------------------------------------
 
-// In memory only: grows with every delivery, is lost on restart and isn't shared
-// between instances. Use a shared store (Redis, a DB table) in production.
-const seen = new Set<string>();
+// Delivery keys seen in the last 24 hours, for spotting ThoughtSpot's retries.
+// In memory only: lost on restart and not shared between instances. Use a
+// shared store (Redis, a DB table) to run more than one instance.
+const DEDUPE_TTL_MS = 24 * 60 * 60 * 1000;
+const seen = new Map<string, number>(); // key -> when it was first seen
+
+// Records the key and returns true, or returns false if it was seen already.
+function markSeen(key: string): boolean {
+  const now = Date.now();
+  for (const [oldKey, seenAt] of seen) {
+    if (now - seenAt < DEDUPE_TTL_MS) break; // insertion order = oldest first
+    seen.delete(oldKey);
+  }
+  if (seen.has(key)) return false;
+  seen.set(key, now);
+  return true;
+}
+
 let queue: Promise<void> = Promise.resolve();
 
 // Resolves once every delivery accepted so far has been processed.
 export const idle = () => queue;
 
+// Each file is handled on its own: one that still fails after its retries is
+// logged and skipped, and the rest of the delivery goes ahead.
 async function processDelivery(event: WebhookEvent, key: string, files: LocalFile[], stored: StoredFile[], dir: string) {
+  let failed = 0;
   try {
     if (event.error) console.error(`[${event.eventId}] storage upload error: ${event.error}`);
     for (const [i, file] of stored.entries()) {
@@ -169,18 +207,31 @@ async function processDelivery(event: WebhookEvent, key: string, files: LocalFil
         continue;
       }
       const dest = path.join(dir, `stored-${i}`);
-      await fetchStored(file, dest);
-      files.push({ filename: safeName(file.filename), contentType: file.contentType, path: dest });
+      try {
+        await fetchStored(file, dest);
+        files.push({ filename: safeName(file.filename), contentType: file.contentType, path: dest });
+      } catch (err) {
+        failed++;
+        console.error(`[${event.eventId}] could not read ${file.filename}: ${(err as Error).message}`);
+      }
     }
     for (const file of files) {
-      await upload(file, event, key);
-      console.log(`[${event.eventId}] delivered ${file.filename}`);
+      try {
+        await upload(file, event, key);
+        console.log(`[${event.eventId}] delivered ${file.filename}`);
+      } catch (err) {
+        failed++;
+        console.error(`[${event.eventId}] could not upload ${file.filename}: ${(err as Error).message}`);
+      }
     }
-  } catch (err) {
-    seen.delete(key); // let a redelivery try again; files already uploaded are uploaded again
-    console.error(`[${event.eventId}] processing failed: ${(err as Error).message}`);
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+  if (failed) {
+    // Forget the key so a redelivery of this event is processed again (files
+    // that did make it are uploaded again too).
+    seen.delete(key);
+    console.error(`[${event.eventId}] ${failed} file(s) not delivered`);
   }
 }
 
@@ -227,11 +278,10 @@ app.post(
     // data.msgUniqueId is documented for deduplication; ThoughtSpot retries
     // deliveries that fail or take longer than 5 seconds.
     const key = event.data?.msgUniqueId ?? event.eventId;
-    if (event.eventType !== 'LIVEBOARD_SCHEDULE' || seen.has(key)) {
+    if (event.eventType !== 'LIVEBOARD_SCHEDULE' || !markSeen(key)) {
       await rm(dir, { recursive: true, force: true });
-      return reply(res, 200, seen.has(key) ? 'Duplicate delivery; already received' : 'Event not handled');
+      return reply(res, 200, event.eventType === 'LIVEBOARD_SCHEDULE' ? 'Duplicate delivery; already received' : 'Event not handled');
     }
-    seen.add(key);
 
     // Acknowledge first, then upload in the background.
     reply(res, 200, 'Webhook received successfully');
@@ -249,8 +299,17 @@ app.use((err: { status?: number; message: string }, _req: Request, res: Response
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = Number(process.env.PORT ?? 3000);
-  app.listen(port, (err) => {
+  const server = app.listen(port, (err) => {
     if (err) throw err;
     console.log(`Listening on http://localhost:${port}/webhooks/thoughtspot`);
   });
+
+  // On shutdown (deploy, restart, Ctrl-C), stop accepting deliveries and finish
+  // the ones already acknowledged before exiting. A second signal exits at once.
+  const shutdown = (signal: string) => {
+    console.log(`${signal}: no longer accepting deliveries; finishing queued ones`);
+    server.close(() => idle().then(() => process.exit(0)));
+  };
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
 }

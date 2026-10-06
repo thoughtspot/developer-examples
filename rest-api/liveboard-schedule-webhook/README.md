@@ -53,11 +53,11 @@ app.post('/webhooks/thoughtspot', checkBearerToken, express.json(), async (req, 
   // ThoughtSpot retries deliveries that fail or take longer than 5 seconds,
   // so skip repeats (data.msgUniqueId) and acknowledge before uploading.
   const key = event.data.msgUniqueId ?? event.eventId;
-  if (seen.has(key)) return reply(res, 200, 'Duplicate delivery; already received');
-  seen.add(key);
+  if (!markSeen(key)) return reply(res, 200, 'Duplicate delivery; already received');
   reply(res, 200, 'Webhook received successfully');
 
-  queue = queue.then(() => processDelivery(event, files)); // fetch from S3, upload to Drive
+  // Fetch from S3 and upload to Drive, retrying each file with backoff.
+  queue = queue.then(() => processDelivery(event, files));
 });
 ```
 
