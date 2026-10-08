@@ -1,11 +1,13 @@
 """
 Python agent: Anthropic Claude + the ThoughtSpot MCP server (Spotter 3 toolset),
-with persistent chat history.
+with saved chat history.
 
-The same agent as `claude_agent_with_spotter3_mcp_server.py` (the agent lives in
-`spotter3_core.py`), plus a SQLite chat history, so past conversations survive a restart
-and the UI can list, reopen and delete them. It also records the Analytics Agent's work
-(`work` events) for the UI's "Show work" section.
+Same agent as `claude_agent_with_spotter3_mcp_server.py` (the agent itself lives in
+`spotter3_core.py`). This version also saves every chat to a small SQLite file, so:
+
+  - chats survive a server restart,
+  - the UI can list, reopen, rename and delete past chats,
+  - the Analytics Agent's steps are kept for the UI's "Show work" section.
 
 MCP server: https://github.com/thoughtspot/mcp-server
 """
@@ -41,18 +43,23 @@ app = create_app()
 # ════════════════════════════════════════════════════════════════════════════════
 # CHAT HISTORY
 #
-# Stored in two layers, because the browser and the model need different things:
+# For the big picture, see "How chat history works" in the README.
 #
-#   turns           - what the UI renders: user text, assistant text, the answers
-#                     (titles only, see `storable_answers`) and the Agent's work steps.
-#   claude_messages - the raw Claude message list, tool_use and tool_result blocks
-#                     included. Replayed into the next request so follow-ups keep full
-#                     context after a restart.
+# For each chat we save three things:
 #
-# The ThoughtSpot MCP server's own conversation storage is internal plumbing for
-# `get_session_updates` delivery, not a client-facing history API - so history belongs to
-# the app. SQLite via the stdlib, no extra dependency. Calls are small and run in a worker
-# thread (`asyncio.to_thread`) to keep the event loop free.
+#   1. The messages       - every question and reply, so the chat can be shown again
+#                           and the AI remembers the context for follow-up questions.
+#   2. The conversation id - ThoughtSpot's id for the chat (`analytical_session_id`).
+#                           ThoughtSpot keeps the chat's charts under this id.
+#   3. A chart count      - one empty placeholder per chart in each reply.
+#
+# The screen's copy (`turns`) holds no chart links or titles. (`claude_messages` is the
+# AI's own working copy and can still contain titles from ThoughtSpot's replies.) A chart link stops working after about
+# 8 hours. When a chat is reopened, each chart is drawn fresh from the conversation id
+# plus the chart's number in the chat (`answer_index`). See `reconcile_answers`.
+#
+# Where it is stored: a SQLite file next to this script. SQLite comes with Python, so
+# there is nothing extra to install.
 # ════════════════════════════════════════════════════════════════════════════════
 
 DB_PATH = Path(os.getenv("CHAT_HISTORY_DB", Path(__file__).resolve().parent / "chat_history.db"))
@@ -131,21 +138,15 @@ def jsonable(value: Any) -> Any:
 
 
 def storable_answers(answers: list[dict]) -> list[dict]:
-    """Keep the parts of an answer that survive, drop the parts that go stale.
+    """One empty placeholder per chart - nothing about the chart itself is saved.
 
-    An answer object lives about 8 hours on the ThoughtSpot side. After that its
-    `iframe_url` - and the `answer_id`, really a `{session_id, gen_no}` pair - point at
-    nothing, and a reopened chat would render a row of error tiles. So only the durable
-    parts are stored; on replay the client asks the Visual Embed SDK for a live URL from
-    the conversation id plus the answer's position. `query` is dropped too: nothing reads
-    it on replay.
+    A chart's `iframe_url` and `answer_id` stop working after about 8 hours, and its
+    title is not needed to rebuild it. Only the number of charts matters; their position
+    (`answer_index`) is worked out on reopen.
 
-    Applied on the way out as well, so rows stored before this rule resolve on replay too.
+    Also applied when reading, so rows saved by older versions lose their stale fields.
     """
-    return [
-        {k: v for k, v in answer.items() if k not in ("iframe_url", "answer_id", "query")}
-        for answer in answers
-    ]
+    return [{} for _ in answers]
 
 
 def db_start_conversation(conv_id: str, first_message: str) -> None:
@@ -283,10 +284,10 @@ async def load_conversation_state(conv_id: str) -> list:
 
 
 class StreamRecorder:
-    """Fans every SSE event out to the browser and to the transcript we persist.
+    """Sends each event to the browser and also keeps a copy to save.
 
-    The UI renders a turn from exactly the events it received, so recording them here is
-    what makes a reopened conversation look like the live one.
+    Saving what the browser received lets a reopened chat match the live one, except
+    chart titles, which are not kept.
     """
 
     def __init__(self, queue: asyncio.Queue) -> None:
@@ -300,7 +301,7 @@ class StreamRecorder:
         if kind == "delta":
             self.text_parts.append(event.get("text") or "")
         elif kind == "answer":
-            self.answers.append({k: event.get(k) for k in ("answer_id", "title", "iframe_url")})
+            self.answers.append({})  # one placeholder per chart, see `storable_answers`
         elif kind == "work":
             append_work(self.work, event)
         self.queue.put_nowait(event)
@@ -340,7 +341,7 @@ async def persist_turn(conv_id: str, recorder: StreamRecorder, history: list | N
             conv_id,
             "assistant",
             recorder.text,
-            storable_answers(recorder.answers),
+            recorder.answers,
             recorder.work,
         )
     if history is not None:
@@ -383,8 +384,8 @@ async def chat(request: ChatRequest):
 
 
 # ── ThoughtSpot conversation lookups ────────────────────────────────────────────
-# A stored conversation is checked against what ThoughtSpot holds, so replayed charts
-# line up with the answers the SDK resolves.
+# On reopen, the saved chat is checked against the conversation ThoughtSpot holds, so
+# each chart gets the right `answer_index`.
 
 
 async def ts_request(
@@ -481,17 +482,37 @@ async def ts_load_answer(session_id: str, answer_id: str) -> dict | None:
 
 
 def reconcile_answers(conversation: dict, ts_messages: list[dict] | None) -> dict:
-    """Align a stored conversation with the answers ThoughtSpot actually holds.
+    """Give every saved chart its number in the chat (`answer_index`).
 
-    The stored copy is not a reliable source of truth. A stream can be cut off (the
-    browser navigates away, the process restarts) after the Agent was already asked; it
-    finishes anyway, so the answer exists on ThoughtSpot's side while our turn recorded
-    none of it. And `answer_index` has to count the way ThoughtSpot counts, or a replayed
-    answer resolves to the wrong chart.
+    Think of the chat's charts as numbered pages in a notebook. ThoughtSpot keeps the
+    notebook (the conversation id); we only need each chart's page number. The first
+    final chart in the chat is 0, the next is 1, and so on, across the whole chat. The
+    browser hands both to the Visual Embed SDK (`tsmcpConversationId`,
+    `tsmcpAnswerIndex`), and ThoughtSpot draws the chart fresh.
 
-    So ThoughtSpot decides how many answers each turn has and the stored rows only supply
-    titles. A turn missing answers gets untitled placeholders; the client renders them and
-    the SDK resolves each by its index.
+    We let ThoughtSpot do the counting, not our saved copy. If the browser closes while a
+    chart is loading, ThoughtSpot still finishes the chart but we never saw it. Its count
+    is complete; ours may not be. A chart we missed gets an empty placeholder.
+
+    How to find a chart's number from its link (`iframe_url`)
+    ----------------------------------------------------------
+    A chart link from the MCP server looks like this:
+
+        https://<host>/?tsmcp=true#/embed/conv-assist-answer
+            ?sessionId=72728061-...&genNo=2&acSessionId=2bfd6f50-...&acGenNo=1
+
+    1. From the link, note `sessionId` and `genNo`. Together they name one chart.
+    2. Get the chat's messages from ThoughtSpot:
+       GET /api/rest/2.0/ai/agent/conversations/{analytical_session_id}/messages
+    3. Go through the messages oldest first. Count only final charts: items in
+       `response_items` with `type == "answer"`, `is_thinking == false` and an
+       `answer_id`. Skip the "thinking" charts (see `answer_items`).
+    4. Number those charts 0, 1, 2, ... across the whole chat.
+    5. `answer_id` is text holding JSON, like {"session_id": "...", "gen_no": 2}.
+       Parse it. The chart with the same `session_id` and `gen_no` as step 1 has your
+       number: that is its `answer_index`.
+
+    This function does steps 2 to 4 for every chart at once, turn by turn.
     """
     turns = conversation.get("turns") or []
     if ts_messages is None:
@@ -514,7 +535,7 @@ def reconcile_answers(conversation: dict, ts_messages: list[dict] | None) -> dic
         thinking_answers = answer_items(message, thinking=True)
         turn["work_answer_ids"] = [item["answer_id"] for item in thinking_answers]
         answers = turn.get("answers") or []
-        # Titles we recorded, padded out to the count ThoughtSpot reports.
+        # Saved placeholders, padded out to the count ThoughtSpot reports.
         merged = answers[:expected] + [{} for _ in range(max(0, expected - len(answers)))]
         for answer in merged:
             answer["answer_index"] = index
