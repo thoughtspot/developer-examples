@@ -57,7 +57,8 @@ const App = () => {
 
 ## Demo
 
-Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/host-event-parameterized)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/host-event-parameterized?file=src/App.tsx)
+> First load imports the repo into StackBlitz and can take a moment — if it stalls on "Mounting environment", refresh the page once.
 
 ## Run locally
 

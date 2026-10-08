@@ -269,7 +269,8 @@ VITE_LIVEBOARD_ID=your-liveboard-id
 
 ## Demo
 
-Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/actions)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/actions?file=src/main.ts)
+> First load imports the repo into StackBlitz and can take a moment — if it stalls on "Mounting environment", refresh the page once.
 
 ## Documentation
 
