@@ -2,10 +2,10 @@
   "installDependencies": true,
   "startCommand": "npm run dev",
   "env": {
-    "VITE_TS_HOST": "https://training.thoughtspot.cloud",
-    "VITE_TS_USERNAME": "code-sandbox",
-    "VITE_TS_PASSWORD": "3mbed+#3xplz",
-    "VITE_LIVEBOARD_ID": "b504e160-3025-4508-a76a-1beb1f4b5eed",
+    "VITE_TS_HOST": "https://embed-1-do-not-delete.thoughtspotstaging.cloud",
+    "VITE_TS_USERNAME": "embed-sandbox",
+    "VITE_TS_PASSWORD": "Embed2CgLvFMZ0G3yaGMA9@A",
+    "VITE_LIVEBOARD_ID": "d084c256-e284-4fc4-b80c-111cb606449a",
     "VITE_LIVEBOARD_ACTIVE_TAB_ID": ""
   }
 }

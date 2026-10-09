@@ -51,7 +51,8 @@ init({
 ```
 
 ## Demo
-Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/style-customizations)
+Open in [StackBlitz](https://stackblitz.com/github/thoughtspot/developer-examples/tree/main/visual-embed/style-customizations?file=src/App.tsx)
+> First load imports the repo into StackBlitz and can take a moment — if it stalls on "Mounting environment", refresh the page once.
 
 ## Documentation
 
