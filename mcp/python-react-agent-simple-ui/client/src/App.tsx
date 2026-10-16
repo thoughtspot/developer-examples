@@ -1,4 +1,5 @@
 import {
+  memo,
   useState,
   useRef,
   useEffect,
@@ -9,6 +10,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import {
   init,
   AuthType,
@@ -32,15 +34,16 @@ interface FrameParams {
   ac_gen_no: number | null;
 }
 
-/** One chart the Analytics Agent produced - streamed live, or replayed from history. */
+/** One chart the Analytics Agent produced, as it streams in live. */
 interface Answer {
   answer_id?: string | null;
   title?: string | null;
   query?: string | null;
   iframe_url?: string | null;
   frame_params?: FrameParams | null;
-  /** Position in the conversation; set on stored answers only. */
-  answer_index?: number | null;
+  /** This reply's label for the chart (`chart-1`, ...); Claude writes `[chart-1]` where
+   * it belongs. */
+  chart?: string | null;
 }
 
 /**
@@ -59,10 +62,20 @@ interface WorkStep {
 
 type Role = "user" | "assistant";
 
+/** A chart in a live reply: its label and its link. */
+interface LiveChart {
+  label: string;
+  src: string;
+}
+
 interface Message {
   role: Role;
+  /** A stored reply as shown: text with each chart in place (filled in by the server). */
   content: string;
-  answers?: Answer[];
+  /** Live replies only: Claude's text so far, and the charts that have arrived. The
+   * charts are placed where Claude writes their labels (see `placeCharts`). */
+  text?: string;
+  charts?: LiveChart[];
   work?: WorkStep[];
   /** Stored turns only: ThoughtSpot's id for each Show work query, in order. */
   workAnswerIds?: string[];
@@ -76,11 +89,9 @@ interface ConversationSummary {
 
 interface ConversationDetail {
   id: string;
-  analytical_session_id?: string | null;
   turns?: {
     role: Role;
     content: string;
-    answers?: Answer[];
     work?: WorkStep[];
     work_answer_ids?: string[];
   }[];
@@ -98,6 +109,7 @@ type StreamEvent =
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
+const TS_HOST = import.meta.env.VITE_TS_HOST;
 const API_URL = "/api/chat";
 const HISTORY_URL = "/api/conversations";
 const TOKEN_URL = "/api/ts-token";
@@ -184,7 +196,7 @@ setEmbedTheme(getTheme());
 const unsubscribeEmbedTheme = subscribeToTheme(() => setEmbedTheme(getTheme()));
 
 init({
-  thoughtSpotHost: import.meta.env.VITE_TS_HOST,
+  thoughtSpotHost: TS_HOST,
   authType: AuthType.TrustedAuthTokenCookieless,
   // The SDK requires a NEW token from every call - returning one constant trips its
   // duplicate-token check as soon as that token stops verifying, with no way back.
@@ -354,7 +366,7 @@ function WorkQueryChart({
   source: WorkSource;
 }) {
   const theme = useTheme();
-  const liveSrc = answerSrc(step, null);
+  const liveSrc = answerSrc(step);
   const answerId = source.answerIds[index];
   const conversationId = source.conversationId;
   const [resolved, setResolved] = useState<FrameParams | null>(null);
@@ -377,8 +389,8 @@ function WorkQueryChart({
   }, [liveSrc, conversationId, answerId, step, attempt]);
 
   const html = liveSrc
-    ? answerHtml(step, null, theme)
-    : resolved && answerHtml({ ...step, frame_params: resolved }, null, theme);
+    ? answerHtml(step, theme)
+    : resolved && answerHtml({ ...step, frame_params: resolved }, theme);
   // Nothing to load: a stored step ThoughtSpot has no answer for.
   if (!liveSrc && (!conversationId || !answerId)) return null;
   if (failed) {
@@ -497,22 +509,16 @@ const escapeAttr = (value: unknown) =>
   String(value ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
 /**
- * The `src` to hand the auto-frame renderer for one answer.
+ * The `src` to hand the auto-frame renderer for one live answer.
  *
- * A live answer carries the `iframe_url` the MCP server just produced. A stored
- * one does not: those URLs embed a session that expires in about 8 hours, so the
- * server never persists them. Instead we point the renderer at the conversation
- * and the answer's position in it, and it resolves a current URL - re-running the
- * chart against today's data, which is why it also gets the stale-data notice.
+ * Stored chats never come through here: the server sends their charts as ready HTML,
+ * inside the reply text (see `ReplyBody`).
  */
-const answerSrc = (
-  answer: Answer,
-  conversationSessionId: string | null,
-): string | null => {
+const answerSrc = (answer: Answer): string | null => {
   // Digested MCP updates carry a ready-made URL.
   if (answer.iframe_url) return answer.iframe_url;
 
-  const url = new URL("/v2/", import.meta.env.VITE_TS_HOST);
+  const url = new URL("/v2/", TS_HOST);
   url.searchParams.set("tsmcp", "true");
 
   // Raw MCP updates carry the ids instead, so we assemble the embed route here.
@@ -526,12 +532,7 @@ const answerSrc = (
     });
     return `${url.toString()}#/embed/conv-assist-answer?${hash.toString()}`;
   }
-
-  // A stored answer has neither - the SDK resolves it from the conversation.
-  if (!conversationSessionId || answer.answer_index == null) return null;
-  url.searchParams.set("tsmcpConversationId", conversationSessionId);
-  url.searchParams.set("tsmcpAnswerIndex", String(answer.answer_index));
-  return url.toString();
+  return null;
 };
 
 /**
@@ -558,12 +559,8 @@ const placeholderDoc = (theme: Theme) =>
  * the markup, and callers key AnswerFrame by it: the toggle re-creates every frame, and
  * the renderer builds each again with the new palette.
  */
-const answerHtml = (
-  answer: Answer,
-  conversationSessionId: string | null,
-  theme: Theme,
-) => {
-  const src = answerSrc(answer, conversationSessionId);
+const answerHtml = (answer: Answer, theme: Theme) => {
+  const src = answerSrc(answer);
   if (!src) return "";
   return `<iframe src="${escapeAttr(src)}" srcdoc="${escapeAttr(
     placeholderDoc(theme),
@@ -571,6 +568,170 @@ const answerHtml = (
     answer.title || "ThoughtSpot answer",
   )}" style="width:100%;border:none"></iframe>`;
 };
+
+/**
+ * A chart inside a reply's text: `<iframe data-ts-chart src="...">`, where Claude wrote
+ * the chart's label (or at the end). Live replies get them from `placeCharts`; stored
+ * replies come from the server with them already in place, links filled in.
+ * `data-ts-chart` keeps an `<iframe>` Claude writes itself from being taken for one.
+ */
+const CHART_TAG = /(<iframe data-ts-chart src="[^"<>]*"><\/iframe>)/;
+
+/** Where Claude wants a chart: its label in square brackets, e.g. `[chart-1]`. */
+const CHART_LABEL = /\[(chart-\d+)\]/g;
+/** The start of a label still streaming in, e.g. `[char` - hidden until it is whole. */
+const PARTIAL_LABEL = /\[(?:c(?:h(?:a(?:r(?:t(?:-\d*)?)?)?)?)?)?$/;
+
+/**
+ * A live reply: Claude's text with each chart where Claude put its label, plus the
+ * charts it has not placed (yet). Mirrors `place_charts` on the server, so the live
+ * and reopened views match.
+ *
+ * A chart marker in Claude's own text is defused first, so only the charts placed
+ * here can ever show as charts. A label used twice, or for a chart that has not
+ * arrived, is dropped.
+ */
+const placeCharts = (text: string, charts: LiveChart[]) => {
+  const placed = new Set<string>();
+  // Same order as the server: labels become neutral markers, then any `data-ts-chart`
+  // in Claude's text is defused, and only then do the real chart tags go in - so no
+  // dropped label can join two halves of text into a working tag.
+  const content = text
+    .replace(/\uE000/g, "")
+    .replace(PARTIAL_LABEL, "")
+    .replace(CHART_LABEL, (_, label: string) => `\uE000${label}\uE000`)
+    .replace(/data-ts-chart/g, "data-ts-chart-text")
+    .replace(/\uE000(chart-\d+)\uE000/g, (_, label: string) => {
+      const chart = charts.find((c) => c.label === label);
+      // A dropped label leaves an invisible space: removing it outright could join the
+      // text on either side into a working `data-ts-chart` tag.
+      if (!chart || placed.has(label)) return "\u200b";
+      placed.add(label);
+      return chartTag(chart.src);
+    });
+  return { content, unplaced: charts.filter((c) => !placed.has(c.label)) };
+};
+
+/** The tag for a live chart. Blank lines keep the text around it as separate paragraphs. */
+const chartTag = (src: string) =>
+  `\n\n<iframe data-ts-chart src="${escapeAttr(src)}"></iframe>\n\n`;
+
+/**
+ * The markup for one chart in a reply, or null if its link is not on our ThoughtSpot.
+ *
+ * Replies hold Claude's text, which a prompt can steer, so a chart tag is never put in
+ * the page as it is. Only its link is kept, and only if it is an https ThoughtSpot chart
+ * link (`tsmcp=true`) on the configured host; the iframe is then built fresh around it.
+ */
+const chartFrameHtml = (tag: string, theme: Theme): string | null => {
+  const src = (tag.match(/src="([^"]*)"/)?.[1] ?? "")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&");
+  let allowed = false;
+  try {
+    const url = new URL(src);
+    allowed =
+      url.protocol === "https:" &&
+      url.origin === new URL(TS_HOST).origin &&
+      url.searchParams.get("tsmcp") === "true"; // only ThoughtSpot chart links
+  } catch {
+    // not a URL
+  }
+  if (!allowed) {
+    console.warn(`[Chart] Not shown: not a ThoughtSpot chart link on ${TS_HOST} (VITE_TS_HOST):`, src);
+    return null;
+  }
+  return `<iframe src="${escapeAttr(src)}" srcdoc="${escapeAttr(
+    placeholderDoc(theme),
+  )}" title="ThoughtSpot answer" style="width:100%;border:none"></iframe>`;
+};
+
+/**
+ * What rehype-sanitize keeps in Claude's text: its default (GitHub's rules), except that
+ * only `name` gets the `user-content-` prefix. react-markdown already prefixes footnote
+ * ids, and prefixing them again would break footnote links. `name` still needs it: an
+ * element named, say, `createElement` would replace `document.createElement` and break
+ * the page.
+ */
+const sanitizeSchema = { ...defaultSchema, clobber: ["name"] };
+
+/**
+ * A reply: its text, with each chart where Claude placed it.
+ *
+ * The text is split at each chart. Text renders as markdown; each chart goes into its
+ * own AnswerFrame, with the "Loading chart…" placeholder (which follows the theme)
+ * added. Charts must not go through ReactMarkdown: React would then own the iframe the
+ * SDK swaps out, and break when it later updates or removes that node.
+ *
+ * A live reply only grows at the end, so each piece keeps its position while streaming.
+ * Memoized: a chart's markup is checked on render, and nothing changes between renders.
+ */
+const ReplyBody = memo(function ReplyBody({
+  content,
+  theme,
+}: {
+  content: string;
+  theme: Theme;
+}) {
+  return (
+    <>
+      {content.split(CHART_TAG).map((piece, i) => {
+        if (i % 2 === 1) {
+          const html = chartFrameHtml(piece, theme);
+          if (!html) return null;
+          return (
+            <figure className="answer" key={i}>
+              <AnswerFrame key={html} html={html} />
+            </figure>
+          );
+        }
+        return piece.trim() ? (
+          // rehypeRaw lets Claude's HTML through; rehypeSanitize then keeps only safe
+          // tags (no iframes, scripts or event handlers). Charts never come this way.
+          <ReactMarkdown
+            key={i}
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
+          >
+            {piece}
+          </ReactMarkdown>
+        ) : null;
+      })}
+    </>
+  );
+});
+
+/**
+ * A reply still streaming in. Charts Claude has placed show in the text; the rest wait
+ * at the bottom (and stay there if Claude never places them, as the server saves them).
+ * A chart that moves from the bottom into the text loads again once.
+ */
+function LiveReply({
+  text,
+  charts,
+  theme,
+}: {
+  text: string;
+  charts: LiveChart[];
+  theme: Theme;
+}) {
+  const { content, unplaced } = placeCharts(text, charts);
+  return (
+    <>
+      <ReplyBody content={content} theme={theme} />
+      {unplaced.map((chart) => {
+        const html = chartFrameHtml(chartTag(chart.src).trim(), theme);
+        return (
+          html && (
+            <figure className="answer" key={chart.label}>
+              <AnswerFrame key={html} html={html} />
+            </figure>
+          )
+        );
+      })}
+    </>
+  );
+}
 
 /**
  * One MCP answer's iframe, written into the DOM exactly once.
@@ -627,15 +788,12 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [responseId, setResponseId] = useState<string | null>(null);
-  // ThoughtSpot analytical session for the open conversation. Only a reopened
-  // chat needs it - live answers arrive with a URL already attached.
-  const [sessionId, setSessionId] = useState<string | null>(null);
   // Chat history. `historyAvailable` stays false against a backend without the
   // /api/conversations endpoints, and the sidebar simply isn't rendered.
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [historyAvailable, setHistoryAvailable] = useState(false);
-  // The stored chat being fetched. Opening one waits on ThoughtSpot (the server
-  // reconciles its answers against the live conversation), so it can take seconds.
+  // The stored chat being fetched. Opening one can wait on ThoughtSpot (when a reply
+  // has Show work charts to find), so it can take seconds.
   const [openingId, setOpeningId] = useState<string | null>(null);
   // Bumped on every open / new chat, so only the latest request's response lands.
   const openRequestRef = useRef(0);
@@ -660,9 +818,9 @@ function App() {
     refreshConversations();
   }, [refreshConversations]);
 
-  // Reopen a stored conversation. Stored turns carry their answers, so the charts
-  // come back as embeds rather than as text - resolved live, since the stored
-  // answers deliberately carry no URL. See answerSrc.
+  // Reopen a stored conversation. Each stored reply carries its charts as HTML in its
+  // text, with links the server built from the conversation id and each chart's
+  // number - so the charts come back as live embeds. See ReplyBody.
   const openConversation = useCallback(
     async (id: string) => {
       if (isLoading) return;
@@ -679,13 +837,11 @@ function App() {
           (data.turns || []).map((turn) => ({
             role: turn.role,
             content: turn.content,
-            answers: turn.answers || [],
             work: turn.work || [],
             workAnswerIds: turn.work_answer_ids || [],
           })),
         );
         setResponseId(data.id);
-        setSessionId(data.analytical_session_id || null);
         setStatus("");
       } catch (error) {
         if (request !== openRequestRef.current) return;
@@ -744,7 +900,7 @@ function App() {
     setMessages((prev) => [
       ...prev,
       { role: "user", content: userMessage },
-      { role: "assistant", content: "", answers: [], work: [] },
+      { role: "assistant", content: "", text: "", charts: [], work: [] },
     ]);
 
     try {
@@ -788,7 +944,7 @@ function App() {
                   const last = updated[updated.length - 1];
                   updated[updated.length - 1] = {
                     ...last,
-                    content: last.content + data.text,
+                    text: (last.text || "") + data.text,
                   };
                   return updated;
                 });
@@ -799,18 +955,19 @@ function App() {
               // An answer the Analytics Agent produced. The server streams these as
               // soon as they arrive, so charts appear while the agent is still working.
               case "answer": {
-                // Raw MCP updates have no `iframe_url`, so an answer is renderable
-                // as long as a src can be built from what it does carry.
-                const src = answerSrc(data, null);
-                if (!src) break;
+                // The server sends each chart once, labelled. Raw MCP updates have no
+                // `iframe_url`; the link is built from the ids they carry instead.
+                const src = answerSrc(data);
+                const label = data.chart;
+                if (!src || !label) break;
                 setMessages((prev) => {
                   const updated = [...prev];
                   const last = updated[updated.length - 1];
-                  const answers = last.answers || [];
-                  if (answers.some((a) => answerSrc(a, null) === src)) return prev;
+                  // A chart is sent again only when its link arrives late; it is new here.
+                  if ((last.charts || []).some((c) => c.label === label)) return prev;
                   updated[updated.length - 1] = {
                     ...last,
-                    answers: [...answers, data],
+                    charts: [...(last.charts || []), { label, src }],
                   };
                   return updated;
                 });
@@ -837,11 +994,10 @@ function App() {
                 setMessages((prev) => {
                   const updated = [...prev];
                   const last = updated[updated.length - 1];
+                  // Keep what already arrived, charts included; the server saves it so.
                   updated[updated.length - 1] = {
-                    role: "assistant",
-                    content: `Error: ${data.message}`,
-                    answers: last.answers || [],
-                    work: last.work || [],
+                    ...last,
+                    text: `${last.text || ""}\n\nError: ${data.message}`,
                     isError: true,
                   };
                   return updated;
@@ -884,7 +1040,6 @@ function App() {
     setOpeningId(null);
     setMessages([]);
     setResponseId(null);
-    setSessionId(null);
     setStatus("");
     setInput("");
   };
@@ -994,36 +1149,16 @@ function App() {
                             }}
                           />
                         )}
-                        {(msg.answers || []).map((answer) => (
-                          <figure
-                            className="answer"
-                            // Live answers are keyed by URL; stored ones have no
-                            // URL, so their position in the conversation is the
-                            // stable identity.
-                            key={answer.iframe_url || `answer-${answer.answer_index}`}
-                          >
-                            {answer.title && (
-                              <figcaption>{answer.title}</figcaption>
-                            )}
-                            {(() => {
-                              const html = answerHtml(answer, sessionId, theme);
-                              return <AnswerFrame key={html} html={html} />;
-                            })()}
-                          </figure>
-                        ))}
-                        {msg.content ? (
-                          // rehypeRaw so an <iframe> the model emits itself still renders.
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeRaw]}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
+                        {msg.text || msg.charts?.length ? (
+                          <LiveReply
+                            text={msg.text || ""}
+                            charts={msg.charts || []}
+                            theme={theme}
+                          />
+                        ) : msg.content ? (
+                          <ReplyBody content={msg.content} theme={theme} />
                         ) : (
-                          !(msg.answers || []).length &&
-                          !(msg.work || []).length && (
-                            <span className="typing-cursor" />
-                          )
+                          !(msg.work || []).length && <span className="typing-cursor" />
                         )}
                       </>
                     )}

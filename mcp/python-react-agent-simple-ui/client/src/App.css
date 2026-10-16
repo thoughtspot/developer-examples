@@ -516,13 +516,6 @@ body {
   margin: 12px 0;
 }
 
-.answer figcaption {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-}
-
 .answer > div {
   border: 1px solid var(--border);
   border-radius: 10px;

@@ -15,6 +15,7 @@ MCP server: https://github.com/thoughtspot/mcp-server
 import asyncio
 import json
 import os
+import re
 import sqlite3
 import uuid
 from collections.abc import Iterator
@@ -45,18 +46,25 @@ app = create_app()
 #
 # For the big picture, see "How chat history works" in the README.
 #
-# For each chat we save three things:
+# For each chat we save:
 #
-#   1. The messages       - every question and reply, so the chat can be shown again
-#                           and the AI remembers the context for follow-up questions.
+#   1. The messages        - every question and reply, so the chat can be shown again
+#                            and the AI remembers the context for follow-up questions.
 #   2. The conversation id - ThoughtSpot's id for the chat (`analytical_session_id`).
-#                           ThoughtSpot keeps the chat's charts under this id.
-#   3. A chart count      - one empty placeholder per chart in each reply.
+#                            ThoughtSpot keeps the chat's charts under this id.
+#   3. The charts, as HTML - each reply is saved as one string: Claude's text with an
+#                            `<iframe>` for each chart, where Claude wrote its label
+#                            (or at the end). See `place_charts`.
+#                            Where the chart link would go, the HTML holds a placeholder
+#                            with the chart's number in the chat, like {{TS_CHART:3}}.
+#                            See `chart_tag`.
 #
-# The screen's copy (`turns`) holds no chart links or titles. (`claude_messages` is the
-# AI's own working copy and can still contain titles from ThoughtSpot's replies.) A chart link stops working after about
-# 8 hours. When a chat is reopened, each chart is drawn fresh from the conversation id
-# plus the chart's number in the chat (`answer_index`). See `reconcile_answers`.
+# Chart links are not saved: they stop working after about 8 hours. When a chat is
+# reopened, each placeholder becomes a fresh link built from the conversation id and the
+# chart's number, and ThoughtSpot draws the chart again. See `fill_chart_links`.
+#
+# (`claude_messages` is the AI's own working copy and can still hold chart titles from
+# ThoughtSpot's replies.)
 #
 # Where it is stored: a SQLite file next to this script. SQLite comes with Python, so
 # there is nothing extra to install.
@@ -79,7 +87,6 @@ CREATE TABLE IF NOT EXISTS turns (
     conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     role            TEXT NOT NULL,
     content         TEXT NOT NULL DEFAULT '',
-    answers         TEXT NOT NULL DEFAULT '[]',
     work            TEXT NOT NULL DEFAULT '[]',
     created_at      TEXT NOT NULL
 );
@@ -115,10 +122,65 @@ def db_init() -> None:
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(turns)")}
         if "work" not in columns:
             conn.execute("ALTER TABLE turns ADD COLUMN work TEXT NOT NULL DEFAULT '[]'")
+        migrate_legacy_charts(conn, columns)
     print(f"[History] SQLite at {DB_PATH}")
 
 
-db_init()
+def migrate_legacy_charts(conn: sqlite3.Connection, columns: set[str]) -> None:
+    """Move charts saved by older versions of this example into the reply text.
+
+    Older versions kept a reply's charts apart from its text: as a list in an `answers`
+    column, or as HTML in a `charts_html` column. They are moved to the start of the
+    reply - where those versions showed them - as `chart_tag`s, and every chart in the
+    conversation is numbered again in order, so new replies count them too.
+
+    Runs once: the old columns are emptied afterwards (they stay, unused).
+    """
+    legacy = [name for name in ("answers", "charts_html") if name in columns]
+    if not legacy:
+        return
+    pending = " OR ".join(
+        "answers NOT IN ('', '[]')" if name == "answers" else "charts_html != ''"
+        for name in legacy
+    )
+    conversation_ids = [
+        row[0]
+        for row in conn.execute(
+            f"SELECT DISTINCT conversation_id FROM turns WHERE role = 'assistant' AND ({pending})"
+        )
+    ]
+    for conv_id in conversation_ids:
+        number = 0
+        rows = conn.execute(
+            f"SELECT id, content, {', '.join(legacy)} FROM turns"
+            " WHERE conversation_id = ? AND role = 'assistant' ORDER BY id",
+            (conv_id,),
+        ).fetchall()
+        for row in rows:
+            old_charts = 0
+            if "answers" in legacy:
+                try:
+                    parsed = json.loads(row["answers"] or "[]")
+                except ValueError:
+                    parsed = []
+                if isinstance(parsed, list):
+                    old_charts += len(parsed)
+            if "charts_html" in legacy:
+                old_charts += (row["charts_html"] or "").count("{{TS_CHART:")
+            moved = "".join(chart_tag(number + i) for i in range(old_charts))
+            number += old_charts
+
+            def renumber(match: re.Match) -> str:
+                nonlocal number
+                number += 1
+                return chart_tag(number - 1).strip()
+
+            content = (moved + CHART_TAG.sub(renumber, row["content"])).lstrip("\n")
+            empty = ", ".join(f"{name} = ?" for name in legacy)
+            conn.execute(
+                f"UPDATE turns SET content = ?, {empty} WHERE id = ?",
+                (content, *[("[]" if name == "answers" else "") for name in legacy], row["id"]),
+            )
 
 
 def jsonable(value: Any) -> Any:
@@ -137,16 +199,43 @@ def jsonable(value: Any) -> Any:
     return value
 
 
-def storable_answers(answers: list[dict]) -> list[dict]:
-    """One empty placeholder per chart - nothing about the chart itself is saved.
+# A chart inside a saved reply. `data-ts-chart` marks the iframes this app wrote, so an
+# `<iframe>` in Claude's own text is never mistaken for one.
+CHART_TAG = re.compile(r'<iframe data-ts-chart src="\{\{TS_CHART:(\d+)\}\}"></iframe>')
 
-    A chart's `iframe_url` and `answer_id` stop working after about 8 hours, and its
-    title is not needed to rebuild it. Only the number of charts matters; their position
-    (`answer_index`) is worked out on reopen.
 
-    Also applied when reading, so rows saved by older versions lose their stale fields.
+def chart_tag(number: int) -> str:
+    """The HTML saved for one chart: an `<iframe>` with a placeholder where the link goes.
+
+    Charts are numbered across the whole chat, from 0: if earlier replies had 3 charts,
+    this reply's charts are 3, 4, ... That number (`answer_index`) is how ThoughtSpot
+    finds the chart again. It counts the same way: the final charts of every reply, in
+    order, skipping the Agent's "thinking" charts - which never reach a reply.
+
+    Blank lines around the tag keep the text on either side as separate paragraphs.
     """
-    return [{} for _ in answers]
+    return f'\n\n<iframe data-ts-chart src="{{{{TS_CHART:{number}}}}}"></iframe>\n\n'
+
+
+def fill_chart_links(html: str, session_id: str | None) -> str:
+    """Swap each placeholder for a link the Visual Embed SDK turns into a live chart.
+
+    The link carries the conversation id and the chart's number. Without a conversation
+    id there is nothing to rebuild a chart from, so the charts are left out.
+    """
+    if not session_id:
+        return CHART_TAG.sub("", html)
+    link = (
+        f"{TS_HOST.rstrip('/')}/v2/?tsmcp=true"
+        f"&amp;tsmcpConversationId={quote(session_id, safe='')}&amp;tsmcpAnswerIndex="
+    )
+    return CHART_TAG.sub(
+        lambda match: f'<iframe data-ts-chart src="{link}{match[1]}"></iframe>', html
+    )
+
+
+# After the chart helpers: moving older charts into replies uses them.
+db_init()
 
 
 def db_start_conversation(conv_id: str, first_message: str) -> None:
@@ -164,15 +253,22 @@ def db_start_conversation(conv_id: str, first_message: str) -> None:
         )
 
 
-def db_add_turn(
-    conv_id: str, role: str, content: str, answers: list[dict], work: list[dict] | None = None
-) -> None:
+def db_add_turn(conv_id: str, role: str, content: str, work: list[dict] | None = None) -> None:
     stamp = now_iso()
     with db() as conn:
+        if role == "assistant":
+            # The reply numbers its charts from 0. Shift them to follow every chart
+            # already saved for the chat.
+            earlier = conn.execute(
+                "SELECT content FROM turns WHERE conversation_id = ? AND role = 'assistant'",
+                (conv_id,),
+            ).fetchall()
+            first = sum(len(CHART_TAG.findall(row["content"])) for row in earlier)
+            content = CHART_TAG.sub(lambda match: chart_tag(first + int(match[1])).strip(), content)
         conn.execute(
-            "INSERT INTO turns (conversation_id, role, content, answers, work, created_at)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (conv_id, role, content, json.dumps(answers), json.dumps(work or []), stamp),
+            "INSERT INTO turns (conversation_id, role, content, work, created_at)"
+            " VALUES (?, ?, ?, ?, ?)",
+            (conv_id, role, content, json.dumps(work or []), stamp),
         )
         conn.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (stamp, conv_id))
 
@@ -230,7 +326,7 @@ def db_get_conversation(conv_id: str) -> dict | None:
         if not row:
             return None
         turns = conn.execute(
-            "SELECT role, content, answers, work, created_at FROM turns"
+            "SELECT role, content, work, created_at FROM turns"
             " WHERE conversation_id = ? ORDER BY id",
             (conv_id,),
         ).fetchall()
@@ -240,8 +336,11 @@ def db_get_conversation(conv_id: str) -> dict | None:
         "turns": [
             {
                 "role": turn["role"],
-                "content": turn["content"],
-                "answers": storable_answers(json.loads(turn["answers"] or "[]")),
+                "content": (
+                    fill_chart_links(turn["content"], row["analytical_session_id"])
+                    if turn["role"] == "assistant"
+                    else turn["content"]
+                ),
                 "work": json.loads(turn["work"] or "[]"),
                 "created_at": turn["created_at"],
             }
@@ -283,32 +382,80 @@ async def load_conversation_state(conv_id: str) -> list:
     return conversations[conv_id]
 
 
+# Where Claude wants a chart: its label in square brackets, e.g. [chart-1] (see the
+# system prompt in spotter3_core).
+CHART_LABEL = re.compile(r"\[(chart-\d+)\]")
+
+
+def place_charts(text: str, labels: list[str]) -> str:
+    """Claude's text with each chart where Claude put its label.
+
+    `labels` are the reply's charts in the order they arrived - which is also their
+    number in the chat. A label used twice, or for a chart that does not exist, is
+    dropped. A chart Claude did not place goes at the end, so none is lost.
+
+    Claude's text can be steered by the data it reads, so it must never produce a chart
+    tag of its own. The steps run in an order that rules that out: labels first become
+    neutral markers, then any `data-ts-chart` in the text is defused, and only then are
+    the real chart tags put in. (Removing a dropped label after defusing could join two
+    halves of text into a working tag, so a dropped label leaves a zero-width space.)
+
+    The browser does the same while the reply streams in (`placeCharts` in App.tsx), so
+    the live and reopened views match.
+    """
+    number = {label: i for i, label in enumerate(labels)}
+    placed: set[str] = set()
+
+    def put(match: re.Match) -> str:
+        label = match[1]
+        if label not in number or label in placed:
+            # An invisible space, not nothing: removing the label outright could join
+            # the text on either side into a working `data-ts-chart` tag.
+            return "\u200b"
+        placed.add(label)
+        return chart_tag(number[label])
+
+    text = text.replace("\x00", "")
+    text = CHART_LABEL.sub(lambda match: f"\x00{match[1]}\x00", text)
+    text = text.replace("data-ts-chart", "data-ts-chart-text")
+    text = re.sub(r"\x00(chart-\d+)\x00", put, text)
+    return text + "".join(chart_tag(number[label]) for label in labels if label not in placed)
+
+
 class StreamRecorder:
     """Sends each event to the browser and also keeps a copy to save.
 
-    Saving what the browser received lets a reopened chat match the live one, except
-    chart titles, which are not kept.
+    The copy is one string: Claude's text, with each chart where Claude put its label
+    (`place_charts`). So a reopened chat matches the live one.
     """
 
     def __init__(self, queue: asyncio.Queue) -> None:
         self.queue = queue
         self.text_parts: list[str] = []
-        self.answers: list[dict] = []
+        # The reply's chart labels, in the order the charts arrived. Repeats never get
+        # here: spotter3_core drops them before sending.
+        self.charts: list[str] = []
         self.work: list[dict] = []  # the Analytics Agent's steps, for "Show work"
 
     def send(self, event: dict) -> None:
         kind = event.get("type")
         if kind == "delta":
             self.text_parts.append(event.get("text") or "")
-        elif kind == "answer":
-            self.answers.append({})  # one placeholder per chart, see `storable_answers`
+        elif kind == "answer" and event.get("chart"):
+            # A chart can be sent twice: again when its link arrives late.
+            if event["chart"] not in self.charts:
+                self.charts.append(event["chart"])
         elif kind == "work":
             append_work(self.work, event)
+        elif kind == "error":
+            # Saved as the browser shows it, after what already arrived.
+            self.text_parts.append(f"\n\nError: {event.get('message') or ''}")
         self.queue.put_nowait(event)
 
     @property
     def text(self) -> str:
-        return "".join(self.text_parts)
+        """The reply as saved: Claude's text with the charts placed (`place_charts`)."""
+        return place_charts("".join(self.text_parts), self.charts)
 
 
 def append_work(work: list[dict], event: dict) -> None:
@@ -335,15 +482,8 @@ async def persist_turn(conv_id: str, recorder: StreamRecorder, history: list | N
     Also runs when a turn fails or is cancelled: the user turn is already stored, so
     skipping this would leave a question with no visible answer on reopen.
     """
-    if recorder.text or recorder.answers or recorder.work:
-        await asyncio.to_thread(
-            db_add_turn,
-            conv_id,
-            "assistant",
-            recorder.text,
-            recorder.answers,
-            recorder.work,
-        )
+    if recorder.text_parts or recorder.charts or recorder.work:
+        await asyncio.to_thread(db_add_turn, conv_id, "assistant", recorder.text, recorder.work)
     if history is not None:
         await asyncio.to_thread(
             db_save_state, conv_id, history, analytical_sessions.get(conv_id)
@@ -368,7 +508,7 @@ async def chat(request: ChatRequest):
     messages = history + [{"role": "user", "content": request.message}]
 
     await asyncio.to_thread(db_start_conversation, conv_id, request.message)
-    await asyncio.to_thread(db_add_turn, conv_id, "user", request.message, [])
+    await asyncio.to_thread(db_add_turn, conv_id, "user", request.message)
 
     async def turn(queue: asyncio.Queue) -> None:
         recorder = StreamRecorder(queue)
@@ -384,8 +524,8 @@ async def chat(request: ChatRequest):
 
 
 # ── ThoughtSpot conversation lookups ────────────────────────────────────────────
-# On reopen, the saved chat is checked against the conversation ThoughtSpot holds, so
-# each chart gets the right `answer_index`.
+# Only "Show work" needs these: its intermediate charts are found by ThoughtSpot's own
+# ids, which are read from the conversation when a chat is reopened.
 
 
 async def ts_request(
@@ -433,20 +573,16 @@ async def ts_conversation_messages(session_id: str) -> list[dict] | None:
     return messages if isinstance(messages, list) else []
 
 
-def answer_items(message: dict, thinking: bool) -> list[dict]:
-    """A message's answer items that are (or are not) the Agent's thinking answers.
-
-    Compared with `is` on purpose: an item missing `is_thinking` counts as neither. Items
-    without an `answer_id` are skipped too. Both are the rules the Visual Embed SDK applies
-    when it replays stored answers, so our counts match its indexes.
-    """
+def thinking_answer_ids(message: dict) -> list[str]:
+    """The ids of a message's "thinking" charts - the Agent's attempts before its final
+    answer, shown under Show work - in the order they were made."""
     items = message.get("response_items") if isinstance(message, dict) else None
     return [
-        item
+        item["answer_id"]
         for item in (items or [])
         if isinstance(item, dict)
         and item.get("type") == "answer"
-        and item.get("is_thinking") is thinking
+        and item.get("is_thinking") is True
         and item.get("answer_id")
     ]
 
@@ -481,67 +617,15 @@ async def ts_load_answer(session_id: str, answer_id: str) -> dict | None:
     return params if all(params.values()) else None
 
 
-def reconcile_answers(conversation: dict, ts_messages: list[dict] | None) -> dict:
-    """Give every saved chart its number in the chat (`answer_index`).
+def attach_work_answer_ids(conversation: dict, ts_messages: list[dict]) -> None:
+    """Give each reply the ids of its Show work charts.
 
-    Think of the chat's charts as numbered pages in a notebook. ThoughtSpot keeps the
-    notebook (the conversation id); we only need each chart's page number. The first
-    final chart in the chat is 0, the next is 1, and so on, across the whole chat. The
-    browser hands both to the Visual Embed SDK (`tsmcpConversationId`,
-    `tsmcpAnswerIndex`), and ThoughtSpot draws the chart fresh.
-
-    We let ThoughtSpot do the counting, not our saved copy. If the browser closes while a
-    chart is loading, ThoughtSpot still finishes the chart but we never saw it. Its count
-    is complete; ours may not be. A chart we missed gets an empty placeholder.
-
-    How to find a chart's number from its link (`iframe_url`)
-    ----------------------------------------------------------
-    A chart link from the MCP server looks like this:
-
-        https://<host>/?tsmcp=true#/embed/conv-assist-answer
-            ?sessionId=72728061-...&genNo=2&acSessionId=2bfd6f50-...&acGenNo=1
-
-    1. From the link, note `sessionId` and `genNo`. Together they name one chart.
-    2. Get the chat's messages from ThoughtSpot:
-       GET /api/rest/2.0/ai/agent/conversations/{analytical_session_id}/messages
-    3. Go through the messages oldest first. Count only final charts: items in
-       `response_items` with `type == "answer"`, `is_thinking == false` and an
-       `answer_id`. Skip the "thinking" charts (see `answer_items`).
-    4. Number those charts 0, 1, 2, ... across the whole chat.
-    5. `answer_id` is text holding JSON, like {"session_id": "...", "gen_no": 2}.
-       Parse it. The chart with the same `session_id` and `gen_no` as step 1 has your
-       number: that is its `answer_index`.
-
-    This function does steps 2 to 4 for every chart at once, turn by turn.
+    ThoughtSpot holds one message per question, in order, so they pair with the
+    replies by position.
     """
-    turns = conversation.get("turns") or []
-    if ts_messages is None:
-        # ThoughtSpot unreachable: fall back to the stored shape rather than drop charts.
-        index = 0
-        for turn in turns:
-            for answer in turn.get("answers") or []:
-                answer["answer_index"] = index
-                index += 1
-        return conversation
-
-    # One ThoughtSpot message per user prompt: pair them with the assistant turns in order.
-    assistant_turns = [turn for turn in turns if turn.get("role") == "assistant"]
-    index = 0
-    for position, turn in enumerate(assistant_turns):
-        message = ts_messages[position] if position < len(ts_messages) else {}
-        expected = len(answer_items(message, thinking=False))
-        # The thinking answers behind this turn's Show work queries, in step order. The
-        # client loads one by id when its row is expanded.
-        thinking_answers = answer_items(message, thinking=True)
-        turn["work_answer_ids"] = [item["answer_id"] for item in thinking_answers]
-        answers = turn.get("answers") or []
-        # Saved placeholders, padded out to the count ThoughtSpot reports.
-        merged = answers[:expected] + [{} for _ in range(max(0, expected - len(answers)))]
-        for answer in merged:
-            answer["answer_index"] = index
-            index += 1
-        turn["answers"] = merged
-    return conversation
+    replies = [turn for turn in conversation["turns"] if turn["role"] == "assistant"]
+    for reply, message in zip(replies, ts_messages):
+        reply["work_answer_ids"] = thinking_answer_ids(message)
 
 
 # ── Chat history endpoints ──────────────────────────────────────────────────────
@@ -558,9 +642,16 @@ async def get_conversation(conv_id: str):
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    # Ask ThoughtSpot only when a reply has Show work charts to find.
     session_id = conversation.get("analytical_session_id")
-    ts_messages = await ts_conversation_messages(session_id) if session_id else None
-    return reconcile_answers(conversation, ts_messages)
+    has_work_charts = any(
+        step.get("kind") == "query" for turn in conversation["turns"] for step in turn["work"]
+    )
+    if session_id and has_work_charts:
+        ts_messages = await ts_conversation_messages(session_id)
+        if ts_messages:
+            attach_work_answer_ids(conversation, ts_messages)
+    return conversation
 
 
 @app.get("/api/conversations/{conv_id}/work-answers/{answer_id}")

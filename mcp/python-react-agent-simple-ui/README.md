@@ -88,7 +88,7 @@ Copy `mint_token()`, `server_token()` and the `/api/ts-token` endpoint.
 
 - Convert `list_tools()` to your model's tool format (`build_tools()`), run the tool loop (`run_agent()`), and return all parallel tool results in one message.
 - **Poll `get_session_updates` in your code, not in the model.** `send_session_message` returns immediately and the Analytics Agent answers asynchronously; `autopoll_session_updates()` polls to completion and gives the model one consolidated result.
-- **Strip `iframe_url` from what the model sees** (`strip_rendered_answers()`) - your UI renders the chart, so the model only needs to summarize it.
+- **Give the model a label, not the chart link** (`strip_rendered_answers()`). Your UI renders the chart; the model sees a short label instead (`chart-1`) and writes `[chart-1]` where the chart belongs. See [Charts next to their explanation](#charts-next-to-their-explanation).
 
 #### 5. Stream progress and answers to your UI
 
@@ -98,7 +98,7 @@ Stream text, progress and answers as they arrive - an Analytics Agent answer typ
 
 ```ts
 init({
-  thoughtSpotHost: import.meta.env.VITE_TS_HOST,
+  thoughtSpotHost: TS_HOST, // VITE_TS_HOST, with https:// added if it is missing
   authType: AuthType.TrustedAuthTokenCookieless,
   getAuthToken: async () => {
     const response = await fetch("/api/ts-token", { cache: "no-store" });
@@ -118,7 +118,7 @@ Then put an `<iframe src="{iframe_url}" srcdoc="Loading chart…">` wherever an 
 
 #### 7. (Optional) Persist chat history
 
-Store the raw model messages, the `analytical_session_id`, and **one empty placeholder per answer** - not its title or its `iframe_url`, which expires with the ThoughtSpot answer (about 8 hours). On replay, the SDK resolves a current chart from the conversation id and the answer's index. For the big picture, start with [How chat history works](#how-chat-history-works).
+Store the raw model messages, the `analytical_session_id`, and each reply's charts as HTML, with a numbered placeholder where each chart link was - not the `iframe_url` itself, which expires with the ThoughtSpot answer (about 8 hours). On replay, the placeholders become links built from the conversation id and each chart's number, and the SDK resolves a current chart. For the big picture, start with [How chat history works](#how-chat-history-works).
 
 #### 8. Production checklist
 
@@ -126,7 +126,7 @@ Store the raw model messages, the `analytical_session_id`, and **one empty place
 - [ ] Authentication on your own endpoints (`/api/chat`, `/api/ts-token`, `/api/conversations`) - this example has none.
 - [ ] Chat history scoped to the user who owns it.
 - [ ] `api-version` pinned to a release date.
-- [ ] Model output sanitized before rendering. This example renders markdown with `rehypeRaw`, which passes raw HTML through: add `rehype-sanitize` with a schema that allows only `<iframe>` tags pointing at your ThoughtSpot host.
+- [ ] Model output sanitized before rendering. Claude's text is shaped by the data it reads, so treat it as untrusted. This example passes it through `rehype-sanitize` (no iframes, scripts or event handlers) and builds chart iframes itself, only for links on your ThoughtSpot host - keep both if you change the renderer.
 - [ ] Iframe `src` validated: accept only `https:` URLs on your ThoughtSpot host before building an embed.
 - [ ] Conversation history pruned or compacted - replaying an unbounded history grows every request.
 - [ ] A real database if you run more than one server process.
@@ -153,7 +153,7 @@ Edit `.env` — the agent uses these variables:
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 # ThoughtSpot host (VITE_ prefix makes it available to the React client too)
-VITE_TS_HOST=your-instance.thoughtspot.cloud
+VITE_TS_HOST=https://your-instance.thoughtspot.cloud
 
 # Token minting - recommended. The server mints short-lived tokens for itself and
 # for the browser; the secret never leaves the server.
@@ -234,7 +234,7 @@ The chat-history backend also keeps that reasoning for the UI. `emit_work_event(
 - **Live:** the `work` event carries the thinking answer's own `iframe_url` / `frame_params`, so the chart renders immediately.
 - **Replayed:** those URLs expire with the answer (about 8 hours), so they are never stored. `GET /api/conversations/{id}` returns each turn's `work_answer_ids` — ThoughtSpot's ids for its thinking answers, in step order. Expanding a row calls `GET /api/conversations/{id}/work-answers/{answer_id}`, which loads that answer again through the conversation service and returns fresh embed ids. Loading re-runs the query, so it can take 30s+ on a busy cluster; the client starts each load once and reuses it.
 
-Thinking answers stay out of the turn's `answers` list: stored answers are resolved by their position among the *non-thinking* answers (by the SDK too), so counting a thinking answer there would shift every later chart onto the wrong one.
+Thinking answers are never sent as `answer` events, so they never get a chart number: stored charts are resolved by their position among the *non-thinking* answers (by the SDK too), so counting a thinking answer would shift every later chart onto the wrong one. Opening a chat asks ThoughtSpot for `work_answer_ids` only when a reply has such query steps.
 
 ```python
 POLL_INITIAL_DELAY = 0.75   # seconds before the first re-poll
@@ -256,7 +256,19 @@ Opening an MCP session costs several round trips (a discovery probe, `initialize
 
 Each `answer` update carries an `iframe_url` with a `tsmcp=true` marker. The server streams it to the browser as an `answer` SSE event; `App.tsx` mounts a bare `<iframe>` and the Visual Embed SDK's `startAutoMCPFrameRenderer` replaces it in place with a fully configured, authenticated ThoughtSpot embed.
 
-Because the UI already draws the chart, the server **strips `iframe_url` out of the tool result Claude sees** and marks the update `rendered_in_ui: true`. That removes a long URL per answer from the context and stops the model from re-emitting markup for a chart that is already on screen.
+Because the UI draws the chart, the server **strips `iframe_url` out of the tool result Claude sees** and gives each chart a short label instead (`"chart": "chart-1"`). That removes a long URL per answer from the context, and stops the model from writing markup for a chart the UI draws.
+
+#### Charts next to their explanation
+
+Charts arrive while the Analytics Agent works, but Claude writes about them later, often all at once in a closing summary. Placing a chart where it *arrived* would put it far from the text that explains it. So Claude places the charts:
+
+1. `ChartLabels` (in `spotter3_core.py`) names each new chart of the reply `chart-1`, `chart-2`, ... It counts the way ThoughtSpot does - every final chart once, repeats dropped (same `answer_id`; same link when there is no id) - so the labels double as chart numbers. A chart with no link still gets a label: the browser skips it live, but its number is kept.
+2. The system prompt asks Claude to write the label in square brackets on its own line, right next to the text about that chart, e.g. under its heading: `[chart-1]`.
+3. The browser (`placeCharts()`) and the chat-history server (`place_charts()`) put each chart where its label is. A chart Claude does not place goes at the end of the reply, so none is lost. A label used twice, or for a chart that does not exist, is dropped.
+
+While a reply streams in, a chart waits at the bottom of the reply until Claude's text reaches its label, then moves up into place (loading again once).
+
+`stream_claude()` also starts a new paragraph between Claude's separate text blocks (around each tool call), so "…this data." and "Now let me…" don't run together and a heading at the start of a block renders as a heading.
 
 #### Conversation and session continuity
 
@@ -290,10 +302,10 @@ Other Claude API details worth noting:
 |-------|--------|---------|
 | `delta` | `text` | Streamed assistant text |
 | `status` | `message` | Thinking, tool start, Analytics Agent step, or reconnecting |
-| `answer` | `answer_id`, `title`, `query`, `iframe_url`, `frame_params` | A chart to render. `frame_params` carries the embed ids when there is no ready-made `iframe_url` |
+| `answer` | `answer_id`, `chart`, `title`, `query`, `iframe_url`, `frame_params` | A chart to render, sent once per chart. `chart` is its label in this reply (`chart-1`); Claude writes `[chart-1]` where it goes. `frame_params` carries the embed ids when there is no ready-made `iframe_url` |
 | `work` | `kind`, `text`, `query`, `iframe_url`, `frame_params` | One step of the Analytics Agent's work, for **Show work** (chat-history backend only). `kind` is `step` (progress), `thought` (reasoning prose — consecutive ones join into one), or `query` (a query tried before the final answer) |
 | `done` | `response_id` | Turn complete; pass `response_id` back for follow-ups |
-| `error` | `message` | Fatal error for this turn |
+| `error` | `message` | Fatal error for this turn. Sent before the turn is saved, so the chat-history backend normally stores it with the reply |
 
 ### Customization
 
@@ -359,103 +371,69 @@ This is the big picture, with no code. The developer detail follows.
 
 **The goal.** A user closes the app, comes back tomorrow, opens yesterday's chat and sees the same questions, replies and charts. They can also ask a follow-up question.
 
-**What to save for each chat (only three things):**
+**What to save for each chat (three things):**
 
 | Save this | What it is | Why |
 |-----------|------------|-----|
-| The messages | Every question and every reply, in order | To show the chat again, and so the AI remembers the context for follow-up questions |
+| The AI's copy of the chat | Every question and reply as the AI saw them, including its calls to ThoughtSpot (`claude_messages`) | So the AI remembers the context for follow-up questions |
 | The ThoughtSpot conversation id | One id per chat, returned by ThoughtSpot (`analytical_session_id`) | ThoughtSpot keeps the charts for that chat under this id |
-| How many charts each reply had | Just a count, for example "this reply had 2 charts" | To know where to put each chart when the chat is reopened |
+| What the screen shows | Each question, and each reply as one HTML string: the text, with an `<iframe>` for each chart right next to the text about it (`turns`). A placeholder such as `{{TS_CHART:3}}` sits where the chart link would go | To show the chat again, each chart in the right place |
 
-**What NOT to save:** the chart link (`iframe_url`) or the chart title. A chart link stops working after about 8 hours, so a saved link shows an error tomorrow. (In this example, the saved copy of the AI's own working notes, `claude_messages`, can still contain chart titles from ThoughtSpot's replies. Only what the screen shows, the `turns` table, leaves them out.)
+**What NOT to save:** the chart link (`iframe_url`) or the chart title. A chart link stops working after about 8 hours, so a saved link shows an error tomorrow. (In this example, the AI's own working copy of the chat, `claude_messages`, can still contain chart titles from ThoughtSpot's replies. The saved replies the screen shows leave them out.)
 
-**How a chart comes back when a chat is reopened.** Think of the charts in a chat as numbered pages in a notebook. ThoughtSpot keeps the notebook (the conversation id). Your app only needs to remember the page number (`answer_index`). The first chart in the chat is page 0, the next is page 1, and so on, across the whole chat. To show a chart again, the app gives ThoughtSpot both the notebook and the page number, and ThoughtSpot draws the chart fresh, with today's data.
+**How a chart comes back when a chat is reopened.** Think of the charts in a chat as numbered pages in a notebook. ThoughtSpot keeps the notebook (the conversation id). Your app only needs to remember the page number. The first chart in the chat is page 0, the next is page 1, and so on, across the whole chat. To show a chart again, the app gives ThoughtSpot both the notebook and the page number, and ThoughtSpot draws the chart fresh, with today's data.
 
-(ThoughtSpot calls each chart an *answer*, so the code and the rest of this README say `answer` and `answer_index`.)
+(ThoughtSpot calls each chart an *answer*, and the page number `answer_index`.)
 
-**Finding a chart's page number from its link.** Each chart link from the MCP server looks like this:
+**Working out the page number.** Count. When a reply is saved, its charts are numbered after all the charts saved earlier in the chat. If the first reply had 2 charts (pages 0 and 1), the next reply's chart is page 2. Count the way ThoughtSpot does: every final chart once, even if it arrives twice, and even if it could not be drawn.
 
-```
-https://<your-thoughtspot>/?tsmcp=true#/embed/conv-assist-answer?sessionId=7272...&genNo=2&acSessionId=2bfd...&acGenNo=1
-```
+You cannot work the number out from the chart link. The `sessionId` in a link does not appear anywhere in ThoughtSpot's list of the chat's charts, which uses different ids. Counting is the only way.
 
-1. From the link, note `sessionId` and `genNo`. Together they name one chart.
-2. Ask ThoughtSpot for the chat's full list of messages, using the conversation id.
-3. Go through the messages from oldest to newest. Count only the final charts. Skip the "thinking" charts the Agent drew while it worked.
-4. Number the final charts 0, 1, 2, and so on.
-5. The chart with the same `sessionId` and `genNo` as your link: its number is the page number (`answer_index`). (A chart's `answer_id` is text that contains both values, like `{"session_id":"7272...","gen_no":2}`. Read the two values out of it before comparing.)
+**Captions:** charts show without title captions. Titles are not saved, so a reopened chat could not show them; live charts leave them out too, so both look the same.
 
-This example does the counting for you, in `reconcile_answers()` in [`server/claude_agent_with_spotter3_mcp_server_and_chat_history.py`](server/claude_agent_with_spotter3_mcp_server_and_chat_history.py).
+**Where each chart goes.** Each chart sits right next to the text that explains it, for example under its heading. Claude decides the spot: the app tells Claude each chart's short label (`chart-1`, `chart-2`, ...), and Claude writes `[chart-1]` where that chart belongs. A chart Claude does not place goes at the end of the reply. Where a chart sits does not change its page number: that always follows the order the charts arrived in.
 
-**Captions:** a reopened chat shows charts without their title captions, because titles are no longer saved. Live chats still show them.
+### What the saved HTML looks like
 
-**Why ask ThoughtSpot to count, instead of trusting your own count?** If a user closes the browser while a chart is still loading, ThoughtSpot still finishes that chart, but your app never sees it. ThoughtSpot's count is always complete, so every later chart keeps the right number.
-
-### If you save replies as HTML
-
-Some apps save each reply as one HTML string, with the chart `<iframe>` inside it. That works too. Save the HTML with a **placeholder** where the chart link was, then swap in a fresh link when the chat is reopened.
-
-**When saving a reply:** (build the saved HTML from the AI's reply, before the charts load. Do not copy it from the page afterwards: the SDK has already replaced the links by then.)
-
-1. Find each chart link (`iframe_url`) in the HTML.
-2. Work out that chart's page number (`answer_index`) with the 5 steps above. Do this once the reply is complete.
-3. Replace the link with a placeholder that holds the number, for example `{{TS_CHART:3}}`.
-4. Save the HTML and the conversation id.
-
-**When reopening the chat:**
-
-1. Load the saved HTML.
-2. Replace each `{{TS_CHART:N}}` with this link, putting in your ThoughtSpot address, the conversation id and the number `N`:
-
-   ```
-   https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=<conversation id>&tsmcpAnswerIndex=N
-   ```
-
-3. Show the HTML. Start the SDK's `startAutoMCPFrameRenderer` first (see [step 6](#6-render-the-charts-with-the-visual-embed-sdk)), then add the HTML to the page. The SDK only upgrades iframes added after it starts. It does not upgrade ones already on the page, or ones whose link you change later. It finds the link and draws the chart fresh.
-
-What the HTML looks like at each stage:
+A reply is saved as one string, with each chart next to the text about it:
 
 ```html
-<!-- 1. From the MCP server (link expires in about 8 hours) -->
+<!-- 1. What the user saw: text, a chart (its link stops working after about 8 hours), more text -->
+Here are total sales by year:
 <iframe src="https://<your-thoughtspot>/?tsmcp=true#/embed/conv-assist-answer?sessionId=7272...&genNo=2&acSessionId=2bfd...&acGenNo=1"></iframe>
+Sales peaked in 2026.
 
-<!-- 2. Saved in your database -->
-<iframe src="{{TS_CHART:3}}" srcdoc="Loading chart…"></iframe>
+<!-- 2. What is saved: the link becomes a placeholder holding the chart's number -->
+Here are total sales by year:
+<iframe data-ts-chart src="{{TS_CHART:3}}"></iframe>
+Sales peaked in 2026.
 
-<!-- 3. Shown when the chat is reopened -->
-<iframe src="https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=<conversation id>&tsmcpAnswerIndex=3" srcdoc="Loading chart…"></iframe>
+<!-- 3. What a reopened chat shows: a fresh link from the conversation id and the number -->
+Here are total sales by year:
+<iframe data-ts-chart src="https://<your-thoughtspot>/v2/?tsmcp=true&amp;tsmcpConversationId=<conversation id>&amp;tsmcpAnswerIndex=3"></iframe>
+Sales peaked in 2026.
 ```
 
-For developers, the same thing in Python. `answer_index_for(url)` stands for the 5 steps above:
+The placeholder replaces only the link, so each chart stays where it was: at the start, in the middle or at the end of the reply. `data-ts-chart` marks the iframes your app wrote, so nothing else in the reply is taken for a chart. Inside HTML, `&` in a link is written `&amp;`.
 
-```python
-import re
-from html import unescape as html_unescape  # links inside HTML write & as &amp;
-from urllib.parse import quote
+**When saving a reply:** put a placeholder `<iframe>` for each chart where it belongs in the reply - in this example, where Claude wrote the chart's label (see [Charts next to their explanation](#charts-next-to-their-explanation)). Number the charts in the order they arrived, after the charts already saved for the chat. The number follows arrival order even if the chart is placed elsewhere. Build the HTML from what the server received, not from the page: once a chart loads, the SDK has replaced its link.
 
-IFRAME_SRC = re.compile(r'src="([^"]*tsmcp=true[^"]*)"')
-PLACEHOLDER = re.compile(r"\{\{TS_CHART:(\d+)\}\}")
+**When reopening a chat:**
 
-def to_saved_html(html: str) -> str:
-    """Before saving: swap each chart link for a placeholder."""
-    return IFRAME_SRC.sub(
-        lambda m: f'src="{{{{TS_CHART:{answer_index_for(html_unescape(m[1]))}}}}}"', html
-    )
+1. Load the saved HTML.
+2. Replace each `{{TS_CHART:N}}` with `https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=<conversation id>&tsmcpAnswerIndex=N`.
+3. Start the SDK's `startAutoMCPFrameRenderer` (see [step 6](#6-render-the-charts-with-the-visual-embed-sdk)), then add the HTML to the page. The SDK only upgrades iframes added after it starts. It does not upgrade ones already on the page, or ones whose link you change later.
 
-def to_display_html(html: str, ts_host: str, conversation_id: str) -> str:
-    """When reopening: swap each placeholder for a fresh chart link."""
-    def fresh_link(m: re.Match) -> str:
-        return (f"{ts_host}/v2/?tsmcp=true&tsmcpConversationId={quote(conversation_id, safe='')}"
-                f"&tsmcpAnswerIndex={m[1]}")
-    return PLACEHOLDER.sub(fresh_link, html)
-```
+A reopened chart takes about 30 seconds to appear: ThoughtSpot loads the chat and re-runs the chart's query.
+
+In this example the server does both halves, in [`server/claude_agent_with_spotter3_mcp_server_and_chat_history.py`](server/claude_agent_with_spotter3_mcp_server_and_chat_history.py): `StreamRecorder` records the reply and its charts, `place_charts()` puts each chart where Claude wrote its label, `db_add_turn()` numbers the charts, and `fill_chart_links()` fills in the links when a chat is opened. The browser shows the reply the same way live and reopened: `ReplyBody` splits it at each chart, shows the text, and puts each chart in its own frame with a "Loading chart…" placeholder (`srcdoc`). The app's own iframes carry a `data-ts-chart` attribute, so an `<iframe>` in Claude's text is never taken for a saved chart.
 
 Good to know:
 
-- **Why work out the number when saving, not later?** The saved HTML holds only the charts the user actually saw. Numbering them from ThoughtSpot's list at save time keeps each number right, even if an earlier reply was cut off.
-- **Add `srcdoc="Loading chart…"` to the iframe.** Without it, the browser tries to open the link itself before the SDK takes over, and shows a login error for a few seconds.
+- **Add `srcdoc="Loading chart…"` to each iframe.** Without it, the browser tries to open the link itself before the SDK takes over, and shows a login error until the chart loads.
 - **Chart shows "not logged in"?** The iframe must keep `tsmcp=true` in its link, and the SDK must be running on the page. Otherwise the browser opens ThoughtSpot itself, with no login. Also check that your site is on ThoughtSpot's CORS and frame-ancestors allowlists. See [Troubleshooting](#troubleshooting).
 - **Only links on your own ThoughtSpot address** should be turned back into charts. Treat anything else in saved HTML as untrusted.
+- **A chart your app never hears about shifts the numbers.** ThoughtSpot sometimes finishes a chart that never reaches your app: the browser closes while the chart is loading, the app stops waiting for the Analytics Agent (after 5 minutes), or a check on its progress fails. ThoughtSpot counts that chart, your app does not, and every later chart in that chat then shows the chart one place before it. This example accepts that trade-off for simplicity.
 
 **Customer impact:** if you need charts to last longer than ThoughtSpot keeps conversations, this approach can't provide it. Once ThoughtSpot removes a conversation, its charts cannot be rebuilt, though the saved messages still show.
 
@@ -484,15 +462,13 @@ Two tables, because the browser and the model need different things:
 | `conversations` | `id`, `title`, `created_at`, `updated_at` | The sidebar list. `title` is the first line of the first user message. |
 | | `analytical_session_id` | The ThoughtSpot session, so a reopened conversation continues in the same one. |
 | | `claude_messages` | The **raw** Claude message list — `tool_use` / `tool_result` / `thinking` blocks included — replayed into the next request so follow-ups keep full context after a restart. |
-| `turns` | `role`, `content`, `answers`, `work` | What the UI renders. `answers` holds one empty placeholder per chart - **not** its `iframe_url` (expires with the ThoughtSpot answer, about 8 hours) or title. `work` holds the Analytics Agent's steps for **Show work**; `db_init()` adds the column to databases created before it existed. |
+| `turns` | `role`, `content`, `work` | What the UI renders. A reply's `content` is its text with an `<iframe data-ts-chart src="{{TS_CHART:N}}">` for each chart, where Claude wrote the chart's label (or at the end) - **not** the `iframe_url` (expires with the ThoughtSpot answer, about 8 hours) or title. `work` holds the Analytics Agent's steps for **Show work**; `db_init()` adds the column to databases created before it existed. Older versions of this example saved charts in an `answers` or `charts_html` column; `migrate_legacy_charts()` moves them into `content` once, at startup, and leaves those columns empty. |
 
 `turns` cascades on delete (`PRAGMA foreign_keys=ON`), so removing a conversation removes its transcript.
 
 ### Replaying charts
 
-A reopened chat re-runs its charts against current data. `GET /api/conversations/{id}` gives every stored answer an `answer_index` - its position in the conversation - and the client builds an embed URL from `tsmcpConversationId` (the `analytical_session_id`) plus `tsmcpAnswerIndex`. The SDK resolves that to a live answer.
-
-The index must count the way ThoughtSpot counts, so `reconcile_answers()` asks ThoughtSpot how many answers each turn holds (`/api/rest/2.0/ai/agent/conversations/{id}/messages`) and pads the stored placeholders to match. The `reconcile_answers()` docstring also lists the steps to get an `answer_index` from a live `iframe_url`. That call is why opening a stored chat takes a few seconds; the UI shows a loading indicator meanwhile.
+A reopened chat re-runs its charts against current data. `db_add_turn()` numbers each reply's charts after the ones already saved for the chat. `GET /api/conversations/{id}` passes each reply's `content` through `fill_chart_links()`, which swaps every placeholder for a link carrying `tsmcpConversationId` (the `analytical_session_id`) and `tsmcpAnswerIndex` (the number). The SDK resolves that to a live answer. Opening a chat makes no ThoughtSpot call of its own, except to find **Show work** charts (below).
 
 `jsonable()` serializes the Claude history with `model_dump(mode="json")` rather than by hand. That matters for thinking blocks: their `signature` must come back **unchanged** on replay, and a hand-rolled `{"type", "text"}` mapping would drop it.
 
@@ -502,11 +478,16 @@ The index must count the way ThoughtSpot counts, so `reconcile_answers()` asks T
 POST /api/chat  →  create conversation row (first turn only)
                 →  insert user turn
                 →  run the agent loop, recording every SSE event
-   done / error →  insert assistant turn (text + answers)
+           done →  insert assistant turn (text with chart placeholders + work)
                 →  save claude_messages + analytical_session_id
+          error →  send the error event, then the same two writes (the error line included)
 ```
 
-`StreamRecorder` fans each SSE event out to both the browser and the transcript, so a reopened conversation renders from exactly the events the live one received. The assistant turn is written on the error paths too — the user turn is already stored, and skipping it would leave a question with no visible answer.
+`StreamRecorder` fans each SSE event out to both the browser and the transcript, so a reopened conversation renders from exactly the events the live one received:
+
+- **Each chart goes where Claude put its label** (`place_charts()`), or at the end if Claude did not place it. Claude's text can be steered by the data it reads, so it must never make a chart of its own: Claude's labels first become neutral markers, then any `data-ts-chart` in its text is renamed `data-ts-chart-text`, and only then are the real charts put in. A dropped label leaves a zero-width space, so removing it cannot join two halves of text into a working tag. The browser does the same while the reply streams in (`placeCharts()`), so the live and reopened views match - except for a chart that had no link while the reply streamed, which only the reopened view can draw.
+- **Every chart is counted once, the way ThoughtSpot counts it.** `ChartLabels` in `spotter3_core.py` already dropped repeats, so each `answer` event is one chart. A chart that arrives without a link still gets its label and number. If its link turns up later, it is sent again and the browser draws it then; if not, the browser cannot draw it live, but the saved reply keeps its place (at the end, unless Claude placed it), and a reopened chat draws it. That keeps every later chart's number right.
+- **Errors are saved too.** `run_turn()` sends the `error` event before the turn is saved, so the "Error: …" line is part of the stored reply. The user turn is already stored, and skipping the reply would leave a question with no visible answer.
 
 In-memory `conversations` / `analytical_sessions` dicts stay as a hot cache in front of SQLite; a miss (after a restart, say) falls back to the stored state.
 
@@ -515,7 +496,7 @@ In-memory `conversations` / `analytical_sessions` dicts stay as a hot cache in f
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/api/conversations` | List conversations, newest first. Returns `id`, `title`, timestamps, `turn_count`. |
-| `GET` | `/api/conversations/{id}` | One conversation with its `turns` (each `role`, `content`, `answers` with `answer_index`, `work`, `work_answer_ids`). |
+| `GET` | `/api/conversations/{id}` | One conversation with its `turns` (each `role`, `content` with chart links filled in, `work`, `work_answer_ids`). |
 | `GET` | `/api/conversations/{id}/work-answers/{answer_id}` | Fresh `frame_params` for one thinking answer, so an expanded **Visualized data** row can render it. |
 | `PATCH` | `/api/conversations/{id}` | Rename. Body: `{"title": "..."}`. |
 | `DELETE` | `/api/conversations/{id}` | Delete the conversation and its turns. |
@@ -561,8 +542,8 @@ python-react-agent-simple-ui/
 The React client is shared across both backends:
 
 - Reads the SSE stream with `fetch` + the `ReadableStream` API
-- Renders assistant text as **markdown** (tables, code blocks, and raw HTML via `rehypeRaw`)
-- Renders ThoughtSpot charts from `answer` events as auto-upgraded embeds
+- Renders assistant text as **markdown** (tables, code blocks, footnotes, and raw HTML via `rehypeRaw`, cleaned by `rehype-sanitize`: no iframes, scripts or event handlers)
+- Renders ThoughtSpot charts from `answer` events as auto-upgraded embeds, **next to the text about them** - where Claude placed each chart, live and reopened
 - Shows **real-time status** — Claude thinking, tool calls, and Analytics Agent progress
 - Shows a collapsible **Show work** section with the Analytics Agent's steps, reasoning and tried queries, when the backend sends `work` events
 - Tracks `response_id` across turns for multi-turn continuity
@@ -582,7 +563,7 @@ startAutoMCPFrameRenderer({
 });
 ```
 
-This works for both paths into the DOM: charts the server streams as `answer` events, and any `<iframe>` the model writes into its markdown.
+Charts come only from the server's `answer` events. An `<iframe>` the model writes into its own text is removed by `rehype-sanitize`.
 
 The client injects each answer's iframe as markup rather than rendering `<iframe>` as JSX. The renderer swaps the element with `replaceWith()`, so React must not own that node - React owns only the wrapper:
 
@@ -594,12 +575,12 @@ function AnswerFrame({ html }: { html: string }) {
   return <div dangerouslySetInnerHTML={markup} />;
 }
 
-<AnswerFrame key={html} html={html} />  // html = answerHtml(answer, sessionId)
+<AnswerFrame key={html} html={html} />  // html = one chart's <iframe> markup
 ```
 
 Keep that prop object stable. An inline `dangerouslySetInnerHTML={{ __html: ... }}` is re-applied on every re-render of the message list - every keystroke and every streamed delta - and each time the renderer resolves the chart from scratch (two ThoughtSpot calls per chart; a stored answer's take tens of seconds).
 
-`answerHtml()` builds the `<iframe>` from `answerSrc()`: the live `iframe_url` when there is one, else an embed route from `frame_params`, else - for a stored answer - `tsmcpConversationId` plus `tsmcpAnswerIndex`.
+`answerSrc()` gives a live chart's link: the `iframe_url` when there is one, else an embed route from `frame_params`. While a reply streams in, `LiveReply` keeps Claude's text and the charts apart, and `placeCharts()` puts each chart (as an `<iframe data-ts-chart>`, `chartTag()`) where Claude wrote its label; charts not placed yet wait at the bottom. A stored reply arrives with its charts already in place, links filled in by the server. `ReplyBody` renders both: markdown for the text, an `AnswerFrame` for each chart. `chartFrameHtml()` keeps only ThoughtSpot chart links (`https`, on `VITE_TS_HOST`, with `tsmcp=true`) and builds the iframe fresh; a rejected chart is logged in the browser console. (`answerHtml()` builds the iframes for **Show work** charts.)
 
 The placeholder iframe also carries a `srcdoc` ("Loading chart…"). `srcdoc` takes precedence over `src`, so the browser never loads the placeholder's ThoughtSpot URL itself - the renderer only reads it. Without it the placeholder loads ThoughtSpot unauthenticated until the swap: ThoughtSpot redirects it to the SSO login, which refuses to be framed, so the frame shows an error and the console fills with CSP `frame-ancestors` violations. For a stored answer that window is the renderer's two conversation-service calls - 25-35 s on a loaded cluster.
 
@@ -609,7 +590,7 @@ ThoughtSpot embed styling is configured at the top of `client/src/App.tsx`. The 
 
 ```ts
 init({
-  thoughtSpotHost: import.meta.env.VITE_TS_HOST,
+  thoughtSpotHost: TS_HOST, // VITE_TS_HOST, with https:// added if it is missing
   authType: AuthType.TrustedAuthTokenCookieless,
   getAuthToken: async () => {
     const response = await fetch("/api/ts-token", { cache: "no-store" });
@@ -652,7 +633,7 @@ init({
 | `list_orgs` / `switch_org` missing        | Expected — they are OAuth-only and hidden on `/token/*`                |
 | `ImportError: streamable_http_client`     | Old `mcp` package; `pip install -r requirements.txt` (needs `mcp>=2.1.1`) |
 | Charts never appear                       | Check the browser console for the Visual Embed SDK, and that `npm install` picked up `@thoughtspot/visual-embed-sdk@1.53.0` |
-| Answers render twice                      | The model emitted its own `<iframe>` too — reinforce that rule in `SYSTEM_PROMPT` |
+| Charts missing, no error on screen        | The chart's link is not on `VITE_TS_HOST`, so the app refused to show it - the browser console says `[Chart] Not shown`. Set `VITE_TS_HOST` to the exact address the MCP server uses in its links, with `https://` |
 | History sidebar missing                   | You are running `claude_agent_with_spotter3_mcp_server`; run `claude_agent_with_spotter3_mcp_server_and_chat_history` for history |
 | History empty after restart               | `CHAT_HISTORY_DB` points somewhere new, or the process cannot write to `server/` |
 | CORS errors in browser                    | Ensure FastAPI server is running on port 8001                          |

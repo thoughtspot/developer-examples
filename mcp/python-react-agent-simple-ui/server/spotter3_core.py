@@ -78,6 +78,8 @@ def model_request_options(model: str) -> dict:
 
 # ── ThoughtSpot MCP server ──────────────────────────────────────────────────────
 TS_HOST = os.getenv("VITE_TS_HOST") or os.getenv("TS_HOST")
+if TS_HOST and not TS_HOST.startswith(("http://", "https://")):
+    TS_HOST = f"https://{TS_HOST}"  # the client adds it the same way
 TS_AUTH_TOKEN = os.getenv("VITE_TS_AUTH_TOKEN") or os.getenv("TS_AUTH_TOKEN")
 
 if not TS_HOST:
@@ -548,9 +550,12 @@ Workflow:
   `answer_id` values from the answers you want on it.
 
 Presenting answers:
-- Every `answer` update is ALREADY rendered in the UI as an interactive ThoughtSpot chart,
-  in the order it was returned. Do not emit <iframe> tags, image links, or a markdown table
-  that restates the chart.
+- Every `answer` update with a `chart` label (such as `chart-1`) is drawn in the UI as an
+  interactive ThoughtSpot chart. You choose where: write the label in square brackets on
+  its own line, e.g. `[chart-1]`, right next to the text about that chart - under its
+  heading, or just before the bullets that explain it. Use each label once. Labels belong
+  to the current reply only. A chart you do not place is shown at the end of the reply.
+- Do not emit <iframe> tags, image links, or a markdown table that restates the chart.
 - Refer to an answer by its title, and add the insight the chart does not show on its own -
   the trend, the outlier, the "so what".
 
@@ -712,13 +717,81 @@ def merge_text_chunks(updates: list[dict]) -> list[dict]:
     return merged
 
 
-def strip_rendered_answers(updates: list[dict]) -> list[dict]:
-    """Drop `iframe_url` from what the model sees - the UI already rendered the chart."""
+class ChartLabels:
+    """Names a reply's charts `chart-1`, `chart-2`, ... so Claude can say where each goes.
+
+    One per reply. The labels also number the charts, so they follow ThoughtSpot's own
+    count: every final (non-thinking) answer, once, in the order it arrived. A repeat is
+    the same `answer_id`, or - for an update without one - the same link. A chart with no
+    link is still labelled: it cannot be drawn live, but it keeps its number, so the
+    charts after it stay right, and a reopened chat can draw it.
+    """
+
+    def __init__(self) -> None:
+        self.by_id: dict[str, str] = {}
+        self.by_link: dict[str, str] = {}
+        self.drawable: set[str] = set()  # labels whose chart has a link
+        self.count = 0
+
+    @staticmethod
+    def keys(update: dict) -> tuple[str | None, str | None]:
+        """The chart's `answer_id` and its link (`iframe_url`, or the ids that stand in
+        for it in raw updates)."""
+        link = update.get("iframe_url")
+        if not link and (params := answer_frame_params(update)):
+            link = "|".join(
+                str(params[k]) for k in ("session_id", "gen_no", "ac_session_id", "ac_gen_no")
+            )
+        return update.get("answer_id"), link
+
+    def find(self, update: dict) -> str | None:
+        """The label this chart already has, if any."""
+        answer_id, link = self.keys(update)
+        if answer_id and answer_id in self.by_id:
+            return self.by_id[answer_id]
+        if link and link in self.by_link:
+            label = self.by_link[link]
+            # The same link under a different `answer_id` is a different answer.
+            if not answer_id or label not in self.by_id.values():
+                return label
+        return None
+
+    def add(self, update: dict) -> str | None:
+        """The label to send this update under, or None if there is nothing new to send.
+
+        A new chart gets a new label. A repeat is sent again only when it brings the
+        first link for a chart that had none, so the browser can now draw it.
+        """
+        answer_id, link = self.keys(update)
+        if not (answer_id or link):
+            return None
+        label = self.find(update)
+        new = label is None
+        if new:
+            self.count += 1
+            label = f"chart-{self.count}"
+        # Remember whatever this update adds - an id or a link - so a later repeat that
+        # carries only one of them is still recognised.
+        if answer_id:
+            self.by_id.setdefault(answer_id, label)
+        if link:
+            self.by_link.setdefault(link, label)
+        if link and label not in self.drawable:
+            self.drawable.add(label)
+            return label
+        return label if new else None
+
+
+def strip_rendered_answers(updates: list[dict], charts: ChartLabels) -> list[dict]:
+    """What the model sees of each answer: its `chart` label instead of its `iframe_url`.
+    The UI draws the chart; the model only says where it goes."""
     cleaned = []
     for update in updates:
         if update.get("type") == "answer":
+            label = None if is_thinking_update(update) else charts.find(update)
             update = {k: v for k, v in update.items() if k != "iframe_url"}
-            update["rendered_in_ui"] = True
+            if label:
+                update["chart"] = label
         cleaned.append(update)
     return cleaned
 
@@ -760,7 +833,9 @@ def emit_work_event(update: dict, send: Send) -> None:
             send({"type": "work", "kind": "thought", "text": text})
 
 
-def emit_update_events(updates: list[dict], send: Send, show_work: bool = False) -> None:
+def emit_update_events(
+    updates: list[dict], send: Send, charts: ChartLabels, show_work: bool = False
+) -> None:
     """Stream Analytics Agent progress to the browser while we poll."""
     for update in updates:
         if show_work:
@@ -770,12 +845,21 @@ def emit_update_events(updates: list[dict], send: Send, show_work: bool = False)
         if kind == "answer":
             # The Agent emits an `answer` for each intermediate query it tries; only the
             # settled one is real (a three-question chat produced eleven answer updates
-            # but one non-thinking one). ThoughtSpot's conversation history applies the
-            # same flag, which keeps our answer order aligned with it - and that is what
-            # makes a stored answer resolvable later.
-            if not thinking:
+            # but one non-thinking one). ThoughtSpot's conversation history counts the
+            # same way, so the labels follow its order - as long as every answer reaches
+            # us (see the README on replies cut off mid-stream). Sent once per chart, even
+            # without a link: the browser skips what it cannot draw, but the chart keeps
+            # its number.
+            if not thinking and (label := charts.add(update)):
                 answer_id = update.get("answer_id")
-                send({"type": "answer", "answer_id": answer_id, **answer_fields(update)})
+                send(
+                    {
+                        "type": "answer",
+                        "answer_id": answer_id,
+                        "chart": label,
+                        **answer_fields(update),
+                    }
+                )
         elif kind in PROGRESS_TYPES or (thinking and kind not in TEXT_TYPES):
             # Reasoning prose arrives in word-sized chunks and flickers as status, so only
             # steps are shown. The model still gets the prose in the tool result.
@@ -788,7 +872,12 @@ def session_updates(payload: dict) -> list[dict]:
 
 
 async def autopoll_session_updates(
-    mcp: McpTurn, arguments: dict, first_result: Any, send: Send, show_work: bool
+    mcp: McpTurn,
+    arguments: dict,
+    first_result: Any,
+    send: Send,
+    charts: ChartLabels,
+    show_work: bool,
 ) -> tuple[str, bool]:
     """Keep polling `get_session_updates` until the Agent is done.
 
@@ -801,7 +890,7 @@ async def autopoll_session_updates(
         payload = tool_payload(result)
         new = session_updates(payload)
         updates.extend(new)
-        emit_update_events(new, send, show_work)
+        emit_update_events(new, send, charts, show_work)
         return new, bool(payload.get("is_done"))
 
     _, is_done = absorb(first_result)
@@ -827,7 +916,7 @@ async def autopoll_session_updates(
         delay = POLL_INITIAL_DELAY if new else min(delay * 1.5, POLL_MAX_DELAY)
 
     consolidated = {
-        "session_updates": strip_rendered_answers(merge_text_chunks(updates)),
+        "session_updates": strip_rendered_answers(merge_text_chunks(updates), charts),
         "is_done": is_done,
     }
     if not is_done:
@@ -839,7 +928,7 @@ async def autopoll_session_updates(
 
 
 async def call_tool(
-    mcp: McpTurn, name: str, arguments: dict, send: Send, show_work: bool
+    mcp: McpTurn, name: str, arguments: dict, send: Send, charts: ChartLabels, show_work: bool
 ) -> tuple[str, bool]:
     """Run one MCP tool call. Returns (result text for the model, is_error)."""
     try:
@@ -851,7 +940,7 @@ async def call_tool(
     is_error = bool(getattr(result, "is_error", False))
     if is_error or name != POLL_TOOL:
         return result_text(result), is_error
-    return await autopoll_session_updates(mcp, arguments, result, send, show_work)
+    return await autopoll_session_updates(mcp, arguments, result, send, charts, show_work)
 
 
 # ── Agent loop ──────────────────────────────────────────────────────────────────
@@ -859,8 +948,16 @@ class RefusedError(Exception):
     """Claude declined the request (stop_reason="refusal")."""
 
 
-async def stream_claude(system: list, messages: list, tools: list, send: Send) -> Any:
-    """One model call. Text streams to the browser as it arrives; returns the final message."""
+async def stream_claude(
+    system: list, messages: list, tools: list, send: Send, wrote_text: list[bool]
+) -> Any:
+    """One model call. Text streams to the browser as it arrives; returns the final message.
+
+    `wrote_text[0]` tracks whether this reply already has text. Claude's text arrives in
+    separate blocks - around each tool call - with nothing between them, so a new block
+    starts a new paragraph. Otherwise "...this data." and "Now let me..." run together,
+    and a heading at the start of a block is not read as one.
+    """
     async with claude_client.beta.messages.stream(
         model=MODEL,
         max_tokens=MAX_TOKENS,
@@ -876,7 +973,10 @@ async def stream_claude(system: list, messages: list, tools: list, send: Send) -
                     send(status(TOOL_STATUS.get(block.name, "Querying ThoughtSpot...")))
                 elif block.type == "thinking":
                     send(status("Thinking..."))
+                elif block.type == "text" and wrote_text[0]:
+                    send({"type": "delta", "text": "\n\n"})
             elif event.type == "content_block_delta" and event.delta.type == "text_delta":
+                wrote_text[0] = True
                 send({"type": "delta", "text": event.delta.text})
         return await stream.get_final_message()
 
@@ -893,9 +993,11 @@ async def run_agent(
         print(f"[MCP] {len(mcp.listing.tools)} tools: {[t.name for t in mcp.listing.tools]}")
         tools = build_tools(mcp.listing.tools)
         system = build_system(conv_id)
+        charts = ChartLabels()  # this reply's charts, across all its tool calls
+        wrote_text = [False]  # whether this reply has text yet, see `stream_claude`
 
         while True:
-            message = await stream_claude(system, messages, tools, send)
+            message = await stream_claude(system, messages, tools, send, wrote_text)
 
             if message.stop_reason == "refusal":
                 details = getattr(message, "stop_details", None)
@@ -910,7 +1012,7 @@ async def run_agent(
             # splitting them teaches the model to stop making parallel calls.
             tool_uses = [b for b in message.content if b.type == "tool_use"]
             results = await asyncio.gather(
-                *(call_tool(mcp, b.name, b.input, send, show_work) for b in tool_uses)
+                *(call_tool(mcp, b.name, b.input, send, charts, show_work) for b in tool_uses)
             )
             tool_results = []
             for block, (text, is_error) in zip(tool_uses, results):
@@ -958,20 +1060,21 @@ async def run_turn(
         cancelled = isinstance(err, asyncio.CancelledError)
         if not cancelled and not isinstance(exc, RefusedError):
             traceback.print_exception(exc)
+        if not cancelled:
+            if isinstance(exc, RefusedError):
+                message = str(exc)
+            elif isinstance(exc, anthropic.APIStatusError):
+                message = f"Claude API error {exc.status_code}"
+            else:
+                message = f"{type(err).__name__}: {err}"
+            # Before the save, so a turn that records what it sends saves the error too.
+            send({"type": "error", "message": message})
         try:
             await save(conversations.get(conv_id))
-        except Exception:  # noqa: BLE001 - a failed save must not hide the error event
+        except Exception:  # noqa: BLE001 - a failed save is logged; the error is already sent
             traceback.print_exc()
         if cancelled:
             raise  # the browser hung up mid-turn - nothing to report
-
-        if isinstance(exc, RefusedError):
-            message = str(exc)
-        elif isinstance(exc, anthropic.APIStatusError):
-            message = f"Claude API error {exc.status_code}"
-        else:
-            message = f"{type(err).__name__}: {err}"
-        send({"type": "error", "message": message})
 
 
 def sse_response(start_turn: Callable[[asyncio.Queue], Awaitable[None]]) -> StreamingResponse:
@@ -988,6 +1091,15 @@ def sse_response(start_turn: Callable[[asyncio.Queue], Awaitable[None]]) -> Stre
                 if event.get("type") in ("done", "error"):
                     finished = True
                     break
+            # Keep the response open until the turn is saved. An `error` is sent before
+            # the save (so the error line is saved too); ending the response first would
+            # let the browser send its next question while this reply is still being
+            # written, and store the two out of order.
+            # Shielded: if the browser hangs up while we wait, the save still finishes.
+            try:
+                await asyncio.shield(task)
+            except Exception:  # noqa: BLE001 - run_turn already reported it
+                pass
         finally:
             # The browser hung up before the turn finished - don't leave the loop running.
             # After `done` the loop is only wrapping up, so let it.
