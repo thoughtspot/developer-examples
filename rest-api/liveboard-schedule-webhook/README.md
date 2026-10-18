@@ -114,7 +114,7 @@ npm run dev
 | `DRIVE_FOLDER_ID` | Drive folder to upload to. It must be in a shared drive, with the service account as a member. Leave empty to write to `out/` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Service-account key file for Drive |
 | `TS_HOST`, `TS_TOKEN` | Your ThoughtSpot instance, and a bearer token for the setup calls |
-| `WEBHOOK_URL` | Where ThoughtSpot can reach the receiver (HTTPS) |
+| `WEBHOOK_URL` | Where ThoughtSpot can reach the receiver (HTTPS). To inspect raw deliveries first, see [See a raw delivery first](#see-a-raw-delivery-first-optional) |
 | `S3_BUCKET`, `S3_REGION`, `S3_ROLE_ARN`, `S3_EXTERNAL_ID`, `S3_PATH_PREFIX` | Optional S3 storage destination |
 
 - Start the receiver and make it reachable from your ThoughtSpot instance, for example with [ngrok](https://ngrok.com/) or by deploying it. For storage mode, it also needs AWS credentials with `s3:GetObject` on the bucket.
@@ -137,6 +137,23 @@ npm start
   For step 2, how the trust policy works depends on where your cluster is hosted:
   - **AWS-hosted clusters:** it uses an external ID (case-sensitive), passed as `S3_EXTERNAL_ID`.
   - **GCP-hosted clusters:** register `accounts.google.com` as an identity provider, and condition the trust on `accounts.google.com:sub` and `:aud`.
+
+### See a raw delivery first (optional)
+
+To see exactly what ThoughtSpot sends before you run the receiver, use a temporary [webhook.site](https://webhook.site) URL as `WEBHOOK_URL`:
+
+```bash
+curl -s -X POST https://webhook.site/token | jq -r '"https://webhook.site/" + .uuid'
+```
+
+Run the setup steps above with that URL, then open it in a browser to see each delivery. Switch `WEBHOOK_URL` to the receiver once you're done.
+
+A free webhook.site URL has limits:
+
+- **It's public.** Anyone with the URL can read the deliveries, including the bearer token. Use test data and a throwaway `RECEIVER_TOKEN`.
+- **It expires after 7 days or 100 requests.** Then create a new one and update the existing webhook's URL in the Webhooks UI or with `POST /api/rest/2.0/webhooks/{webhook_identifier}/update`. You can't create a second webhook: only one is allowed per Org.
+- **It rejects requests over 10 MB.** ThoughtSpot records larger deliveries as failed and retries them.
+- **It shows only the last attachment of a direct-mode delivery**, because ThoughtSpot names every attachment part `file`. The event JSON and storage-mode deliveries arrive in full.
 
 ### Before you start
 
