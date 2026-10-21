@@ -52,12 +52,13 @@ app = create_app()
 #                            and the AI remembers the context for follow-up questions.
 #   2. The conversation id - ThoughtSpot's id for the chat (`analytical_session_id`).
 #                            ThoughtSpot keeps the chat's charts under this id.
-#   3. The charts, as HTML - each reply is saved as one string: Claude's text with an
-#                            `<iframe>` for each chart, where Claude wrote its label
-#                            (or at the end). See `place_charts`.
-#                            Where the chart link would go, the HTML holds a placeholder
-#                            with the chart's number in the chat, like {{TS_CHART:3}}.
-#                            See `chart_tag`.
+#   3. The charts, as HTML - each reply is saved as one string: Claude's text with a
+#                            link (`<a>`) for each chart, where Claude wrote its label
+#                            (or at the end). See `place_charts`. The browser turns
+#                            each link into the chart's `<iframe>`.
+#                            Where the chart's address would go, the HTML holds a
+#                            placeholder with the chart's number in the chat, like
+#                            {{TS_CHART:3}}. See `chart_tag`.
 #
 # Chart links are not saved: they stop working after about 8 hours. When a chat is
 # reopened, each placeholder becomes a fresh link built from the conversation id and the
@@ -122,8 +123,23 @@ def db_init() -> None:
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(turns)")}
         if "work" not in columns:
             conn.execute("ALTER TABLE turns ADD COLUMN work TEXT NOT NULL DEFAULT '[]'")
+        migrate_iframe_tags(conn)
         migrate_legacy_charts(conn, columns)
     print(f"[History] SQLite at {DB_PATH}")
+
+
+def migrate_iframe_tags(conn: sqlite3.Connection) -> None:
+    """Turn chart `<iframe>` tags saved by an earlier version of this example into the
+    chart links (`chart_tag`) used now. Runs once: afterwards nothing matches."""
+    rows = conn.execute(
+        "SELECT id, content FROM turns WHERE role = 'assistant' AND content LIKE ?",
+        ("%<iframe data-ts-chart src=%",),
+    ).fetchall()
+    for row in rows:
+        content = OLD_CHART_IFRAME.sub(
+            lambda match: chart_tag(int(match[1])).strip(), row["content"]
+        )
+        conn.execute("UPDATE turns SET content = ? WHERE id = ?", (content, row["id"]))
 
 
 def migrate_legacy_charts(conn: sqlite3.Connection, columns: set[str]) -> None:
@@ -199,13 +215,19 @@ def jsonable(value: Any) -> Any:
     return value
 
 
-# A chart inside a saved reply. `data-ts-chart` marks the iframes this app wrote, so an
-# `<iframe>` in Claude's own text is never mistaken for one.
-CHART_TAG = re.compile(r'<iframe data-ts-chart src="\{\{TS_CHART:(\d+)\}\}"></iframe>')
+# A chart inside a saved reply: a plain link, which the browser turns into the chart's
+# `<iframe>`. A link travels from server to browser more easily than an `<iframe>` -
+# many HTML cleaners, markdown renderers and proxies drop or block iframes. And if
+# nothing converts it, a reader still gets a working link instead of a broken frame.
+# `data-ts-chart` marks the links this app wrote, so a link in Claude's own text is
+# never mistaken for one.
+CHART_TAG = re.compile(r'<a data-ts-chart href="\{\{TS_CHART:(\d+)\}\}">ThoughtSpot chart</a>')
+# The `<iframe>` form an earlier version of this example saved. See `migrate_iframe_tags`.
+OLD_CHART_IFRAME = re.compile(r'<iframe data-ts-chart src="\{\{TS_CHART:(\d+)\}\}"></iframe>')
 
 
 def chart_tag(number: int) -> str:
-    """The HTML saved for one chart: an `<iframe>` with a placeholder where the link goes.
+    """The HTML saved for one chart: a link with a placeholder where the address goes.
 
     Charts are numbered across the whole chat, from 0: if earlier replies had 3 charts,
     this reply's charts are 3, 4, ... That number (`answer_index`) is how ThoughtSpot
@@ -214,14 +236,15 @@ def chart_tag(number: int) -> str:
 
     Blank lines around the tag keep the text on either side as separate paragraphs.
     """
-    return f'\n\n<iframe data-ts-chart src="{{{{TS_CHART:{number}}}}}"></iframe>\n\n'
+    return f'\n\n<a data-ts-chart href="{{{{TS_CHART:{number}}}}}">ThoughtSpot chart</a>\n\n'
 
 
 def fill_chart_links(html: str, session_id: str | None) -> str:
-    """Swap each placeholder for a link the Visual Embed SDK turns into a live chart.
+    """Swap each placeholder for the chart's address. The browser turns the link into an
+    `<iframe>`, and the Visual Embed SDK turns that into a live chart.
 
-    The link carries the conversation id and the chart's number. Without a conversation
-    id there is nothing to rebuild a chart from, so the charts are left out.
+    The address carries the conversation id and the chart's number. Without a
+    conversation id there is nothing to rebuild a chart from, so the charts are left out.
     """
     if not session_id:
         return CHART_TAG.sub("", html)
@@ -230,7 +253,7 @@ def fill_chart_links(html: str, session_id: str | None) -> str:
         f"&amp;tsmcpConversationId={quote(session_id, safe='')}&amp;tsmcpAnswerIndex="
     )
     return CHART_TAG.sub(
-        lambda match: f'<iframe data-ts-chart src="{link}{match[1]}"></iframe>', html
+        lambda match: f'<a data-ts-chart href="{link}{match[1]}">ThoughtSpot chart</a>', html
     )
 
 

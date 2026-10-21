@@ -570,12 +570,15 @@ const answerHtml = (answer: Answer, theme: Theme) => {
 };
 
 /**
- * A chart inside a reply's text: `<iframe data-ts-chart src="...">`, where Claude wrote
- * the chart's label (or at the end). Live replies get them from `placeCharts`; stored
- * replies come from the server with them already in place, links filled in.
- * `data-ts-chart` keeps an `<iframe>` Claude writes itself from being taken for one.
+ * A chart inside a reply's text: a link, `<a data-ts-chart href="...">`, where Claude
+ * wrote the chart's label (or at the end). The server sends charts as links rather than
+ * `<iframe>`s - links pass through HTML cleaners, markdown and proxies that drop iframes -
+ * and the page turns each one into the chart's iframe (`chartFrameHtml`).
+ * Live replies get them from `placeCharts`; stored replies come from the server with
+ * them already in place, addresses filled in. `data-ts-chart` keeps a link Claude
+ * writes itself from being taken for a chart.
  */
-const CHART_TAG = /(<iframe data-ts-chart src="[^"<>]*"><\/iframe>)/;
+const CHART_TAG = /(<a data-ts-chart href="[^"<>]*">ThoughtSpot chart<\/a>)/;
 
 /** Where Claude wants a chart: its label in square brackets, e.g. `[chart-1]`. */
 const CHART_LABEL = /\[(chart-\d+)\]/g;
@@ -614,17 +617,19 @@ const placeCharts = (text: string, charts: LiveChart[]) => {
 
 /** The tag for a live chart. Blank lines keep the text around it as separate paragraphs. */
 const chartTag = (src: string) =>
-  `\n\n<iframe data-ts-chart src="${escapeAttr(src)}"></iframe>\n\n`;
+  `\n\n<a data-ts-chart href="${escapeAttr(src)}">ThoughtSpot chart</a>\n\n`;
 
 /**
- * The markup for one chart in a reply, or null if its link is not on our ThoughtSpot.
+ * One chart link from a reply, turned into the chart's `<iframe>` - or null if the link
+ * is not a ThoughtSpot chart on our host.
  *
- * Replies hold Claude's text, which a prompt can steer, so a chart tag is never put in
- * the page as it is. Only its link is kept, and only if it is an https ThoughtSpot chart
- * link (`tsmcp=true`) on the configured host; the iframe is then built fresh around it.
+ * Replies hold Claude's text, which a prompt can steer, so a chart link is never put in
+ * the page as it is. Only its address is kept, and only if it is an https ThoughtSpot
+ * chart link (`tsmcp=true`) on the configured host; the iframe is then built fresh around
+ * it, and the SDK's auto-frame renderer turns that into the live chart.
  */
 const chartFrameHtml = (tag: string, theme: Theme): string | null => {
-  const src = (tag.match(/src="([^"]*)"/)?.[1] ?? "")
+  const src = (tag.match(/href="([^"]*)"/)?.[1] ?? "")
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&");
   let allowed = false;
