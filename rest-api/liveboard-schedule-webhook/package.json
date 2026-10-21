@@ -1,0 +1,26 @@
+{
+  "name": "liveboard-schedule-webhook",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Receive ThoughtSpot Liveboard schedule webhooks and upload the files to Google Drive.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/demo.ts",
+    "test": "tsx src/demo.ts --once",
+    "start": "tsx --env-file=.env src/main.ts",
+    "setup": "tsx --env-file=.env src/setup.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1138.0",
+    "@googleapis/drive": "^26.0.0",
+    "@thoughtspot/rest-api-sdk": "^2.28.0",
+    "busboy": "^1.6.0",
+    "express": "^5.2.1",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/busboy": "^1.5.4",
+    "@types/express": "^5.0.3"
+  }
+}

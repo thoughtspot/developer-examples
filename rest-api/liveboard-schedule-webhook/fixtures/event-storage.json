@@ -1,0 +1,43 @@
+{
+  "eventId": "n.7c1e2a90-4b3d-4f5e-9a8b-1c2d3e4f5a6b",
+  "timestamp": "2026-02-26T09:25:32Z",
+  "eventType": "LIVEBOARD_SCHEDULE",
+  "schemaVersion": "1.0",
+  "source": {
+    "applicationName": "ThoughtSpot",
+    "applicationUrl": "https://your-cluster.thoughtspot.cloud",
+    "instanceId": "your-instance-id",
+    "orgId": "0"
+  },
+  "actor": { "actorType": "SYSTEM" },
+  "metadataObject": {
+    "objectType": "LIVEBOARD",
+    "id": "c30a0d49-5747-475d-8985-e975b1c2cf6d",
+    "name": "Sales Dashboard",
+    "url": "https://your-cluster.thoughtspot.cloud/#/pinboard/c30a0d49-5747-475d-8985-e975b1c2cf6d"
+  },
+  "data": {
+    "scheduleDetails": {
+      "scheduleId": "cffddca8-d4fc-4575-b8ec-a50e696ccdfc",
+      "name": "Daily Sales Report",
+      "creationTime": "2026-02-26T07:52:23Z",
+      "description": "Daily report",
+      "authorId": "59481331-ee53-42be-a548-bd87be6ddd4a",
+      "userIds": ["59481331-ee53-42be-a548-bd87be6ddd4a"],
+      "groupIds": [],
+      "runId": "29001ffd-6a84-45cd-a957-621fce89afc6",
+      "exportRequest": { "object_type": "LIVEBOARD", "request_type": "SCHEDULE" },
+      "fileFormat": "pdf",
+      "status": "SCHEDULED",
+      "emailIds": []
+    },
+    "recipients": [
+      { "type": "USER", "id": "59481331-ee53-42be-a548-bd87be6ddd4a", "name": "John Doe", "email": "john@company.com", "locale": "en_US" }
+    ],
+    "aiHighlights": "",
+    "msgUniqueId": "8a4f0c6e-1d2b-4e3f-a5b6-c7d8e9f0a1b2",
+    "channelID": "6dfa4d82-fdc8-4d5b-8294-a5de0dd5ede1",
+    "channelType": "webhook",
+    "communicationType": "LiveboardSchedules"
+  }
+}

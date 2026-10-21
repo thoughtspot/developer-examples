@@ -1,0 +1,49 @@
+{
+  "eventId": "n.18bd8bd5-dee3-4d5c-918e-aec3ba1a090f",
+  "timestamp": "2025-08-29T09:25:32Z",
+  "eventType": "LIVEBOARD_SCHEDULE",
+  "schemaVersion": "1.0",
+  "source": {
+    "applicationName": "ThoughtSpot",
+    "applicationUrl": "https://my.thoughtspot.cloud",
+    "instanceId": "3d85f2fe-8489-11f0-bdf8-5ba90",
+    "orgId": "2100019165"
+  },
+  "actor": { "actorType": "SYSTEM" },
+  "metadataObject": {
+    "objectType": "LIVEBOARD",
+    "id": "c30a0d49-5747-475d-8985-e975b1c2cf6d",
+    "name": "Sample Liveboard (View: sample view name)",
+    "url": "https://my.thoughtspot.cloud/#/pinboard/c30a0d49-5747-475d-8985-e975b1c2cf6d?view=a8118b21-4581-4315-8833-39b2aa5be542"
+  },
+  "data": {
+    "scheduleDetails": {
+      "scheduleId": "cffddca8-d4fc-4575-b8ec-a50e696ccdfc",
+      "name": "Sample Liveboard",
+      "creationTime": "2025-08-29T07:52:23Z",
+      "description": "Daily sales performance report",
+      "authorId": "59481331-ee53-42be-a548-bd87be6ddd4a",
+      "viewInfo": { "viewId": "a8118b21-4581-4315-8833-39b2aa5be542", "viewName": "sample view name" },
+      "userIds": ["59481331-ee53-42be-a548-bd87be6ddd4a"],
+      "groupIds": [],
+      "runId": "29001ffd-6a84-45cd-a957-621fce89afc6",
+      "exportRequest": {
+        "object_type": "LIVEBOARD",
+        "pdf_params": { "orientation": "LANDSCAPE", "page_size": "A4" },
+        "request_type": "SCHEDULE"
+      },
+      "fileFormat": "pdf",
+      "status": "SCHEDULED",
+      "emailIds": []
+    },
+    "recipients": [
+      { "type": "USER", "id": "user-123", "name": "John Doe", "email": "john@company.com", "locale": "en_US" }
+    ],
+    "viewInfo": { "viewId": "a8118b21-4581-4315-8833-39b2aa5be542", "viewName": "sample view name" },
+    "aiHighlights": "Sales increased by 15% compared to last quarter",
+    "msgUniqueId": "2f31df6a-2623-4953-a9bb-5af9b2922474",
+    "channelID": "6dfa4d82-fdc8-4d5b-8294-a5de0dd5ede1",
+    "channelType": "webhook",
+    "communicationType": "LiveboardSchedules"
+  }
+}

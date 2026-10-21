@@ -1,0 +1,22 @@
+{
+  "files": [
+    {
+      "filename": "sales_report.pdf",
+      "contentType": "application/pdf",
+      "size": 1024000,
+      "provider": "AWS_S3",
+      "bucketName": "my-webhook-files",
+      "region": "us-west-2",
+      "objectKey": "thoughtspot-webhooks/cluster-abc/user-123/org-0/liveboard/sales_report.pdf",
+      "uploadStatus": "SUCCESS"
+    },
+    {
+      "filename": "sales_data.csv",
+      "contentType": "text/csv",
+      "size": 512000,
+      "provider": "AWS_S3",
+      "uploadStatus": "FAILED",
+      "errorMessage": "Failed to upload to S3: AccessDenied: Access Denied"
+    }
+  ]
+}
