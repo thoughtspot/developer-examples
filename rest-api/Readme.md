@@ -5,10 +5,12 @@
 1. [Import User multiple orgs](./import-user-multiple-orgs/)
 2. [JWT Filtering / RLS](./jwt-filter-rules/)
 3. [Typescript API SDK](./typescript-sdk/)
-  - [Express](./typescript-sdk/express-example/)
-  - [React](./typescript-sdk/react-rest-api/)
+
+- [Express](./typescript-sdk/express-example/)
+- [React](./typescript-sdk/react-rest-api/)
+
 4. [Trusted auth server typescript](./trusted-auth-server-typescript/)
 5. [Trusted auth server python](./trusted-auth-server-python/)
 6. [Org inactive users cleanup](./ts-org-inactive-users-cleanup/)
-7. [Liveboard schedule webhook](./liveboard-schedule-webhook/)
-
+7. [TML to SQL](./tml-to-sql/)
+8. [Liveboard schedule webhook](./liveboard-schedule-webhook/)
