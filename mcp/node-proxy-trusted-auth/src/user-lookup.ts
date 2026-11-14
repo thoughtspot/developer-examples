@@ -24,6 +24,6 @@ export async function findTsUsernameByEmail(
 	const config = createBearerAuthenticationConfig(instanceUrl, () =>
 		Promise.resolve(adminToken),
 	);
-	const users = await new UsersApi(config).searchUsers({ email });
+	const users = await new UsersApi(config).searchUsers({ email, record_size: -1 });
 	return users[0]?.name;
 }
