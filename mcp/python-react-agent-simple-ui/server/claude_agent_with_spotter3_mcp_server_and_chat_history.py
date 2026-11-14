@@ -33,6 +33,8 @@ from spotter3_core import (
     analytical_sessions,
     conversations,
     create_app,
+    trust_session,
+    valid_session_id,
     run_turn,
     server_token,
     sse_response,
@@ -338,8 +340,12 @@ async def load_conversation_state(conv_id: str) -> list:
     if conv_id not in conversations:
         messages, session_id = await asyncio.to_thread(db_load_state, conv_id)
         conversations[conv_id] = messages
-        if session_id:
+        if valid_session_id(session_id):
             analytical_sessions[conv_id] = session_id
+        # The sessions this chat already used, so a follow-up's charts in them are tagged.
+        _, known = await asyncio.to_thread(db_get_session_ids, conv_id)
+        for known_session in known:
+            trust_session(conv_id, known_session)
     return conversations[conv_id]
 
 
@@ -547,7 +553,7 @@ async def ts_conversation_messages(session_id: str) -> list[dict] | None:
     """A ThoughtSpot conversation's messages, oldest first, or None if unreadable."""
     body = await ts_request(
         "GET",
-        f"/api/rest/2.0/ai/agent/conversations/{session_id}/messages",
+        f"/api/rest/2.0/ai/agent/conversations/{quote(session_id, safe='')}/messages",
         label=f"getConversation {session_id}",
         read_timeout=45.0,
     )
@@ -584,7 +590,8 @@ async def ts_load_answer(session_id: str, answer_id: str) -> dict | None:
     """
     body = await ts_request(
         "POST",
-        f"/conversation/v2/{session_id}/message/{quote(answer_id, safe='')}/load/public",
+        f"/conversation/v2/{quote(session_id, safe='')}/message/{quote(answer_id, safe='')}"
+        "/load/public",
         label=f"load answer {answer_id}",
         read_timeout=120.0,  # loading re-runs the query; 45s+ is common on a loaded cluster
         headers={"Content-Type": "application/json", "x-requested-by": "ThoughtSpot"},
@@ -739,7 +746,7 @@ async def get_work_answer(conv_id: str, answer_id: str, session_id: str | None =
         session_id = current
     if not session_id:
         raise HTTPException(status_code=404, detail="Conversation has no ThoughtSpot session")
-    if session_id not in known:
+    if not valid_session_id(session_id) or session_id not in known:
         raise HTTPException(status_code=404, detail="Session not part of this conversation")
 
     frame_params = await ts_load_answer(session_id, answer_id)

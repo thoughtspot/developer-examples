@@ -27,6 +27,7 @@ MCP server: https://github.com/thoughtspot/mcp-server
 import asyncio
 import json
 import os
+import re
 import time
 import traceback
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
@@ -573,6 +574,24 @@ conversations: dict[str, list] = {}
 # another. Each chart therefore records its own session (see `emit_update_events`).
 analytical_sessions: dict[str, str] = {}
 
+# conv_id -> every session create_analysis_session returned for that conversation. Only
+# these are trusted as a chart's session: the session id in a poll's arguments comes from
+# the model, so a prompt could steer it at any id. Seeded from storage on reload.
+conversation_sessions: dict[str, set[str]] = {}
+
+# ThoughtSpot analytical session ids are short URL-safe tokens (e.g. "zKyqJc-l9FZb").
+SESSION_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,128}")
+
+
+def valid_session_id(value: Any) -> bool:
+    return isinstance(value, str) and SESSION_ID_PATTERN.fullmatch(value) is not None
+
+
+def trust_session(conv_id: str, session_id: Any) -> None:
+    """Record a session as belonging to a conversation (created by it, or stored for it)."""
+    if valid_session_id(session_id):
+        conversation_sessions.setdefault(conv_id, set()).add(session_id)
+
 
 def build_tools(mcp_tools: list) -> list[dict]:
     """Convert MCP tool definitions to Anthropic tool definitions."""
@@ -618,7 +637,10 @@ def remember_session(conv_id: str, tool_name: str, text: str) -> None:
         session_id = json.loads(text).get("analytical_session_id")
     except (ValueError, TypeError, AttributeError):
         return
-    if session_id and session_id != analytical_sessions.get(conv_id):
+    if not valid_session_id(session_id):
+        return
+    trust_session(conv_id, session_id)
+    if session_id != analytical_sessions.get(conv_id):
         analytical_sessions[conv_id] = session_id
         print(f"[MCP] conv {conv_id} -> analytical session {session_id}")
 
@@ -812,7 +834,12 @@ def session_updates(payload: dict) -> list[dict]:
 
 
 async def autopoll_session_updates(
-    mcp: McpTurn, arguments: dict, first_result: Any, send: Send, show_work: bool
+    mcp: McpTurn,
+    arguments: dict,
+    first_result: Any,
+    send: Send,
+    show_work: bool,
+    conv_id: str,
 ) -> tuple[str, bool]:
     """Keep polling `get_session_updates` until the Agent is done.
 
@@ -821,8 +848,11 @@ async def autopoll_session_updates(
     """
     updates: list[dict] = []
     # Taken from this poll's own arguments, not `analytical_sessions`: in the turn where
-    # the model replaces a dead session, the stored id still names the old one.
-    session_id = arguments.get("analytical_session_id")
+    # the model replaces a dead session, the stored id still names the old one. Those
+    # arguments come from the model, so the id is kept only if this conversation created
+    # that session; otherwise charts carry no session and are not replayed.
+    polled = arguments.get("analytical_session_id")
+    session_id = polled if polled in conversation_sessions.get(conv_id, set()) else None
 
     def absorb(result: Any) -> tuple[list[dict], bool]:
         payload = tool_payload(result)
@@ -866,7 +896,7 @@ async def autopoll_session_updates(
 
 
 async def call_tool(
-    mcp: McpTurn, name: str, arguments: dict, send: Send, show_work: bool
+    mcp: McpTurn, name: str, arguments: dict, send: Send, show_work: bool, conv_id: str
 ) -> tuple[str, bool]:
     """Run one MCP tool call. Returns (result text for the model, is_error)."""
     try:
@@ -878,7 +908,7 @@ async def call_tool(
     is_error = bool(getattr(result, "is_error", False))
     if is_error or name != POLL_TOOL:
         return result_text(result), is_error
-    return await autopoll_session_updates(mcp, arguments, result, send, show_work)
+    return await autopoll_session_updates(mcp, arguments, result, send, show_work, conv_id)
 
 
 # ── Agent loop ──────────────────────────────────────────────────────────────────
@@ -937,7 +967,7 @@ async def run_agent(
             # splitting them teaches the model to stop making parallel calls.
             tool_uses = [b for b in message.content if b.type == "tool_use"]
             results = await asyncio.gather(
-                *(call_tool(mcp, b.name, b.input, send, show_work) for b in tool_uses)
+                *(call_tool(mcp, b.name, b.input, send, show_work, conv_id) for b in tool_uses)
             )
             tool_results = []
             for block, (text, is_error) in zip(tool_uses, results):
