@@ -565,8 +565,12 @@ Style: short markdown. Lead with the answer, then at most three bullets. No prea
 # conv_id -> full Claude message history, including tool interactions
 conversations: dict[str, list] = {}
 
-# conv_id -> analytical_session_id from create_analysis_session, added to the system prompt
-# on later turns so follow-ups continue in the same ThoughtSpot session.
+# conv_id -> the latest analytical_session_id from create_analysis_session, added to the
+# system prompt on later turns so follow-ups continue in the same ThoughtSpot session.
+#
+# One chat can span several sessions: a session lives in the ThoughtSpot Org it was
+# created in, so after an Org switch the old one rejects new messages and the model opens
+# another. Each chart therefore records its own session (see `emit_update_events`).
 analytical_sessions: dict[str, str] = {}
 
 
@@ -602,14 +606,19 @@ def build_system(conv_id: str) -> list[dict]:
 
 
 def remember_session(conv_id: str, tool_name: str, text: str) -> None:
-    """Capture the analytical_session_id so later turns reuse the same session."""
-    if tool_name != "create_analysis_session" or analytical_sessions.get(conv_id):
+    """Capture the analytical_session_id so later turns reuse the same session.
+
+    A later successful create replaces the stored id: the model only opens a second
+    session when the first one stopped accepting messages (for example, it belongs to
+    another Org), so keeping the old id would send every follow-up to a dead session.
+    """
+    if tool_name != "create_analysis_session":
         return
     try:
         session_id = json.loads(text).get("analytical_session_id")
     except (ValueError, TypeError, AttributeError):
         return
-    if session_id:
+    if session_id and session_id != analytical_sessions.get(conv_id):
         analytical_sessions[conv_id] = session_id
         print(f"[MCP] conv {conv_id} -> analytical session {session_id}")
 
@@ -723,7 +732,7 @@ def strip_rendered_answers(updates: list[dict]) -> list[dict]:
     return cleaned
 
 
-def emit_work_event(update: dict, send: Send) -> None:
+def emit_work_event(update: dict, send: Send, session_id: str | None = None) -> None:
     """Send one update as a step of the Agent's work, for the UI's "Show work" section.
 
     This is the Analytics Agent's own reasoning as the MCP server reports it - not
@@ -749,6 +758,7 @@ def emit_work_event(update: dict, send: Send) -> None:
                 # through /work-answers instead.
                 "iframe_url": fields["iframe_url"],
                 "frame_params": fields["frame_params"],
+                "analytical_session_id": session_id,
             }
         )
     elif kind in PROGRESS_TYPES:
@@ -760,11 +770,18 @@ def emit_work_event(update: dict, send: Send) -> None:
             send({"type": "work", "kind": "thought", "text": text})
 
 
-def emit_update_events(updates: list[dict], send: Send, show_work: bool = False) -> None:
-    """Stream Analytics Agent progress to the browser while we poll."""
+def emit_update_events(
+    updates: list[dict], send: Send, show_work: bool = False, session_id: str | None = None
+) -> None:
+    """Stream Analytics Agent progress to the browser while we poll.
+
+    `session_id` is the analytical session these updates were polled from. Each chart
+    carries it, because a chat can span sessions (see `analytical_sessions`) and a stored
+    chart can only be replayed from the session that produced it.
+    """
     for update in updates:
         if show_work:
-            emit_work_event(update, send)
+            emit_work_event(update, send, session_id)
         kind = update.get("type")
         thinking = is_thinking_update(update)
         if kind == "answer":
@@ -775,7 +792,14 @@ def emit_update_events(updates: list[dict], send: Send, show_work: bool = False)
             # makes a stored answer resolvable later.
             if not thinking:
                 answer_id = update.get("answer_id")
-                send({"type": "answer", "answer_id": answer_id, **answer_fields(update)})
+                send(
+                    {
+                        "type": "answer",
+                        "answer_id": answer_id,
+                        "analytical_session_id": session_id,
+                        **answer_fields(update),
+                    }
+                )
         elif kind in PROGRESS_TYPES or (thinking and kind not in TEXT_TYPES):
             # Reasoning prose arrives in word-sized chunks and flickers as status, so only
             # steps are shown. The model still gets the prose in the tool result.
@@ -796,12 +820,15 @@ async def autopoll_session_updates(
     model one consolidated result instead of spending a model turn per poll.
     """
     updates: list[dict] = []
+    # Taken from this poll's own arguments, not `analytical_sessions`: in the turn where
+    # the model replaces a dead session, the stored id still names the old one.
+    session_id = arguments.get("analytical_session_id")
 
     def absorb(result: Any) -> tuple[list[dict], bool]:
         payload = tool_payload(result)
         new = session_updates(payload)
         updates.extend(new)
-        emit_update_events(new, send, show_work)
+        emit_update_events(new, send, show_work, session_id)
         return new, bool(payload.get("is_done"))
 
     _, is_done = absorb(first_result)

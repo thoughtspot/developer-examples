@@ -49,14 +49,20 @@ app = create_app()
 #
 #   1. The messages       - every question and reply, so the chat can be shown again
 #                           and the AI remembers the context for follow-up questions.
-#   2. The conversation id - ThoughtSpot's id for the chat (`analytical_session_id`).
-#                           ThoughtSpot keeps the chat's charts under this id.
-#   3. A chart count      - one empty placeholder per chart in each reply.
+#   2. The conversation ids - ThoughtSpot's id for the session that produced each reply
+#                           (`analytical_session_id`), kept on the reply and on each of
+#                           its charts. ThoughtSpot keeps a session's charts under its id.
+#                           Usually one chat has one session, but a session lives in the
+#                           Org it was created in: after an Org switch the agent opens a
+#                           new one, so one chat can span several.
+#   3. A chart count      - one placeholder per chart in each reply, holding only the
+#                           session id above.
 #
 # The screen's copy (`turns`) holds no chart links or titles. (`claude_messages` is the
-# AI's own working copy and can still contain titles from ThoughtSpot's replies.) A chart link stops working after about
-# 8 hours. When a chat is reopened, each chart is drawn fresh from the conversation id
-# plus the chart's number in the chat (`answer_index`). See `reconcile_answers`.
+# AI's own working copy and can still contain titles from ThoughtSpot's replies.) A chart
+# link stops working after about 8 hours. When a chat is reopened, each chart is drawn
+# fresh from its session id plus the chart's number in that session (`answer_index`).
+# See `reconcile_answers`.
 #
 # Where it is stored: a SQLite file next to this script. SQLite comes with Python, so
 # there is nothing extra to install.
@@ -81,7 +87,11 @@ CREATE TABLE IF NOT EXISTS turns (
     content         TEXT NOT NULL DEFAULT '',
     answers         TEXT NOT NULL DEFAULT '[]',
     work            TEXT NOT NULL DEFAULT '[]',
-    created_at      TEXT NOT NULL
+    created_at      TEXT NOT NULL,
+    -- The session this reply's charts and Show work came from (assistant turns only).
+    analytical_session_id TEXT,
+    -- How many messages this reply sent to that session; NULL on older rows (read as 1).
+    ts_message_count INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS turns_by_conversation ON turns (conversation_id, id);
@@ -115,6 +125,19 @@ def db_init() -> None:
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(turns)")}
         if "work" not in columns:
             conn.execute("ALTER TABLE turns ADD COLUMN work TEXT NOT NULL DEFAULT '[]'")
+        if "ts_message_count" not in columns:
+            conn.execute("ALTER TABLE turns ADD COLUMN ts_message_count INTEGER")
+        if "analytical_session_id" not in columns:
+            conn.execute("ALTER TABLE turns ADD COLUMN analytical_session_id TEXT")
+            # Older rows predate per-reply sessions. Pin each reply to the chat's session
+            # as it stands now, once: the chat's session can change later, and a reply
+            # must keep pointing at the session that produced it.
+            conn.execute(
+                "UPDATE turns SET analytical_session_id = ("
+                " SELECT c.analytical_session_id FROM conversations c"
+                " WHERE c.id = turns.conversation_id)"
+                " WHERE role = 'assistant'"
+            )
     print(f"[History] SQLite at {DB_PATH}")
 
 
@@ -138,15 +161,22 @@ def jsonable(value: Any) -> Any:
 
 
 def storable_answers(answers: list[dict]) -> list[dict]:
-    """One empty placeholder per chart - nothing about the chart itself is saved.
+    """One placeholder per chart, holding only the session that produced it.
 
     A chart's `iframe_url` and `answer_id` stop working after about 8 hours, and its
-    title is not needed to rebuild it. Only the number of charts matters; their position
+    title is not needed to rebuild it. What is kept is the chart's session
+    (`analytical_session_id`), which does not expire; its position in that session
     (`answer_index`) is worked out on reopen.
 
     Also applied when reading, so rows saved by older versions lose their stale fields.
     """
-    return [{} for _ in answers]
+    placeholders = []
+    for answer in answers:
+        session_id = answer.get("analytical_session_id") if isinstance(answer, dict) else None
+        placeholders.append(
+            {"analytical_session_id": session_id} if isinstance(session_id, str) else {}
+        )
+    return placeholders
 
 
 def db_start_conversation(conv_id: str, first_message: str) -> None:
@@ -165,14 +195,29 @@ def db_start_conversation(conv_id: str, first_message: str) -> None:
 
 
 def db_add_turn(
-    conv_id: str, role: str, content: str, answers: list[dict], work: list[dict] | None = None
+    conv_id: str,
+    role: str,
+    content: str,
+    answers: list[dict],
+    work: list[dict] | None = None,
+    analytical_session_id: str | None = None,
+    ts_message_count: int | None = None,
 ) -> None:
     stamp = now_iso()
     with db() as conn:
         conn.execute(
-            "INSERT INTO turns (conversation_id, role, content, answers, work, created_at)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (conv_id, role, content, json.dumps(answers), json.dumps(work or []), stamp),
+            "INSERT INTO turns (conversation_id, role, content, answers, work, created_at,"
+            " analytical_session_id, ts_message_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                conv_id,
+                role,
+                content,
+                json.dumps(storable_answers(answers)),
+                json.dumps(work or []),
+                stamp,
+                analytical_session_id,
+                ts_message_count,
+            ),
         )
         conn.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (stamp, conv_id))
 
@@ -230,7 +275,8 @@ def db_get_conversation(conv_id: str) -> dict | None:
         if not row:
             return None
         turns = conn.execute(
-            "SELECT role, content, answers, work, created_at FROM turns"
+            "SELECT role, content, answers, work, created_at, analytical_session_id,"
+            " ts_message_count FROM turns"
             " WHERE conversation_id = ? ORDER BY id",
             (conv_id,),
         ).fetchall()
@@ -244,18 +290,32 @@ def db_get_conversation(conv_id: str) -> dict | None:
                 "answers": storable_answers(json.loads(turn["answers"] or "[]")),
                 "work": json.loads(turn["work"] or "[]"),
                 "created_at": turn["created_at"],
+                "analytical_session_id": turn["analytical_session_id"],
+                "ts_message_count": turn["ts_message_count"],
             }
             for turn in turns
         ],
     }
 
 
-def db_get_session_id(conv_id: str) -> str | None:
+def db_get_session_ids(conv_id: str) -> tuple[str | None, set[str]]:
+    """The chat's current session, and every session any of its replies came from."""
     with db() as conn:
         row = conn.execute(
             "SELECT analytical_session_id FROM conversations WHERE id = ?", (conv_id,)
         ).fetchone()
-    return row["analytical_session_id"] if row else None
+        if not row:
+            return None, set()
+        used = conn.execute(
+            "SELECT DISTINCT analytical_session_id FROM turns"
+            " WHERE conversation_id = ? AND analytical_session_id IS NOT NULL",
+            (conv_id,),
+        ).fetchall()
+    current = row["analytical_session_id"]
+    sessions = {r["analytical_session_id"] for r in used}
+    if current:
+        sessions.add(current)
+    return current, sessions
 
 
 def db_delete_conversation(conv_id: str) -> bool:
@@ -295,15 +355,20 @@ class StreamRecorder:
         self.text_parts: list[str] = []
         self.answers: list[dict] = []
         self.work: list[dict] = []  # the Analytics Agent's steps, for "Show work"
+        # The session this reply's charts and Show work queries came from.
+        self.session_id: str | None = None
 
     def send(self, event: dict) -> None:
         kind = event.get("type")
         if kind == "delta":
             self.text_parts.append(event.get("text") or "")
         elif kind == "answer":
-            self.answers.append({})  # one placeholder per chart, see `storable_answers`
+            # One placeholder per chart, tagged with its session; see `storable_answers`.
+            self.answers.append({"analytical_session_id": event.get("analytical_session_id")})
         elif kind == "work":
             append_work(self.work, event)
+        if kind in ("answer", "work") and event.get("analytical_session_id"):
+            self.session_id = event["analytical_session_id"]
         self.queue.put_nowait(event)
 
     @property
@@ -329,13 +394,70 @@ def append_work(work: list[dict], event: dict) -> None:
     work.append(step)
 
 
-async def persist_turn(conv_id: str, recorder: StreamRecorder, history: list | None) -> None:
+def block_field(block: Any, name: str) -> Any:
+    """A field of a Claude content block, which is an SDK object or (once stored) a dict."""
+    return block.get(name) if isinstance(block, dict) else getattr(block, name, None)
+
+
+def session_message_count(turn_messages: list, session_id: str | None) -> int:
+    """How many questions this reply sent to `session_id` that ThoughtSpot accepted.
+
+    ThoughtSpot stores one message per accepted `send_session_message`, and a reply can
+    send more than one (the agent retries, or asks two questions) or none (a greeting).
+    `reconcile_answers` pairs replies with messages, so it needs the real count, not an
+    assumed one.
+    """
+    if not session_id:
+        return 0  # no session yet, so nothing was sent
+    sent: set[str] = set()
+    for message in turn_messages:
+        if message.get("role") != "assistant" or not isinstance(message.get("content"), list):
+            continue
+        for block in message["content"]:
+            arguments = block_field(block, "input") or {}
+            if (
+                block_field(block, "type") == "tool_use"
+                and block_field(block, "name") == "send_session_message"
+                and isinstance(arguments, dict)
+                and arguments.get("analytical_session_id") == session_id
+            ):
+                sent.add(block_field(block, "id"))
+    accepted = 0
+    for message in turn_messages:
+        if message.get("role") != "user" or not isinstance(message.get("content"), list):
+            continue
+        for block in message["content"]:
+            if (
+                isinstance(block, dict)
+                and block.get("type") == "tool_result"
+                and block.get("tool_use_id") in sent
+                and not block.get("is_error")
+            ):
+                accepted += 1
+    return accepted
+
+
+async def persist_turn(
+    conv_id: str, recorder: StreamRecorder, history: list | None, turn_start: int
+) -> None:
     """Store the assistant turn, and the state the next turn needs.
 
-    Also runs when a turn fails or is cancelled: the user turn is already stored, so
-    skipping this would leave a question with no visible answer on reopen.
+    `turn_start` is where this turn begins in `history`, so its own tool calls can be told
+    apart from earlier ones. Also runs when a turn fails or is cancelled: the user turn is
+    already stored, so skipping this would leave a question with no visible answer on
+    reopen.
     """
     if recorder.text or recorder.answers or recorder.work:
+        # A reply with no chart or query may still have asked a session; if so, it was the
+        # chat's current one, since the model updates that id whenever it opens a new
+        # session. Whether it asked at all is in `message_count` (0 for a greeting).
+        session_id = recorder.session_id or analytical_sessions.get(conv_id)
+        # Unknown when the turn failed before a history came back; read as 1 on reopen.
+        message_count = (
+            session_message_count(history[turn_start:], session_id)
+            if history is not None and len(history) > turn_start
+            else None
+        )
         await asyncio.to_thread(
             db_add_turn,
             conv_id,
@@ -343,6 +465,8 @@ async def persist_turn(conv_id: str, recorder: StreamRecorder, history: list | N
             recorder.text,
             recorder.answers,
             recorder.work,
+            session_id,
+            message_count,
         )
     if history is not None:
         await asyncio.to_thread(
@@ -376,7 +500,7 @@ async def chat(request: ChatRequest):
             messages,
             conv_id,
             recorder.send,
-            persist=lambda history: persist_turn(conv_id, recorder, history),
+            persist=lambda history: persist_turn(conv_id, recorder, history, len(messages)),
             show_work=True,
         )
 
@@ -481,14 +605,27 @@ async def ts_load_answer(session_id: str, answer_id: str) -> dict | None:
     return params if all(params.values()) else None
 
 
-def reconcile_answers(conversation: dict, ts_messages: list[dict] | None) -> dict:
-    """Give every saved chart its number in the chat (`answer_index`).
+def reply_session(turn: dict, conversation: dict) -> str | None:
+    """The session a stored reply came from. Rows saved before replies kept their own
+    session fall back to the chat's."""
+    return turn.get("analytical_session_id") or conversation.get("analytical_session_id")
 
-    Think of the chat's charts as numbered pages in a notebook. ThoughtSpot keeps the
-    notebook (the conversation id); we only need each chart's page number. The first
-    final chart in the chat is 0, the next is 1, and so on, across the whole chat. The
-    browser hands both to the Visual Embed SDK (`tsmcpConversationId`,
-    `tsmcpAnswerIndex`), and ThoughtSpot draws the chart fresh.
+
+def reconcile_answers(
+    conversation: dict, ts_messages_by_session: dict[str, list[dict] | None]
+) -> dict:
+    """Give every saved chart its session and its number in that session (`answer_index`).
+
+    Think of a session's charts as numbered pages in a notebook. ThoughtSpot keeps the
+    notebook (the session id); we only need each chart's page number. The first final
+    chart in a session is 0, the next is 1, and so on. The browser hands both to the
+    Visual Embed SDK (`tsmcpConversationId`, `tsmcpAnswerIndex`), and ThoughtSpot draws
+    the chart fresh.
+
+    One chat can fill more than one notebook. A session belongs to the Org it was
+    created in; after an Org switch the agent opens a new one and later charts go
+    there. So replies are grouped by their session and numbered within it - a chart
+    numbered across the whole chat would point into the wrong notebook.
 
     We let ThoughtSpot do the counting, not our saved copy. If the browser closes while a
     chart is loading, ThoughtSpot still finishes the chart but we never saw it. Its count
@@ -502,45 +639,62 @@ def reconcile_answers(conversation: dict, ts_messages: list[dict] | None) -> dic
             ?sessionId=72728061-...&genNo=2&acSessionId=2bfd6f50-...&acGenNo=1
 
     1. From the link, note `sessionId` and `genNo`. Together they name one chart.
-    2. Get the chat's messages from ThoughtSpot:
+    2. Get the session's messages from ThoughtSpot:
        GET /api/rest/2.0/ai/agent/conversations/{analytical_session_id}/messages
     3. Go through the messages oldest first. Count only final charts: items in
        `response_items` with `type == "answer"`, `is_thinking == false` and an
        `answer_id`. Skip the "thinking" charts (see `answer_items`).
-    4. Number those charts 0, 1, 2, ... across the whole chat.
+    4. Number those charts 0, 1, 2, ... across the whole session.
     5. `answer_id` is text holding JSON, like {"session_id": "...", "gen_no": 2}.
        Parse it. The chart with the same `session_id` and `gen_no` as step 1 has your
        number: that is its `answer_index`.
 
     This function does steps 2 to 4 for every chart at once, turn by turn.
+    `ts_messages_by_session` holds each session's messages, or None when ThoughtSpot
+    would not return them - for example, the session belongs to another Org. Those
+    replies keep their saved charts, numbered in saved order, so the SDK can still try
+    them and show its notice if they cannot load.
     """
     turns = conversation.get("turns") or []
-    if ts_messages is None:
-        # ThoughtSpot unreachable: fall back to the stored shape rather than drop charts.
+
+    # ThoughtSpot stores one message per question a reply sent to its session: pair each
+    # session's messages with that session's replies, in order (`ts_message_count`).
+    replies_by_session: dict[str | None, list[dict]] = {}
+    for turn in turns:
+        if turn.get("role") == "assistant":
+            replies_by_session.setdefault(reply_session(turn, conversation), []).append(turn)
+
+    for session_id, replies in replies_by_session.items():
+        ts_messages = ts_messages_by_session.get(session_id) if session_id else None
         index = 0
-        for turn in turns:
-            for answer in turn.get("answers") or []:
+        position = 0
+        for turn in replies:
+            answers = turn.get("answers") or []
+            # How many of the session's messages this reply sent: the agent can retry
+            # or ask twice in one reply. Older rows did not record it; read them as 1.
+            count = turn.get("ts_message_count")
+            count = 1 if count is None else count
+            own = (ts_messages or [])[position : position + count]
+            position += count
+            if ts_messages is None:
+                # Unreadable: fall back to the stored shape rather than drop charts.
+                merged = answers
+            else:
+                expected = sum(len(answer_items(m, thinking=False)) for m in own)
+                # The thinking answers behind this turn's Show work queries, in step
+                # order. The client loads one by id when its row is expanded.
+                thinking_answers = [a for m in own for a in answer_items(m, thinking=True)]
+                turn["work_answer_ids"] = [item["answer_id"] for item in thinking_answers]
+                # Saved placeholders, padded out to the count ThoughtSpot reports.
+                merged = answers[:expected] + [
+                    {} for _ in range(max(0, expected - len(answers)))
+                ]
+            for answer in merged:
+                answer["analytical_session_id"] = session_id
                 answer["answer_index"] = index
                 index += 1
-        return conversation
-
-    # One ThoughtSpot message per user prompt: pair them with the assistant turns in order.
-    assistant_turns = [turn for turn in turns if turn.get("role") == "assistant"]
-    index = 0
-    for position, turn in enumerate(assistant_turns):
-        message = ts_messages[position] if position < len(ts_messages) else {}
-        expected = len(answer_items(message, thinking=False))
-        # The thinking answers behind this turn's Show work queries, in step order. The
-        # client loads one by id when its row is expanded.
-        thinking_answers = answer_items(message, thinking=True)
-        turn["work_answer_ids"] = [item["answer_id"] for item in thinking_answers]
-        answers = turn.get("answers") or []
-        # Saved placeholders, padded out to the count ThoughtSpot reports.
-        merged = answers[:expected] + [{} for _ in range(max(0, expected - len(answers)))]
-        for answer in merged:
-            answer["answer_index"] = index
-            index += 1
-        turn["answers"] = merged
+            turn["answers"] = merged
+            turn["analytical_session_id"] = session_id
     return conversation
 
 
@@ -558,22 +712,35 @@ async def get_conversation(conv_id: str):
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    session_id = conversation.get("analytical_session_id")
-    ts_messages = await ts_conversation_messages(session_id) if session_id else None
-    return reconcile_answers(conversation, ts_messages)
+    # Each session the chat's replies came from, read once and in parallel.
+    session_ids = list(
+        dict.fromkeys(
+            session_id
+            for turn in conversation["turns"]
+            if turn["role"] == "assistant"
+            and (session_id := reply_session(turn, conversation))
+        )
+    )
+    messages = await asyncio.gather(*(ts_conversation_messages(s) for s in session_ids))
+    return reconcile_answers(conversation, dict(zip(session_ids, messages)))
 
 
 @app.get("/api/conversations/{conv_id}/work-answers/{answer_id}")
-async def get_work_answer(conv_id: str, answer_id: str):
+async def get_work_answer(conv_id: str, answer_id: str, session_id: str | None = None):
     """Live embed ids for a thinking answer shown in a stored turn's Show work.
 
-    `answer_id` comes from the turn's `work_answer_ids`. The client asks only when a step
-    is expanded, so a reopened chat does not load every intermediate chart up front.
-    ThoughtSpot checks the answer belongs to the conversation.
+    `answer_id` comes from the turn's `work_answer_ids`, and `session_id` from the turn
+    (`analytical_session_id`), since a chat can span sessions. The client asks only when a
+    step is expanded, so a reopened chat does not load every intermediate chart up front.
+    The session must be one this chat used, and ThoughtSpot checks the answer belongs to it.
     """
-    session_id = await asyncio.to_thread(db_get_session_id, conv_id)
+    current, known = await asyncio.to_thread(db_get_session_ids, conv_id)
+    if session_id is None:
+        session_id = current
     if not session_id:
         raise HTTPException(status_code=404, detail="Conversation has no ThoughtSpot session")
+    if session_id not in known:
+        raise HTTPException(status_code=404, detail="Session not part of this conversation")
 
     frame_params = await ts_load_answer(session_id, answer_id)
     if not frame_params:

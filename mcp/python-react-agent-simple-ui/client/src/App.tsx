@@ -39,7 +39,13 @@ interface Answer {
   query?: string | null;
   iframe_url?: string | null;
   frame_params?: FrameParams | null;
-  /** Position in the conversation; set on stored answers only. */
+  /**
+   * The ThoughtSpot analytical session that produced this answer. One chat can span
+   * several (a session belongs to the Org it was created in), so a stored answer is
+   * resolved from its own session, not the chat's latest one.
+   */
+  analytical_session_id?: string | null;
+  /** Position in its session; set on stored answers only. */
   answer_index?: number | null;
 }
 
@@ -66,6 +72,8 @@ interface Message {
   work?: WorkStep[];
   /** Stored turns only: ThoughtSpot's id for each Show work query, in order. */
   workAnswerIds?: string[];
+  /** Stored turns only: the session those Show work queries belong to. */
+  sessionId?: string | null;
   isError?: boolean;
 }
 
@@ -83,6 +91,7 @@ interface ConversationDetail {
     answers?: Answer[];
     work?: WorkStep[];
     work_answer_ids?: string[];
+    analytical_session_id?: string | null;
   }[];
 }
 
@@ -311,6 +320,8 @@ const stepIcon = (text: string): keyof typeof ICON_PATHS => {
 /** Where a stored turn's thinking answers are loaded from. */
 interface WorkSource {
   conversationId: string | null;
+  /** The ThoughtSpot session the stored turn came from. */
+  sessionId: string | null;
   answerIds: string[];
 }
 
@@ -321,12 +332,17 @@ interface WorkSource {
  */
 const workAnswerLoads = new Map<string, Promise<FrameParams>>();
 
-const loadWorkAnswer = (conversationId: string, answerId: string) => {
-  const key = `${conversationId}/${answerId}`;
+const loadWorkAnswer = (
+  conversationId: string,
+  answerId: string,
+  sessionId: string | null,
+) => {
+  const key = `${conversationId}/${sessionId ?? ""}/${answerId}`;
   let load = workAnswerLoads.get(key);
   if (!load) {
+    const query = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
     load = fetch(
-      `${HISTORY_URL}/${conversationId}/work-answers/${encodeURIComponent(answerId)}`,
+      `${HISTORY_URL}/${conversationId}/work-answers/${encodeURIComponent(answerId)}${query}`,
     ).then(async (response) => {
       if (!response.ok) throw new Error(String(response.status));
       return ((await response.json()) as { frame_params: FrameParams }).frame_params;
@@ -357,6 +373,7 @@ function WorkQueryChart({
   const liveSrc = answerSrc(step, null);
   const answerId = source.answerIds[index];
   const conversationId = source.conversationId;
+  const sessionId = source.sessionId;
   const [resolved, setResolved] = useState<FrameParams | null>(null);
   const [failed, setFailed] = useState(false);
   // Bumped by Retry to run the load again; the failed load is already evicted.
@@ -366,7 +383,7 @@ function WorkQueryChart({
     if (liveSrc || !conversationId || !answerId) return;
     let cancelled = false;
     setFailed(false);
-    loadWorkAnswer(conversationId, answerId)
+    loadWorkAnswer(conversationId, answerId, sessionId)
       .then((frame_params) => {
         if (!cancelled) setResolved(frame_params);
       })
@@ -374,7 +391,7 @@ function WorkQueryChart({
     return () => {
       cancelled = true;
     };
-  }, [liveSrc, conversationId, answerId, step, attempt]);
+  }, [liveSrc, conversationId, sessionId, answerId, step, attempt]);
 
   const html = liveSrc
     ? answerHtml(step, null, theme)
@@ -501,9 +518,11 @@ const escapeAttr = (value: unknown) =>
  *
  * A live answer carries the `iframe_url` the MCP server just produced. A stored
  * one does not: those URLs embed a session that expires in about 8 hours, so the
- * server never persists them. Instead we point the renderer at the conversation
- * and the answer's position in it, and it resolves a current URL - re-running the
- * chart against today's data, which is why it also gets the stale-data notice.
+ * server never persists them. Instead we point the renderer at the answer's
+ * session and its position in that session, and it resolves a current URL -
+ * re-running the chart against today's data, which is why it also gets the
+ * stale-data notice. The answer's own session wins over the chat's: after an Org
+ * switch, one chat holds answers from more than one session.
  */
 const answerSrc = (
   answer: Answer,
@@ -527,9 +546,10 @@ const answerSrc = (
     return `${url.toString()}#/embed/conv-assist-answer?${hash.toString()}`;
   }
 
-  // A stored answer has neither - the SDK resolves it from the conversation.
-  if (!conversationSessionId || answer.answer_index == null) return null;
-  url.searchParams.set("tsmcpConversationId", conversationSessionId);
+  // A stored answer has neither - the SDK resolves it from its session.
+  const sessionId = answer.analytical_session_id || conversationSessionId;
+  if (!sessionId || answer.answer_index == null) return null;
+  url.searchParams.set("tsmcpConversationId", sessionId);
   url.searchParams.set("tsmcpAnswerIndex", String(answer.answer_index));
   return url.toString();
 };
@@ -682,6 +702,7 @@ function App() {
             answers: turn.answers || [],
             work: turn.work || [],
             workAnswerIds: turn.work_answer_ids || [],
+            sessionId: turn.analytical_session_id || null,
           })),
         );
         setResponseId(data.id);
@@ -990,6 +1011,7 @@ function App() {
                             finished={!(isLoading && i === messages.length - 1)}
                             source={{
                               conversationId: responseId,
+                              sessionId: msg.sessionId || null,
                               answerIds: msg.workAnswerIds || [],
                             }}
                           />
