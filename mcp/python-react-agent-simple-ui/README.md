@@ -359,25 +359,78 @@ This is the big picture, with no code. The developer detail follows.
 
 **The goal.** A user closes the app, comes back tomorrow, opens yesterday's chat and sees the same questions, replies and charts. They can also ask a follow-up question.
 
-**What to save for each chat (only three things):**
+**Words used here**
 
-| Save this | What it is | Why |
-|-----------|------------|-----|
-| The messages | Every question and every reply, in order | To show the chat again, and so the AI remembers the context for follow-up questions |
-| The ThoughtSpot conversation id of each reply | The id of the session that produced the reply and its charts (`analytical_session_id`). Usually one per chat - see [Orgs](#a-chat-can-span-several-sessions-orgs) | ThoughtSpot keeps a session's charts under its id |
-| How many charts each reply had | Just a count, for example "this reply had 2 charts" | To know where to put each chart when the chat is reopened |
+| Word | Meaning |
+|------|---------|
+| Chat | One conversation in your app: the list in the sidebar. |
+| Session | ThoughtSpot's side of the conversation, created by `create_analysis_session`. Its id (`analytical_session_id`) is the "conversation id" the Visual Embed SDK asks for. |
+| Answer | One chart. ThoughtSpot calls charts *answers*, so the code says `answer`. |
+| `answer_index` | A chart's position in its session: the first chart is 0, the next is 1, and so on. |
+
+**How a chart comes back.** Think of a session as a notebook and its charts as numbered pages. ThoughtSpot keeps the notebook. Your app only remembers which notebook (the session id) and which page (`answer_index`). To show the chart again, the app gives both to the SDK, and ThoughtSpot draws the chart fresh, with today's data.
+
+**What to save**
+
+| Save this | Why |
+|-----------|-----|
+| Every question and reply, in order | To show the chat again, and so the AI keeps the context for follow-ups. |
+| For each reply: the session it used, and how many questions it sent to it | ThoughtSpot stores one message per question. The count says which of the session's messages belong to which reply. |
+| For each chart: a placeholder holding its session id | So each chart is looked up in its own notebook. |
 
 **What NOT to save:** the chart link (`iframe_url`) or the chart title. A chart link stops working after about 8 hours, so a saved link shows an error tomorrow. (In this example, the saved copy of the AI's own working notes, `claude_messages`, can still contain chart titles from ThoughtSpot's replies. Only what the screen shows, the `turns` table, leaves them out.)
 
-**How a chart comes back when a chat is reopened.** Think of the charts in a chat as numbered pages in a notebook. ThoughtSpot keeps the notebook (the conversation id). Your app only needs to remember the page number (`answer_index`). The first chart in the chat is page 0, the next is page 1, and so on, across the whole notebook. To show a chart again, the app gives ThoughtSpot both the notebook and the page number, and ThoughtSpot draws the chart fresh, with today's data.
+#### A chat can span several sessions (Orgs)
 
-(ThoughtSpot calls each chart an *answer*, so the code and the rest of this README say `answer` and `answer_index`.)
+Usually a chat uses one session. But a session belongs to the ThoughtSpot Org it was created in. If the user's token moves to another Org mid-chat, the old session rejects new questions, so the agent opens a new session and later charts go into that new notebook. That is why the session is saved **with each reply and each chart**, and why charts are numbered **within their own session**. With one id per chat, a chart from the second session would be looked up in the first one and come back as the wrong chart, or not at all.
 
-##### A chat can span several sessions (Orgs)
+When the chat is reopened, a chart loads only if the viewer's token is in that chart's Org. A chart from another Org cannot be rebuilt, so the Visual Embed SDK shows "This answer could not be loaded." in its place (change the text with `unresolvedAnswerNoticeText`).
 
-A session belongs to the ThoughtSpot Org it was created in. If the user's token moves to another Org mid-chat, the old session rejects new messages, so the agent opens a new session and later charts go into that new notebook. So save the conversation id **with each reply and each chart**, not once per chat, and number charts **within their own session**. Otherwise a chart from the second session is looked up by its position in the first one, and comes back as the wrong chart or not at all.
+#### Example: one chat, start to finish
 
-When the chat is reopened, each chart loads only if the viewer's token is in that chart's Org. A chart from another Org cannot be rebuilt, and the Visual Embed SDK shows "This answer could not be loaded." in its place (change the text with `unresolvedAnswerNoticeText`).
+A user asks three questions in one chat, and switches Org after the first.
+
+**1. While chatting**
+
+| # | User's Org | Question | What the agent does | Charts |
+|---|------------|----------|---------------------|--------|
+| 1 | Org A | "total sales by year" | Creates session `S1` and asks 1 question. | 1 |
+| 2 | Org B | "total sales by region" | Tries `S1`; ThoughtSpot rejects it (it belongs to Org A). Creates session `S2` and asks 1 question. | 1 |
+| 3 | Org B | "total sales by month" | Asks in `S2`. The first try fails, so it asks again: 2 questions. | 1 |
+
+**2. What gets saved** (one row per reply in the `turns` table)
+
+| Reply | `analytical_session_id` | `ts_message_count` | `answers` |
+|-------|-------------------------|--------------------|-----------|
+| 1 | `S1` | 1 | `[{"analytical_session_id": "S1"}]` |
+| 2 | `S2` | 1 | `[{"analytical_session_id": "S2"}]` |
+| 3 | `S2` | 2 | `[{"analytical_session_id": "S2"}]` |
+
+**3. When the chat is reopened**, the server asks ThoughtSpot for each session's messages and numbers the charts within each session:
+
+- `S1` has 1 message. Reply 1 owns it, so its chart is `S1`, page 0.
+- `S2` has 3 messages. Reply 2 owns message 1 (chart: `S2`, page 0). Reply 3 owns messages 2 and 3 (chart: `S2`, page 1).
+
+The browser turns each chart into a link for the SDK:
+
+```
+Reply 1:  https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=S1&tsmcpAnswerIndex=0
+Reply 2:  https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=S2&tsmcpAnswerIndex=0
+Reply 3:  https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=S2&tsmcpAnswerIndex=1
+```
+
+**4. What the viewer sees**
+
+| Viewer's Org | Reply 1 | Reply 2 | Reply 3 |
+|--------------|---------|---------|---------|
+| Org A | Chart | "This answer could not be loaded." | "This answer could not be loaded." |
+| Org B | "This answer could not be loaded." | Chart | Chart |
+
+If the chat had saved one session id (`S2`) for everything, reply 1 would have been looked up as `S2`, page 0 and shown reply 2's chart, and reply 3 would have shown nothing.
+
+**Why ask ThoughtSpot to count, instead of trusting your own count?** If a user closes the browser while a chart is still loading, ThoughtSpot still finishes that chart, but your app never sees it. ThoughtSpot's count is always complete, so every later chart keeps the right number.
+
+**Captions:** a reopened chat shows charts without their title captions, because titles are no longer saved. Live chats still show them.
 
 **Finding a chart's page number from its link.** Each chart link from the MCP server looks like this:
 
@@ -386,9 +439,9 @@ https://<your-thoughtspot>/?tsmcp=true#/embed/conv-assist-answer?sessionId=7272.
 ```
 
 1. From the link, note `sessionId` and `genNo`. Together they name one chart.
-2. Ask ThoughtSpot for the chat's full list of messages, using the conversation id.
+2. Ask ThoughtSpot for the session's full list of messages, using the session id.
 3. Go through the messages from oldest to newest. Count only the final charts. Skip the "thinking" charts the Agent drew while it worked.
-4. Number the final charts 0, 1, 2, and so on.
+4. Number the final charts 0, 1, 2, and so on, across the whole session.
 5. The chart with the same `sessionId` and `genNo` as your link: its number is the page number (`answer_index`). (A chart's `answer_id` is text that contains both values, like `{"session_id":"7272...","gen_no":2}`. Read the two values out of it before comparing.)
 
 This example does the counting for you, in `reconcile_answers()` in [`server/claude_agent_with_spotter3_mcp_server_and_chat_history.py`](server/claude_agent_with_spotter3_mcp_server_and_chat_history.py).
