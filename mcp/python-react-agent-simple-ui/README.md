@@ -265,7 +265,7 @@ conversations:        { conv_id → [user msg, assistant msg + tool calls, tool 
 analytical_sessions:  { conv_id → analytical_session_id }
 ```
 
-Full message history (tool interactions included) is kept in memory per `conv_id`. Each `/api/chat` request either starts a new conversation or continues one via the `response_id` returned in the previous `done` event. When Claude calls `create_analysis_session`, the returned `analytical_session_id` is stored and injected into the system prompt on later turns so follow-ups stay in the same ThoughtSpot session. A later successful `create_analysis_session` replaces it: the model only opens a new session when the old one stopped accepting messages (for example, after an Org switch).
+Full message history (tool interactions included) is kept in memory per `conv_id`. Each `/api/chat` request either starts a new conversation or continues one via the `response_id` returned in the previous `done` event. When Claude calls `create_analysis_session`, the returned `analytical_session_id` is stored and injected into the system prompt on later turns so follow-ups stay in the same ThoughtSpot session. A later successful `create_analysis_session` replaces it, so follow-ups go to the newest session. In practice the model opens a new session when the old one stops accepting messages (for example, after an Org switch); nothing in the code forces that.
 
 #### Agentic loop
 
@@ -290,8 +290,9 @@ Other Claude API details worth noting:
 |-------|--------|---------|
 | `delta` | `text` | Streamed assistant text |
 | `status` | `message` | Thinking, tool start, Analytics Agent step, or reconnecting |
-| `answer` | `answer_id`, `title`, `query`, `iframe_url`, `frame_params` | A chart to render. `frame_params` carries the embed ids when there is no ready-made `iframe_url` |
+| `answer` | `answer_id`, `analytical_session_id`, `title`, `query`, `iframe_url`, `frame_params` | A chart to render. `frame_params` carries the embed ids when there is no ready-made `iframe_url` |
 | `work` | `kind`, `text`, `query`, `iframe_url`, `frame_params` | One step of the Analytics Agent's work, for **Show work** (chat-history backend only). `kind` is `step` (progress), `thought` (reasoning prose — consecutive ones join into one), or `query` (a query tried before the final answer) |
+| `session_message` | `analytical_session_id` | ThoughtSpot accepted a question in this session. Used to save chat history; the UI ignores it. |
 | `done` | `response_id` | Turn complete; pass `response_id` back for follow-ups |
 | `error` | `message` | Fatal error for this turn |
 
@@ -396,15 +397,17 @@ A user asks three questions in one chat, and switches Org after the first.
 |---|------------|----------|---------------------|--------|
 | 1 | Org A | "total sales by year" | Creates session `S1` and asks 1 question. | 1 |
 | 2 | Org B | "total sales by region" | Tries `S1`; ThoughtSpot rejects it (it belongs to Org A). Creates session `S2` and asks 1 question. | 1 |
-| 3 | Org B | "total sales by month" | Asks in `S2`. The first try fails, so it asks again: 2 questions. | 1 |
+| 3 | Org B | "total sales by month" | Asks in `S2`. The first answer is not usable, so it asks again. ThoughtSpot accepts both: 2 questions. | 1 |
 
 **2. What gets saved** (one row per reply in the `turns` table)
 
-| Reply | `analytical_session_id` | `ts_message_count` | `answers` |
-|-------|-------------------------|--------------------|-----------|
-| 1 | `S1` | 1 | `[{"analytical_session_id": "S1"}]` |
-| 2 | `S2` | 1 | `[{"analytical_session_id": "S2"}]` |
-| 3 | `S2` | 2 | `[{"analytical_session_id": "S2"}]` |
+| Reply | `analytical_session_id` | `ts_message_counts` | `answers` |
+|-------|-------------------------|---------------------|-----------|
+| 1 | `S1` | `{"S1": 1}` | `[{"analytical_session_id": "S1"}]` |
+| 2 | `S2` | `{"S2": 1}` | `[{"analytical_session_id": "S2"}]` |
+| 3 | `S2` | `{"S2": 2}` | `[{"analytical_session_id": "S2"}]` |
+
+Reply 2's rejected question to `S1` is not counted: ThoughtSpot stored nothing for it.
 
 **3. When the chat is reopened**, the server asks ThoughtSpot for each session's messages and numbers the charts within each session:
 
@@ -426,7 +429,7 @@ Reply 3:  https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=S2&tsmcp
 | Org A | Chart | "This answer could not be loaded." | "This answer could not be loaded." |
 | Org B | "This answer could not be loaded." | Chart | Chart |
 
-If the chat had saved one session id (`S2`) for everything, reply 1 would have been looked up as `S2`, page 0 and shown reply 2's chart, and reply 3 would have shown nothing.
+Saving one session id per chat (the first one, `S1`) would look up replies 2 and 3 in `S1`, where their charts do not exist, so both would be lost. And assuming one question per reply would push every chart after reply 3's retry onto the wrong page.
 
 **Why ask ThoughtSpot to count, instead of trusting your own count?** If a user closes the browser while a chart is still loading, ThoughtSpot still finishes that chart, but your app never sees it. ThoughtSpot's count is always complete, so every later chart keeps the right number.
 
@@ -547,7 +550,7 @@ Two tables, because the browser and the model need different things:
 | | `claude_messages` | The **raw** Claude message list — `tool_use` / `tool_result` / `thinking` blocks included — replayed into the next request so follow-ups keep full context after a restart. |
 | `turns` | `role`, `content`, `answers`, `work` | What the UI renders. `answers` holds one placeholder per chart with only its `analytical_session_id` - **not** its `iframe_url` (expires with the ThoughtSpot answer, about 8 hours) or title. `work` holds the Analytics Agent's steps for **Show work**; `db_init()` adds the column to databases created before it existed. |
 | | `analytical_session_id` | The session this reply came from (assistant turns). A chat can span sessions after an Org switch. `db_init()` adds the column to older databases and fills it once from the chat's session. |
-| | `ts_message_count` | How many questions the reply sent to its session. The agent can retry or ask twice in one reply, and ThoughtSpot stores one message per question, so `reconcile_answers()` pairs replies with messages by this count. Older rows have none and count as 1. |
+| | `ts_message_counts` | JSON `{session id: questions}`: the questions ThoughtSpot accepted from this reply, per session. ThoughtSpot stores one message per question, and a reply can ask none (a greeting), several (the agent retries) or two sessions (an Org switch mid-reply), so `reconcile_answers()` pairs replies with messages by these counts. They are counted as each question is accepted (the `session_message` event), so a turn that fails or is cancelled afterwards still records them. Rows saved before this column existed have none and count as one question to the reply's session. |
 
 `turns` cascades on delete (`PRAGMA foreign_keys=ON`), so removing a conversation removes its transcript.
 
@@ -555,7 +558,7 @@ Two tables, because the browser and the model need different things:
 
 A reopened chat re-runs its charts against current data. `GET /api/conversations/{id}` gives every stored answer its `analytical_session_id` and an `answer_index` - its position in that session - and the client builds an embed URL from `tsmcpConversationId` (the answer's `analytical_session_id`) plus `tsmcpAnswerIndex`. The SDK resolves that to a live answer.
 
-The index must count the way ThoughtSpot counts, so `reconcile_answers()` asks ThoughtSpot how many answers each turn holds (`/api/rest/2.0/ai/agent/conversations/{id}/messages`, once per session the chat used) and pads the stored placeholders to match. A session ThoughtSpot will not return - for example, one in another Org - keeps its stored placeholders, so the SDK shows its notice for those charts instead of dropping them. The `reconcile_answers()` docstring also lists the steps to get an `answer_index` from a live `iframe_url`. That call is why opening a stored chat takes a few seconds; the UI shows a loading indicator meanwhile.
+The index must count the way ThoughtSpot counts, so `reconcile_answers()` asks ThoughtSpot how many answers each turn holds (`/api/rest/2.0/ai/agent/conversations/{id}/messages`, once per session the chat used) and pads the stored placeholders to match. A session ThoughtSpot will not return (a 4xx, for example one in another Org) keeps its stored placeholders, so the SDK shows its notice for those charts instead of dropping them. If ThoughtSpot is unavailable (5xx or timeout, after one retry), opening the chat fails with 503 instead: numbering charts without ThoughtSpot's count could show the wrong chart. The `reconcile_answers()` docstring also lists the steps to get an `answer_index` from a live `iframe_url`. That call is why opening a stored chat takes a few seconds; the UI shows a loading indicator meanwhile.
 
 `jsonable()` serializes the Claude history with `model_dump(mode="json")` rather than by hand. That matters for thinking blocks: their `signature` must come back **unchanged** on replay, and a hand-rolled `{"type", "text"}` mapping would drop it.
 
@@ -565,7 +568,8 @@ The index must count the way ThoughtSpot counts, so `reconcile_answers()` asks T
 POST /api/chat  →  create conversation row (first turn only)
                 →  insert user turn
                 →  run the agent loop, recording every SSE event
-   done / error →  insert assistant turn (text + answers + its analytical_session_id)
+   done / error →  insert assistant turn (text + answers + its analytical_session_id
+                     + ts_message_counts, counted from session_message events)
                 →  save claude_messages + the chat's latest analytical_session_id
 ```
 
@@ -591,6 +595,8 @@ In-memory `conversations` / `analytical_sessions` dicts stay as a hot cache in f
 - **No auth and no per-user scoping.** Every conversation in the file is visible to every caller. Add a user id column and filter on the authenticated user before this goes anywhere real.
 - **No pruning.** `claude_messages` grows with every turn. For long-lived chats, add [context editing or compaction](https://docs.anthropic.com) rather than replaying an unbounded history.
 - **Single process.** SQLite in WAL mode is fine for one uvicorn worker; use a real database if you run several.
+- **Chats saved before per-reply sessions.** The upgrade pins each old reply to the chat's session at that moment and counts it as one question. A chat that had already spanned two sessions, or where the agent had retried, cannot be repaired: nothing recorded which reply used which session.
+- **Show work in a reply that spans two sessions** only reloads the queries from the reply's last session.
 
 ## Project Structure
 

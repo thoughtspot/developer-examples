@@ -857,7 +857,7 @@ async def autopoll_session_updates(
     # Taken from this poll's own arguments, not `analytical_sessions`: in the turn where
     # the model replaces a dead session, the stored id still names the old one. Those
     # arguments come from the model, so the id is kept only if this conversation created
-    # that session; otherwise charts carry no session and are not replayed.
+    # that session; otherwise the charts are sent untagged.
     polled = arguments.get("analytical_session_id")
     session_id = polled if polled in conversation_sessions.get(conv_id, set()) else None
 
@@ -913,6 +913,13 @@ async def call_tool(
         return f"Tool call failed: {exc}", True
 
     is_error = bool(getattr(result, "is_error", False))
+    if name == "send_session_message" and not is_error:
+        # ThoughtSpot stored one message in this session. Saved chat history uses these
+        # to tell which of a session's messages belong to which reply, so they are sent
+        # even when the turn fails or is cancelled afterwards. Clients may ignore them.
+        sent_to = arguments.get("analytical_session_id")
+        if sent_to in conversation_sessions.get(conv_id, set()):
+            send({"type": "session_message", "analytical_session_id": sent_to})
     if is_error or name != POLL_TOOL:
         return result_text(result), is_error
     return await autopoll_session_updates(mcp, arguments, result, send, show_work, conv_id)

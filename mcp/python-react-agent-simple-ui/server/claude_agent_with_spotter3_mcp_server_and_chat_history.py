@@ -93,8 +93,9 @@ CREATE TABLE IF NOT EXISTS turns (
     created_at      TEXT NOT NULL,
     -- The session this reply's charts and Show work came from (assistant turns only).
     analytical_session_id TEXT,
-    -- How many messages this reply sent to that session; NULL on older rows (read as 1).
-    ts_message_count INTEGER
+    -- JSON {session id: questions this reply sent to it that ThoughtSpot accepted}.
+    -- NULL only on rows saved before it existed (read as 1 for the reply's session).
+    ts_message_counts TEXT
 );
 
 CREATE INDEX IF NOT EXISTS turns_by_conversation ON turns (conversation_id, id);
@@ -124,17 +125,31 @@ def db() -> Iterator[sqlite3.Connection]:
 def db_init() -> None:
     with db() as conn:
         conn.executescript(SCHEMA)
-        # A database from before `work` existed is left untouched by CREATE IF NOT EXISTS.
+        # A database from before a column existed is left untouched by CREATE IF NOT
+        # EXISTS, so add the missing ones. Columns are only ever added, never changed.
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(turns)")}
+        # One transaction for the column and its backfill: sqlite3 commits an ALTER on
+        # its own, and a crash between the two would skip the backfill for good.
+        conn.execute("BEGIN")
         if "work" not in columns:
             conn.execute("ALTER TABLE turns ADD COLUMN work TEXT NOT NULL DEFAULT '[]'")
-        if "ts_message_count" not in columns:
-            conn.execute("ALTER TABLE turns ADD COLUMN ts_message_count INTEGER")
+        if "ts_message_counts" not in columns:
+            conn.execute("ALTER TABLE turns ADD COLUMN ts_message_counts TEXT")
+            if "ts_message_count" in columns:
+                # A pre-release build kept one count per reply; carry those over.
+                conn.execute(
+                    "UPDATE turns SET ts_message_counts = CASE"
+                    " WHEN analytical_session_id IS NULL THEN '{}'"
+                    " ELSE json_object(analytical_session_id, ts_message_count) END"
+                    " WHERE ts_message_count IS NOT NULL"
+                )
         if "analytical_session_id" not in columns:
             conn.execute("ALTER TABLE turns ADD COLUMN analytical_session_id TEXT")
             # Older rows predate per-reply sessions. Pin each reply to the chat's session
             # as it stands now, once: the chat's session can change later, and a reply
-            # must keep pointing at the session that produced it.
+            # must keep pointing at the session that produced it. A chat that already
+            # spanned two sessions before this ran cannot be repaired: nothing recorded
+            # which reply used which.
             conn.execute(
                 "UPDATE turns SET analytical_session_id = ("
                 " SELECT c.analytical_session_id FROM conversations c"
@@ -204,13 +219,13 @@ def db_add_turn(
     answers: list[dict],
     work: list[dict] | None = None,
     analytical_session_id: str | None = None,
-    ts_message_count: int | None = None,
+    ts_message_counts: dict[str, int] | None = None,
 ) -> None:
     stamp = now_iso()
     with db() as conn:
         conn.execute(
             "INSERT INTO turns (conversation_id, role, content, answers, work, created_at,"
-            " analytical_session_id, ts_message_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            " analytical_session_id, ts_message_counts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 conv_id,
                 role,
@@ -219,7 +234,7 @@ def db_add_turn(
                 json.dumps(work or []),
                 stamp,
                 analytical_session_id,
-                ts_message_count,
+                None if ts_message_counts is None else json.dumps(ts_message_counts),
             ),
         )
         conn.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (stamp, conv_id))
@@ -268,6 +283,23 @@ def db_list_conversations(limit: int = 100) -> list[dict]:
     return [dict(row) for row in rows]
 
 
+def parse_message_counts(raw: str | None) -> dict[str, int] | None:
+    """A stored `ts_message_counts`, or None for a row saved before it existed."""
+    if raw is None:
+        return None
+    try:
+        counts = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(counts, dict):
+        return None
+    return {
+        key: value
+        for key, value in counts.items()
+        if isinstance(key, str) and isinstance(value, int) and value >= 0
+    }
+
+
 def db_get_conversation(conv_id: str) -> dict | None:
     with db() as conn:
         row = conn.execute(
@@ -279,7 +311,7 @@ def db_get_conversation(conv_id: str) -> dict | None:
             return None
         turns = conn.execute(
             "SELECT role, content, answers, work, created_at, analytical_session_id,"
-            " ts_message_count FROM turns"
+            " ts_message_counts FROM turns"
             " WHERE conversation_id = ? ORDER BY id",
             (conv_id,),
         ).fetchall()
@@ -294,7 +326,7 @@ def db_get_conversation(conv_id: str) -> dict | None:
                 "work": json.loads(turn["work"] or "[]"),
                 "created_at": turn["created_at"],
                 "analytical_session_id": turn["analytical_session_id"],
-                "ts_message_count": turn["ts_message_count"],
+                "ts_message_counts": parse_message_counts(turn["ts_message_counts"]),
             }
             for turn in turns
         ],
@@ -310,12 +342,16 @@ def db_get_session_ids(conv_id: str) -> tuple[str | None, set[str]]:
         if not row:
             return None, set()
         used = conn.execute(
-            "SELECT DISTINCT analytical_session_id FROM turns"
-            " WHERE conversation_id = ? AND analytical_session_id IS NOT NULL",
+            "SELECT analytical_session_id, ts_message_counts FROM turns"
+            " WHERE conversation_id = ? AND role = 'assistant'",
             (conv_id,),
         ).fetchall()
     current = row["analytical_session_id"]
-    sessions = {r["analytical_session_id"] for r in used}
+    sessions = set()
+    for r in used:
+        if r["analytical_session_id"]:
+            sessions.add(r["analytical_session_id"])
+        sessions.update((parse_message_counts(r["ts_message_counts"]) or {}).keys())
     if current:
         sessions.add(current)
     return current, sessions
@@ -364,9 +400,18 @@ class StreamRecorder:
         self.work: list[dict] = []  # the Analytics Agent's steps, for "Show work"
         # The session this reply's charts and Show work queries came from.
         self.session_id: str | None = None
+        # Questions ThoughtSpot accepted, per session. Counted as they happen, so a turn
+        # that fails or is cancelled afterwards still records them.
+        self.message_counts: dict[str, int] = {}
 
     def send(self, event: dict) -> None:
         kind = event.get("type")
+        if kind == "session_message":
+            # Bookkeeping for the saved history only; the browser has no use for it.
+            session_id = event.get("analytical_session_id")
+            if session_id:
+                self.message_counts[session_id] = self.message_counts.get(session_id, 0) + 1
+            return
         if kind == "delta":
             self.text_parts.append(event.get("text") or "")
         elif kind == "answer":
@@ -401,69 +446,21 @@ def append_work(work: list[dict], event: dict) -> None:
     work.append(step)
 
 
-def block_field(block: Any, name: str) -> Any:
-    """A field of a Claude content block, which is an SDK object or (once stored) a dict."""
-    return block.get(name) if isinstance(block, dict) else getattr(block, name, None)
-
-
-def session_message_count(turn_messages: list, session_id: str | None) -> int:
-    """How many questions this reply sent to `session_id` that ThoughtSpot accepted.
-
-    ThoughtSpot stores one message per accepted `send_session_message`, and a reply can
-    send more than one (the agent retries, or asks two questions) or none (a greeting).
-    `reconcile_answers` pairs replies with messages, so it needs the real count, not an
-    assumed one.
-    """
-    if not session_id:
-        return 0  # no session yet, so nothing was sent
-    sent: set[str] = set()
-    for message in turn_messages:
-        if message.get("role") != "assistant" or not isinstance(message.get("content"), list):
-            continue
-        for block in message["content"]:
-            arguments = block_field(block, "input") or {}
-            if (
-                block_field(block, "type") == "tool_use"
-                and block_field(block, "name") == "send_session_message"
-                and isinstance(arguments, dict)
-                and arguments.get("analytical_session_id") == session_id
-            ):
-                sent.add(block_field(block, "id"))
-    accepted = 0
-    for message in turn_messages:
-        if message.get("role") != "user" or not isinstance(message.get("content"), list):
-            continue
-        for block in message["content"]:
-            if (
-                isinstance(block, dict)
-                and block.get("type") == "tool_result"
-                and block.get("tool_use_id") in sent
-                and not block.get("is_error")
-            ):
-                accepted += 1
-    return accepted
-
-
-async def persist_turn(
-    conv_id: str, recorder: StreamRecorder, history: list | None, turn_start: int
-) -> None:
+async def persist_turn(conv_id: str, recorder: StreamRecorder, history: list | None) -> None:
     """Store the assistant turn, and the state the next turn needs.
 
-    `turn_start` is where this turn begins in `history`, so its own tool calls can be told
-    apart from earlier ones. Also runs when a turn fails or is cancelled: the user turn is
-    already stored, so skipping this would leave a question with no visible answer on
-    reopen.
+    Also runs when a turn fails or is cancelled: the user turn is already stored, so
+    skipping this would leave a question with no visible answer on reopen. A reply is
+    stored even if all it did was ask ThoughtSpot a question: that question is a message
+    in the session, and later replies are numbered after it.
     """
-    if recorder.text or recorder.answers or recorder.work:
-        # A reply with no chart or query may still have asked a session; if so, it was the
-        # chat's current one, since the model updates that id whenever it opens a new
-        # session. Whether it asked at all is in `message_count` (0 for a greeting).
-        session_id = recorder.session_id or analytical_sessions.get(conv_id)
-        # Unknown when the turn failed before a history came back; read as 1 on reopen.
-        message_count = (
-            session_message_count(history[turn_start:], session_id)
-            if history is not None and len(history) > turn_start
-            else None
+    if recorder.text or recorder.answers or recorder.work or recorder.message_counts:
+        # The session a reply's charts came from; else the one it asked; else the chat's
+        # current one (a reply that asked nothing - its counts say 0 either way).
+        session_id = (
+            recorder.session_id
+            or next(reversed(recorder.message_counts), None)
+            or analytical_sessions.get(conv_id)
         )
         await asyncio.to_thread(
             db_add_turn,
@@ -473,7 +470,7 @@ async def persist_turn(
             recorder.answers,
             recorder.work,
             session_id,
-            message_count,
+            dict(recorder.message_counts),
         )
     if history is not None:
         await asyncio.to_thread(
@@ -507,7 +504,7 @@ async def chat(request: ChatRequest):
             messages,
             conv_id,
             recorder.send,
-            persist=lambda history: persist_turn(conv_id, recorder, history, len(messages)),
+            persist=lambda history: persist_turn(conv_id, recorder, history),
             show_work=True,
         )
 
@@ -519,6 +516,10 @@ async def chat(request: ChatRequest):
 # each chart gets the right `answer_index`.
 
 
+class ThoughtSpotUnavailable(Exception):
+    """ThoughtSpot failed in a way that may pass (5xx, timeout, network)."""
+
+
 async def ts_request(
     method: str,
     path: str,
@@ -526,9 +527,12 @@ async def ts_request(
     read_timeout: float,
     headers: dict | None = None,
     json_body: dict | None = None,
+    raise_unavailable: bool = False,
 ) -> Any:
     """Call the ThoughtSpot REST API as the server user. Returns the JSON body, or None
-    (logged) when the call fails."""
+    (logged) when the call fails. With `raise_unavailable`, a failure that may pass
+    (5xx, timeout, network) raises `ThoughtSpotUnavailable` instead, so the caller can tell
+    it apart from "this cannot be read" (4xx)."""
     try:
         async with httpx2.AsyncClient(timeout=httpx2.Timeout(10.0, read=read_timeout)) as client:
             response = await client.request(
@@ -543,21 +547,37 @@ async def ts_request(
             )
         if response.status_code != 200:
             print(f"[History] {label} -> {response.status_code}")
+            if raise_unavailable and response.status_code >= 500:
+                raise ThoughtSpotUnavailable(f"{label} -> {response.status_code}")
             return None
         return response.json()
-    except (httpx2.HTTPError, ValueError, TypeError, AttributeError) as exc:
+    except httpx2.HTTPError as exc:
+        print(f"[History] {label} failed: {type(exc).__name__}: {exc}")
+        if raise_unavailable:
+            raise ThoughtSpotUnavailable(f"{label} failed: {type(exc).__name__}") from exc
+        return None
+    except (ValueError, TypeError, AttributeError) as exc:
         print(f"[History] {label} failed: {type(exc).__name__}: {exc}")
         return None
 
 
 async def ts_conversation_messages(session_id: str) -> list[dict] | None:
-    """A ThoughtSpot conversation's messages, oldest first, or None if unreadable."""
-    body = await ts_request(
-        "GET",
-        f"/api/rest/2.0/ai/agent/conversations/{quote(session_id, safe='')}/messages",
-        label=f"getConversation {session_id}",
-        read_timeout=45.0,
-    )
+    """A ThoughtSpot conversation's messages, oldest first, or None if ThoughtSpot will
+    not return them (4xx - for example, the session is in another Org). Raises
+    `ThoughtSpotUnavailable` on a failure that may pass, after one retry."""
+    for attempt in (1, 2):
+        try:
+            body = await ts_request(
+                "GET",
+                f"/api/rest/2.0/ai/agent/conversations/{quote(session_id, safe='')}/messages",
+                label=f"getConversation {session_id}",
+                read_timeout=45.0,
+                raise_unavailable=True,
+            )
+            break
+        except ThoughtSpotUnavailable:
+            if attempt == 2:
+                raise
     if not isinstance(body, dict):
         return None
     messages = body.get("messages")
@@ -660,50 +680,73 @@ def reconcile_answers(
     This function does steps 2 to 4 for every chart at once, turn by turn.
     `ts_messages_by_session` holds each session's messages, or None when ThoughtSpot
     would not return them - for example, the session belongs to another Org. Those
-    replies keep their saved charts, numbered in saved order, so the SDK can still try
-    them and show its notice if they cannot load.
+    charts keep their saved placeholders, numbered in saved order, so the SDK can still
+    try them and show its notice if they cannot load.
+
+    Which messages belong to which reply comes from the reply's `ts_message_counts`: the
+    questions ThoughtSpot accepted from it, per session. A reply can ask more than one
+    (the agent retries), none (a greeting), or ask two sessions (an Org switch mid-reply),
+    so each session keeps its own position and each chart its own session.
     """
-    turns = conversation.get("turns") or []
+    position: dict[str, int] = {}  # next unread message, per session
+    index: dict[str, int] = {}  # next answer_index, per session
 
-    # ThoughtSpot stores one message per question a reply sent to its session: pair each
-    # session's messages with that session's replies, in order (`ts_message_count`).
-    replies_by_session: dict[str | None, list[dict]] = {}
-    for turn in turns:
-        if turn.get("role") == "assistant":
-            replies_by_session.setdefault(reply_session(turn, conversation), []).append(turn)
+    for turn in conversation.get("turns") or []:
+        if turn.get("role") != "assistant":
+            continue
+        primary = reply_session(turn, conversation)
+        counts = reply_message_counts(turn, conversation)
 
-    for session_id, replies in replies_by_session.items():
-        ts_messages = ts_messages_by_session.get(session_id) if session_id else None
-        index = 0
-        position = 0
-        for turn in replies:
-            answers = turn.get("answers") or []
-            # How many of the session's messages this reply sent: the agent can retry
-            # or ask twice in one reply. Older rows did not record it; read them as 1.
-            count = turn.get("ts_message_count")
-            count = 1 if count is None else count
-            own = (ts_messages or [])[position : position + count]
-            position += count
-            if ts_messages is None:
-                # Unreadable: fall back to the stored shape rather than drop charts.
-                merged = answers
+        # The reply's saved charts, grouped by the session each came from.
+        charts: dict[str | None, list[dict]] = {}
+        for answer in turn.get("answers") or []:
+            charts.setdefault(answer.get("analytical_session_id") or primary, []).append(answer)
+        for session_id in counts:
+            charts.setdefault(session_id, [])
+
+        merged_all: list[dict] = []
+        for session_id, saved in charts.items():
+            count = counts.get(session_id, 0)
+            ts_messages = ts_messages_by_session.get(session_id) if session_id else None
+            start = position.get(session_id, 0)
+            if session_id:
+                position[session_id] = start + count
+            if ts_messages is None or (count == 0 and saved):
+                # Unreadable - or charts with no recorded question, which cannot be
+                # matched to a message: keep the stored shape rather than drop charts.
+                merged = saved
             else:
+                own = ts_messages[start : start + count]
                 expected = sum(len(answer_items(m, thinking=False)) for m in own)
-                # The thinking answers behind this turn's Show work queries, in step
-                # order. The client loads one by id when its row is expanded.
-                thinking_answers = [a for m in own for a in answer_items(m, thinking=True)]
-                turn["work_answer_ids"] = [item["answer_id"] for item in thinking_answers]
+                if session_id == primary:
+                    # The thinking answers behind this turn's Show work queries, in step
+                    # order. The client loads one by id when its row is expanded.
+                    turn["work_answer_ids"] = [
+                        item["answer_id"] for m in own for item in answer_items(m, thinking=True)
+                    ]
                 # Saved placeholders, padded out to the count ThoughtSpot reports.
-                merged = answers[:expected] + [
-                    {} for _ in range(max(0, expected - len(answers)))
-                ]
+                merged = saved[:expected] + [{} for _ in range(max(0, expected - len(saved)))]
             for answer in merged:
                 answer["analytical_session_id"] = session_id
-                answer["answer_index"] = index
-                index += 1
-            turn["answers"] = merged
-            turn["analytical_session_id"] = session_id
+                if session_id:
+                    answer["answer_index"] = index.get(session_id, 0)
+                    index[session_id] = answer["answer_index"] + 1
+                else:
+                    answer["answer_index"] = None
+            merged_all.extend(merged)
+        turn["answers"] = merged_all
+        turn["analytical_session_id"] = primary
     return conversation
+
+
+def reply_message_counts(turn: dict, conversation: dict) -> dict[str, int]:
+    """Questions a stored reply sent, per session. Rows saved before this was recorded
+    count as one question to the reply's session."""
+    counts = turn.get("ts_message_counts")
+    if isinstance(counts, dict):
+        return counts
+    session_id = reply_session(turn, conversation)
+    return {session_id: 1} if session_id else {}
 
 
 # ── Chat history endpoints ──────────────────────────────────────────────────────
@@ -720,16 +763,26 @@ async def get_conversation(conv_id: str):
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    # Each session the chat's replies came from, read once and in parallel.
-    session_ids = list(
-        dict.fromkeys(
-            session_id
-            for turn in conversation["turns"]
-            if turn["role"] == "assistant"
-            and (session_id := reply_session(turn, conversation))
-        )
-    )
-    messages = await asyncio.gather(*(ts_conversation_messages(s) for s in session_ids))
+    # Each session the chat's replies or charts came from, read once and in parallel.
+    session_ids: dict[str, None] = {}
+    for turn in conversation["turns"]:
+        if turn["role"] != "assistant":
+            continue
+        for session_id in (
+            reply_session(turn, conversation),
+            *reply_message_counts(turn, conversation),
+            *(answer.get("analytical_session_id") for answer in turn.get("answers") or []),
+        ):
+            if session_id:
+                session_ids[session_id] = None
+    try:
+        messages = await asyncio.gather(*(ts_conversation_messages(s) for s in session_ids))
+    except ThoughtSpotUnavailable as exc:
+        # Numbering charts without ThoughtSpot's count could point one at the wrong
+        # chart; better to let the user try again.
+        raise HTTPException(
+            status_code=503, detail="ThoughtSpot is not responding. Try again shortly."
+        ) from exc
     return reconcile_answers(conversation, dict(zip(session_ids, messages)))
 
 
