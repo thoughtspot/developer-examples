@@ -587,6 +587,13 @@ def valid_session_id(value: Any) -> bool:
     return isinstance(value, str) and SESSION_ID_PATTERN.fullmatch(value) is not None
 
 
+def forget_conversation(conv_id: str) -> None:
+    """Drop every in-memory record of a conversation (it was deleted)."""
+    conversations.pop(conv_id, None)
+    analytical_sessions.pop(conv_id, None)
+    conversation_sessions.pop(conv_id, None)
+
+
 def trust_session(conv_id: str, session_id: Any) -> None:
     """Record a session as belonging to a conversation (created by it, or stored for it)."""
     if valid_session_id(session_id):

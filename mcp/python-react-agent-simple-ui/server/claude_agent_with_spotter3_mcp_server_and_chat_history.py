@@ -33,6 +33,7 @@ from spotter3_core import (
     analytical_sessions,
     conversations,
     create_app,
+    forget_conversation,
     trust_session,
     valid_session_id,
     run_turn,
@@ -766,6 +767,5 @@ async def rename_conversation(conv_id: str, request: RenameRequest):
 async def delete_conversation(conv_id: str):
     if not await asyncio.to_thread(db_delete_conversation, conv_id):
         raise HTTPException(status_code=404, detail="Conversation not found")
-    conversations.pop(conv_id, None)
-    analytical_sessions.pop(conv_id, None)
+    forget_conversation(conv_id)
     return {"status": "deleted"}
