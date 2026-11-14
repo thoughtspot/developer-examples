@@ -82,6 +82,10 @@ export function createProxyApp(options: CreateProxyAppOptions) {
 	}
 
 	const app = express();
+	// Trust the first hop's X-Forwarded-For (ngrok, a load balancer, etc.) so the
+	// rate limiter in mcpAuthRouter keys on the real client IP. Raise the hop
+	// count if more than one proxy sits in front of this server.
+	app.set("trust proxy", 1);
 	const oauthEnabled = !tsStaticToken;
 
 	if (oauthEnabled) {
@@ -137,14 +141,20 @@ export function createProxyApp(options: CreateProxyAppOptions) {
 			}
 		}
 
-		const upstreamUrl = new URL(upstreamPath, upstreamBaseUrl);
+		const upstreamBase = new URL(upstreamBaseUrl);
+		const upstreamUrl = new URL(upstreamPath, upstreamBase);
 		const queryIndex = req.originalUrl.indexOf("?");
 		if (queryIndex !== -1) {
 			upstreamUrl.search = req.originalUrl.slice(queryIndex);
 		}
+		if (upstreamUrl.origin !== upstreamBase.origin) {
+			res.status(400).json({ error: "Invalid upstream URL" });
+			return;
+		}
+		const safeUpstreamUrl = `${upstreamBase.origin}${upstreamUrl.pathname}${upstreamUrl.search}`;
 
 		const hasBody = !["GET", "HEAD"].includes(req.method);
-		const upstreamRes = await fetch(upstreamUrl, {
+		const upstreamRes = await fetch(safeUpstreamUrl, {
 			method: req.method,
 			headers: {
 				...forwardableRequestHeaders(req),
