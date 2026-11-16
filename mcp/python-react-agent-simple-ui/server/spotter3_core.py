@@ -27,6 +27,7 @@ MCP server: https://github.com/thoughtspot/mcp-server
 import asyncio
 import json
 import os
+import re
 import time
 import traceback
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
@@ -565,9 +566,38 @@ Style: short markdown. Lead with the answer, then at most three bullets. No prea
 # conv_id -> full Claude message history, including tool interactions
 conversations: dict[str, list] = {}
 
-# conv_id -> analytical_session_id from create_analysis_session, added to the system prompt
-# on later turns so follow-ups continue in the same ThoughtSpot session.
+# conv_id -> the latest analytical_session_id from create_analysis_session, added to the
+# system prompt on later turns so follow-ups continue in the same ThoughtSpot session.
+#
+# One chat can span several sessions: a session lives in the ThoughtSpot Org it was
+# created in, so after an Org switch the old one rejects new messages and the model opens
+# another. Each chart therefore records its own session (see `emit_update_events`).
 analytical_sessions: dict[str, str] = {}
+
+# conv_id -> every session create_analysis_session returned for that conversation. Only
+# these are trusted as a chart's session: the session id in a poll's arguments comes from
+# the model, so a prompt could steer it at any id. Seeded from storage on reload.
+conversation_sessions: dict[str, set[str]] = {}
+
+# ThoughtSpot analytical session ids are short URL-safe tokens (e.g. "zKyqJc-l9FZb").
+SESSION_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,128}")
+
+
+def valid_session_id(value: Any) -> bool:
+    return isinstance(value, str) and SESSION_ID_PATTERN.fullmatch(value) is not None
+
+
+def forget_conversation(conv_id: str) -> None:
+    """Drop every in-memory record of a conversation (it was deleted)."""
+    conversations.pop(conv_id, None)
+    analytical_sessions.pop(conv_id, None)
+    conversation_sessions.pop(conv_id, None)
+
+
+def trust_session(conv_id: str, session_id: Any) -> None:
+    """Record a session as belonging to a conversation (created by it, or stored for it)."""
+    if valid_session_id(session_id):
+        conversation_sessions.setdefault(conv_id, set()).add(session_id)
 
 
 def build_tools(mcp_tools: list) -> list[dict]:
@@ -602,14 +632,22 @@ def build_system(conv_id: str) -> list[dict]:
 
 
 def remember_session(conv_id: str, tool_name: str, text: str) -> None:
-    """Capture the analytical_session_id so later turns reuse the same session."""
-    if tool_name != "create_analysis_session" or analytical_sessions.get(conv_id):
+    """Capture the analytical_session_id so later turns reuse the same session.
+
+    A later successful create replaces the stored id: the model only opens a second
+    session when the first one stopped accepting messages (for example, it belongs to
+    another Org), so keeping the old id would send every follow-up to a dead session.
+    """
+    if tool_name != "create_analysis_session":
         return
     try:
         session_id = json.loads(text).get("analytical_session_id")
     except (ValueError, TypeError, AttributeError):
         return
-    if session_id:
+    if not valid_session_id(session_id):
+        return
+    trust_session(conv_id, session_id)
+    if session_id != analytical_sessions.get(conv_id):
         analytical_sessions[conv_id] = session_id
         print(f"[MCP] conv {conv_id} -> analytical session {session_id}")
 
@@ -723,7 +761,7 @@ def strip_rendered_answers(updates: list[dict]) -> list[dict]:
     return cleaned
 
 
-def emit_work_event(update: dict, send: Send) -> None:
+def emit_work_event(update: dict, send: Send, session_id: str | None = None) -> None:
     """Send one update as a step of the Agent's work, for the UI's "Show work" section.
 
     This is the Analytics Agent's own reasoning as the MCP server reports it - not
@@ -749,6 +787,7 @@ def emit_work_event(update: dict, send: Send) -> None:
                 # through /work-answers instead.
                 "iframe_url": fields["iframe_url"],
                 "frame_params": fields["frame_params"],
+                "analytical_session_id": session_id,
             }
         )
     elif kind in PROGRESS_TYPES:
@@ -760,11 +799,18 @@ def emit_work_event(update: dict, send: Send) -> None:
             send({"type": "work", "kind": "thought", "text": text})
 
 
-def emit_update_events(updates: list[dict], send: Send, show_work: bool = False) -> None:
-    """Stream Analytics Agent progress to the browser while we poll."""
+def emit_update_events(
+    updates: list[dict], send: Send, show_work: bool = False, session_id: str | None = None
+) -> None:
+    """Stream Analytics Agent progress to the browser while we poll.
+
+    `session_id` is the analytical session these updates were polled from. Each chart
+    carries it, because a chat can span sessions (see `analytical_sessions`) and a stored
+    chart can only be replayed from the session that produced it.
+    """
     for update in updates:
         if show_work:
-            emit_work_event(update, send)
+            emit_work_event(update, send, session_id)
         kind = update.get("type")
         thinking = is_thinking_update(update)
         if kind == "answer":
@@ -775,7 +821,14 @@ def emit_update_events(updates: list[dict], send: Send, show_work: bool = False)
             # makes a stored answer resolvable later.
             if not thinking:
                 answer_id = update.get("answer_id")
-                send({"type": "answer", "answer_id": answer_id, **answer_fields(update)})
+                send(
+                    {
+                        "type": "answer",
+                        "answer_id": answer_id,
+                        "analytical_session_id": session_id,
+                        **answer_fields(update),
+                    }
+                )
         elif kind in PROGRESS_TYPES or (thinking and kind not in TEXT_TYPES):
             # Reasoning prose arrives in word-sized chunks and flickers as status, so only
             # steps are shown. The model still gets the prose in the tool result.
@@ -788,7 +841,12 @@ def session_updates(payload: dict) -> list[dict]:
 
 
 async def autopoll_session_updates(
-    mcp: McpTurn, arguments: dict, first_result: Any, send: Send, show_work: bool
+    mcp: McpTurn,
+    arguments: dict,
+    first_result: Any,
+    send: Send,
+    show_work: bool,
+    conv_id: str,
 ) -> tuple[str, bool]:
     """Keep polling `get_session_updates` until the Agent is done.
 
@@ -796,12 +854,18 @@ async def autopoll_session_updates(
     model one consolidated result instead of spending a model turn per poll.
     """
     updates: list[dict] = []
+    # Taken from this poll's own arguments, not `analytical_sessions`: in the turn where
+    # the model replaces a dead session, the stored id still names the old one. Those
+    # arguments come from the model, so the id is kept only if this conversation created
+    # that session; otherwise the charts are sent untagged.
+    polled = arguments.get("analytical_session_id")
+    session_id = polled if polled in conversation_sessions.get(conv_id, set()) else None
 
     def absorb(result: Any) -> tuple[list[dict], bool]:
         payload = tool_payload(result)
         new = session_updates(payload)
         updates.extend(new)
-        emit_update_events(new, send, show_work)
+        emit_update_events(new, send, show_work, session_id)
         return new, bool(payload.get("is_done"))
 
     _, is_done = absorb(first_result)
@@ -839,7 +903,7 @@ async def autopoll_session_updates(
 
 
 async def call_tool(
-    mcp: McpTurn, name: str, arguments: dict, send: Send, show_work: bool
+    mcp: McpTurn, name: str, arguments: dict, send: Send, show_work: bool, conv_id: str
 ) -> tuple[str, bool]:
     """Run one MCP tool call. Returns (result text for the model, is_error)."""
     try:
@@ -849,9 +913,16 @@ async def call_tool(
         return f"Tool call failed: {exc}", True
 
     is_error = bool(getattr(result, "is_error", False))
+    if name == "send_session_message" and not is_error:
+        # ThoughtSpot stored one message in this session. Saved chat history uses these
+        # to tell which of a session's messages belong to which reply, so they are sent
+        # even when the turn fails or is cancelled afterwards. Clients may ignore them.
+        sent_to = arguments.get("analytical_session_id")
+        if sent_to in conversation_sessions.get(conv_id, set()):
+            send({"type": "session_message", "analytical_session_id": sent_to})
     if is_error or name != POLL_TOOL:
         return result_text(result), is_error
-    return await autopoll_session_updates(mcp, arguments, result, send, show_work)
+    return await autopoll_session_updates(mcp, arguments, result, send, show_work, conv_id)
 
 
 # ── Agent loop ──────────────────────────────────────────────────────────────────
@@ -910,7 +981,7 @@ async def run_agent(
             # splitting them teaches the model to stop making parallel calls.
             tool_uses = [b for b in message.content if b.type == "tool_use"]
             results = await asyncio.gather(
-                *(call_tool(mcp, b.name, b.input, send, show_work) for b in tool_uses)
+                *(call_tool(mcp, b.name, b.input, send, show_work, conv_id) for b in tool_uses)
             )
             tool_results = []
             for block, (text, is_error) in zip(tool_uses, results):

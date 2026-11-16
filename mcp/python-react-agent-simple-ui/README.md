@@ -118,7 +118,7 @@ Then put an `<iframe src="{iframe_url}" srcdoc="Loading chart…">` wherever an 
 
 #### 7. (Optional) Persist chat history
 
-Store the raw model messages, the `analytical_session_id`, and **one empty placeholder per answer** - not its title or its `iframe_url`, which expires with the ThoughtSpot answer (about 8 hours). On replay, the SDK resolves a current chart from the conversation id and the answer's index. For the big picture, start with [How chat history works](#how-chat-history-works).
+Store the raw model messages, the `analytical_session_id`, and **one placeholder per answer holding only the session that produced it** - not its title or its `iframe_url`, which expires with the ThoughtSpot answer (about 8 hours). On replay, the SDK resolves a current chart from the answer's session id and its index in that session. For the big picture, start with [How chat history works](#how-chat-history-works).
 
 #### 8. Production checklist
 
@@ -265,7 +265,7 @@ conversations:        { conv_id → [user msg, assistant msg + tool calls, tool 
 analytical_sessions:  { conv_id → analytical_session_id }
 ```
 
-Full message history (tool interactions included) is kept in memory per `conv_id`. Each `/api/chat` request either starts a new conversation or continues one via the `response_id` returned in the previous `done` event. When Claude calls `create_analysis_session`, the returned `analytical_session_id` is stored and injected into the system prompt on later turns so follow-ups stay in the same ThoughtSpot session.
+Full message history (tool interactions included) is kept in memory per `conv_id`. Each `/api/chat` request either starts a new conversation or continues one via the `response_id` returned in the previous `done` event. When Claude calls `create_analysis_session`, the returned `analytical_session_id` is stored and injected into the system prompt on later turns so follow-ups stay in the same ThoughtSpot session. A later successful `create_analysis_session` replaces it, so follow-ups go to the newest session. In practice the model opens a new session when the old one stops accepting messages (for example, after an Org switch); nothing in the code forces that.
 
 #### Agentic loop
 
@@ -290,8 +290,9 @@ Other Claude API details worth noting:
 |-------|--------|---------|
 | `delta` | `text` | Streamed assistant text |
 | `status` | `message` | Thinking, tool start, Analytics Agent step, or reconnecting |
-| `answer` | `answer_id`, `title`, `query`, `iframe_url`, `frame_params` | A chart to render. `frame_params` carries the embed ids when there is no ready-made `iframe_url` |
+| `answer` | `answer_id`, `analytical_session_id`, `title`, `query`, `iframe_url`, `frame_params` | A chart to render. `frame_params` carries the embed ids when there is no ready-made `iframe_url` |
 | `work` | `kind`, `text`, `query`, `iframe_url`, `frame_params` | One step of the Analytics Agent's work, for **Show work** (chat-history backend only). `kind` is `step` (progress), `thought` (reasoning prose — consecutive ones join into one), or `query` (a query tried before the final answer) |
+| `session_message` | `analytical_session_id` | ThoughtSpot accepted a question in this session. Used to save chat history; the UI ignores it. |
 | `done` | `response_id` | Turn complete; pass `response_id` back for follow-ups |
 | `error` | `message` | Fatal error for this turn |
 
@@ -359,19 +360,80 @@ This is the big picture, with no code. The developer detail follows.
 
 **The goal.** A user closes the app, comes back tomorrow, opens yesterday's chat and sees the same questions, replies and charts. They can also ask a follow-up question.
 
-**What to save for each chat (only three things):**
+**Words used here**
 
-| Save this | What it is | Why |
-|-----------|------------|-----|
-| The messages | Every question and every reply, in order | To show the chat again, and so the AI remembers the context for follow-up questions |
-| The ThoughtSpot conversation id | One id per chat, returned by ThoughtSpot (`analytical_session_id`) | ThoughtSpot keeps the charts for that chat under this id |
-| How many charts each reply had | Just a count, for example "this reply had 2 charts" | To know where to put each chart when the chat is reopened |
+| Word | Meaning |
+|------|---------|
+| Chat | One conversation in your app: the list in the sidebar. |
+| Session | ThoughtSpot's side of the conversation, created by `create_analysis_session`. Its id (`analytical_session_id`) is the "conversation id" the Visual Embed SDK asks for. |
+| Answer | One chart. ThoughtSpot calls charts *answers*, so the code says `answer`. |
+| `answer_index` | A chart's position in its session: the first chart is 0, the next is 1, and so on. |
+
+**How a chart comes back.** Think of a session as a notebook and its charts as numbered pages. ThoughtSpot keeps the notebook. Your app only remembers which notebook (the session id) and which page (`answer_index`). To show the chart again, the app gives both to the SDK, and ThoughtSpot draws the chart fresh, with today's data.
+
+**What to save**
+
+| Save this | Why |
+|-----------|-----|
+| Every question and reply, in order | To show the chat again, and so the AI keeps the context for follow-ups. |
+| For each reply: the session it used, and how many questions it sent to it | ThoughtSpot stores one message per question. The count says which of the session's messages belong to which reply. |
+| For each chart: a placeholder holding its session id | So each chart is looked up in its own notebook. |
 
 **What NOT to save:** the chart link (`iframe_url`) or the chart title. A chart link stops working after about 8 hours, so a saved link shows an error tomorrow. (In this example, the saved copy of the AI's own working notes, `claude_messages`, can still contain chart titles from ThoughtSpot's replies. Only what the screen shows, the `turns` table, leaves them out.)
 
-**How a chart comes back when a chat is reopened.** Think of the charts in a chat as numbered pages in a notebook. ThoughtSpot keeps the notebook (the conversation id). Your app only needs to remember the page number (`answer_index`). The first chart in the chat is page 0, the next is page 1, and so on, across the whole chat. To show a chart again, the app gives ThoughtSpot both the notebook and the page number, and ThoughtSpot draws the chart fresh, with today's data.
+#### A chat can span several sessions (Orgs)
 
-(ThoughtSpot calls each chart an *answer*, so the code and the rest of this README say `answer` and `answer_index`.)
+Usually a chat uses one session. But a session belongs to the ThoughtSpot Org it was created in. If the user's token moves to another Org mid-chat, the old session rejects new questions, so the agent opens a new session and later charts go into that new notebook. That is why the session is saved **with each reply and each chart**, and why charts are numbered **within their own session**. With one id per chat, a chart from the second session would be looked up in the first one and come back as the wrong chart, or not at all.
+
+When the chat is reopened, a chart loads only if the viewer's token is in that chart's Org. A chart from another Org cannot be rebuilt, so the Visual Embed SDK shows "This answer could not be loaded." in its place (SDK 1.54.1 or later; change the text with `unresolvedAnswerNoticeText`). Older SDKs instead reloaded the chart in a loop.
+
+#### Example: one chat, start to finish
+
+A user asks three questions in one chat, and switches Org after the first.
+
+**1. While chatting**
+
+| # | User's Org | Question | What the agent does | Charts |
+|---|------------|----------|---------------------|--------|
+| 1 | Org A | "total sales by year" | Creates session `S1` and asks 1 question. | 1 |
+| 2 | Org B | "total sales by region" | Tries `S1`; ThoughtSpot rejects it (it belongs to Org A). Creates session `S2` and asks 1 question. | 1 |
+| 3 | Org B | "total sales by month" | Asks in `S2`. The first answer is not usable, so it asks again. ThoughtSpot accepts both: 2 questions. | 1 |
+
+**2. What gets saved** (one row per reply in the `turns` table)
+
+| Reply | `analytical_session_id` | `ts_message_counts` | `answers` |
+|-------|-------------------------|---------------------|-----------|
+| 1 | `S1` | `{"S1": 1}` | `[{"analytical_session_id": "S1"}]` |
+| 2 | `S2` | `{"S2": 1}` | `[{"analytical_session_id": "S2"}]` |
+| 3 | `S2` | `{"S2": 2}` | `[{"analytical_session_id": "S2"}]` |
+
+Reply 2's rejected question to `S1` is not counted: ThoughtSpot stored nothing for it.
+
+**3. When the chat is reopened**, the server asks ThoughtSpot for each session's messages and numbers the charts within each session:
+
+- `S1` has 1 message. Reply 1 owns it, so its chart is `S1`, page 0.
+- `S2` has 3 messages. Reply 2 owns message 1 (chart: `S2`, page 0). Reply 3 owns messages 2 and 3 (chart: `S2`, page 1).
+
+The browser turns each chart into a link for the SDK:
+
+```
+Reply 1:  https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=S1&tsmcpAnswerIndex=0
+Reply 2:  https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=S2&tsmcpAnswerIndex=0
+Reply 3:  https://<your-thoughtspot>/v2/?tsmcp=true&tsmcpConversationId=S2&tsmcpAnswerIndex=1
+```
+
+**4. What the viewer sees**
+
+| Viewer's Org | Reply 1 | Reply 2 | Reply 3 |
+|--------------|---------|---------|---------|
+| Org A | Chart | "This answer could not be loaded." | "This answer could not be loaded." |
+| Org B | "This answer could not be loaded." | Chart | Chart |
+
+Saving one session id per chat (the first one, `S1`) would look up replies 2 and 3 in `S1`, where their charts do not exist, so both would be lost. And assuming one question per reply would push every chart after reply 3's retry onto the wrong page.
+
+**Why ask ThoughtSpot to count, instead of trusting your own count?** If a user closes the browser while a chart is still loading, ThoughtSpot still finishes that chart, but your app never sees it. ThoughtSpot's count is always complete, so every later chart keeps the right number.
+
+**Captions:** a reopened chat shows charts without their title captions, because titles are no longer saved. Live chats still show them.
 
 **Finding a chart's page number from its link.** Each chart link from the MCP server looks like this:
 
@@ -380,9 +442,9 @@ https://<your-thoughtspot>/?tsmcp=true#/embed/conv-assist-answer?sessionId=7272.
 ```
 
 1. From the link, note `sessionId` and `genNo`. Together they name one chart.
-2. Ask ThoughtSpot for the chat's full list of messages, using the conversation id.
+2. Ask ThoughtSpot for the session's full list of messages, using the session id.
 3. Go through the messages from oldest to newest. Count only the final charts. Skip the "thinking" charts the Agent drew while it worked.
-4. Number the final charts 0, 1, 2, and so on.
+4. Number the final charts 0, 1, 2, and so on, across the whole session.
 5. The chart with the same `sessionId` and `genNo` as your link: its number is the page number (`answer_index`). (A chart's `answer_id` is text that contains both values, like `{"session_id":"7272...","gen_no":2}`. Read the two values out of it before comparing.)
 
 This example does the counting for you, in `reconcile_answers()` in [`server/claude_agent_with_spotter3_mcp_server_and_chat_history.py`](server/claude_agent_with_spotter3_mcp_server_and_chat_history.py).
@@ -401,6 +463,8 @@ Some apps save each reply as one HTML string, with the chart `<iframe>` inside i
 2. Work out that chart's page number (`answer_index`) with the 5 steps above. Do this once the reply is complete.
 3. Replace the link with a placeholder that holds the number, for example `{{TS_CHART:3}}`.
 4. Save the HTML and the conversation id.
+
+> **Orgs:** save the conversation id **with each reply**, not once per chat: it is the id of the session that produced that reply's charts (see [A chat can span several sessions](#a-chat-can-span-several-sessions-orgs)). The steps below use that reply's id, and count `N` within that session.
 
 **When reopening the chat:**
 
@@ -484,15 +548,17 @@ Two tables, because the browser and the model need different things:
 | `conversations` | `id`, `title`, `created_at`, `updated_at` | The sidebar list. `title` is the first line of the first user message. |
 | | `analytical_session_id` | The ThoughtSpot session, so a reopened conversation continues in the same one. |
 | | `claude_messages` | The **raw** Claude message list — `tool_use` / `tool_result` / `thinking` blocks included — replayed into the next request so follow-ups keep full context after a restart. |
-| `turns` | `role`, `content`, `answers`, `work` | What the UI renders. `answers` holds one empty placeholder per chart - **not** its `iframe_url` (expires with the ThoughtSpot answer, about 8 hours) or title. `work` holds the Analytics Agent's steps for **Show work**; `db_init()` adds the column to databases created before it existed. |
+| `turns` | `role`, `content`, `answers`, `work` | What the UI renders. `answers` holds one placeholder per chart with only its `analytical_session_id` - **not** its `iframe_url` (expires with the ThoughtSpot answer, about 8 hours) or title. `work` holds the Analytics Agent's steps for **Show work**; `db_init()` adds the column to databases created before it existed. |
+| | `analytical_session_id` | The session this reply came from (assistant turns). A chat can span sessions after an Org switch. `db_init()` adds the column to older databases and fills it once from the chat's session. |
+| | `ts_message_counts` | JSON `{session id: questions}`: the questions ThoughtSpot accepted from this reply, per session. ThoughtSpot stores one message per question, and a reply can ask none (a greeting), several (the agent retries) or two sessions (an Org switch mid-reply), so `reconcile_answers()` pairs replies with messages by these counts. They are counted as each question is accepted (the `session_message` event), so a turn that fails or is cancelled afterwards still records them. Rows saved before this column existed have none and count as one question to the reply's session. |
 
 `turns` cascades on delete (`PRAGMA foreign_keys=ON`), so removing a conversation removes its transcript.
 
 ### Replaying charts
 
-A reopened chat re-runs its charts against current data. `GET /api/conversations/{id}` gives every stored answer an `answer_index` - its position in the conversation - and the client builds an embed URL from `tsmcpConversationId` (the `analytical_session_id`) plus `tsmcpAnswerIndex`. The SDK resolves that to a live answer.
+A reopened chat re-runs its charts against current data. `GET /api/conversations/{id}` gives every stored answer its `analytical_session_id` and an `answer_index` - its position in that session - and the client builds an embed URL from `tsmcpConversationId` (the answer's `analytical_session_id`) plus `tsmcpAnswerIndex`. The SDK resolves that to a live answer.
 
-The index must count the way ThoughtSpot counts, so `reconcile_answers()` asks ThoughtSpot how many answers each turn holds (`/api/rest/2.0/ai/agent/conversations/{id}/messages`) and pads the stored placeholders to match. The `reconcile_answers()` docstring also lists the steps to get an `answer_index` from a live `iframe_url`. That call is why opening a stored chat takes a few seconds; the UI shows a loading indicator meanwhile.
+The index must count the way ThoughtSpot counts, so `reconcile_answers()` asks ThoughtSpot how many answers each turn holds (`/api/rest/2.0/ai/agent/conversations/{id}/messages`, once per session the chat used) and pads the stored placeholders to match. A session ThoughtSpot will not return (a 4xx, for example one in another Org) keeps its stored placeholders, so the SDK shows its notice for those charts instead of dropping them. If ThoughtSpot is unavailable (5xx or timeout, after one retry), opening the chat fails with 503 instead: numbering charts without ThoughtSpot's count could show the wrong chart. The `reconcile_answers()` docstring also lists the steps to get an `answer_index` from a live `iframe_url`. That call is why opening a stored chat takes a few seconds; the UI shows a loading indicator meanwhile.
 
 `jsonable()` serializes the Claude history with `model_dump(mode="json")` rather than by hand. That matters for thinking blocks: their `signature` must come back **unchanged** on replay, and a hand-rolled `{"type", "text"}` mapping would drop it.
 
@@ -502,8 +568,9 @@ The index must count the way ThoughtSpot counts, so `reconcile_answers()` asks T
 POST /api/chat  →  create conversation row (first turn only)
                 →  insert user turn
                 →  run the agent loop, recording every SSE event
-   done / error →  insert assistant turn (text + answers)
-                →  save claude_messages + analytical_session_id
+   done / error →  insert assistant turn (text + answers + its analytical_session_id
+                     + ts_message_counts, counted from session_message events)
+                →  save claude_messages + the chat's latest analytical_session_id
 ```
 
 `StreamRecorder` fans each SSE event out to both the browser and the transcript, so a reopened conversation renders from exactly the events the live one received. The assistant turn is written on the error paths too — the user turn is already stored, and skipping it would leave a question with no visible answer.
@@ -515,8 +582,8 @@ In-memory `conversations` / `analytical_sessions` dicts stay as a hot cache in f
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/api/conversations` | List conversations, newest first. Returns `id`, `title`, timestamps, `turn_count`. |
-| `GET` | `/api/conversations/{id}` | One conversation with its `turns` (each `role`, `content`, `answers` with `answer_index`, `work`, `work_answer_ids`). |
-| `GET` | `/api/conversations/{id}/work-answers/{answer_id}` | Fresh `frame_params` for one thinking answer, so an expanded **Visualized data** row can render it. |
+| `GET` | `/api/conversations/{id}` | One conversation with its `turns` (each `role`, `content`, `analytical_session_id`, `answers` with `analytical_session_id` and `answer_index`, `work`, `work_answer_ids`). |
+| `GET` | `/api/conversations/{id}/work-answers/{answer_id}?session_id=` | Fresh `frame_params` for one thinking answer, so an expanded **Visualized data** row can render it. `session_id` is the turn's session; it must be one the chat used. |
 | `PATCH` | `/api/conversations/{id}` | Rename. Body: `{"title": "..."}`. |
 | `DELETE` | `/api/conversations/{id}` | Delete the conversation and its turns. |
 | `GET` | `/api/ts-token` | A freshly minted ThoughtSpot token for the Visual Embed SDK (both servers). |
@@ -528,6 +595,8 @@ In-memory `conversations` / `analytical_sessions` dicts stay as a hot cache in f
 - **No auth and no per-user scoping.** Every conversation in the file is visible to every caller. Add a user id column and filter on the authenticated user before this goes anywhere real.
 - **No pruning.** `claude_messages` grows with every turn. For long-lived chats, add [context editing or compaction](https://docs.anthropic.com) rather than replaying an unbounded history.
 - **Single process.** SQLite in WAL mode is fine for one uvicorn worker; use a real database if you run several.
+- **Chats saved before per-reply sessions.** The upgrade pins each old reply to the chat's session at that moment and counts it as one question. A chat that had already spanned two sessions, or where the agent had retried, cannot be repaired: nothing recorded which reply used which session.
+- **Show work in a reply that spans two sessions** only reloads the queries from the reply's last session.
 
 ## Project Structure
 
@@ -651,7 +720,7 @@ init({
 | Only legacy tools (`getAnswer`, …) appear | You are on a `/bearer/*` URL; use `/token/mcp?api-version=2026-05-01`  |
 | `list_orgs` / `switch_org` missing        | Expected — they are OAuth-only and hidden on `/token/*`                |
 | `ImportError: streamable_http_client`     | Old `mcp` package; `pip install -r requirements.txt` (needs `mcp>=2.1.1`) |
-| Charts never appear                       | Check the browser console for the Visual Embed SDK, and that `npm install` picked up `@thoughtspot/visual-embed-sdk@1.53.0` |
+| Charts never appear                       | Check the browser console for the Visual Embed SDK, and that `npm install` picked up `@thoughtspot/visual-embed-sdk@1.54.1` |
 | Answers render twice                      | The model emitted its own `<iframe>` too — reinforce that rule in `SYSTEM_PROMPT` |
 | History sidebar missing                   | You are running `claude_agent_with_spotter3_mcp_server`; run `claude_agent_with_spotter3_mcp_server_and_chat_history` for history |
 | History empty after restart               | `CHAT_HISTORY_DB` points somewhere new, or the process cannot write to `server/` |
