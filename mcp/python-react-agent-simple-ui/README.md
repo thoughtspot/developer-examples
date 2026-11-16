@@ -385,7 +385,7 @@ This is the big picture, with no code. The developer detail follows.
 
 Usually a chat uses one session. But a session belongs to the ThoughtSpot Org it was created in. If the user's token moves to another Org mid-chat, the old session rejects new questions, so the agent opens a new session and later charts go into that new notebook. That is why the session is saved **with each reply and each chart**, and why charts are numbered **within their own session**. With one id per chat, a chart from the second session would be looked up in the first one and come back as the wrong chart, or not at all.
 
-When the chat is reopened, a chart loads only if the viewer's token is in that chart's Org. A chart from another Org cannot be rebuilt, so the Visual Embed SDK shows "This answer could not be loaded." in its place (change the text with `unresolvedAnswerNoticeText`).
+When the chat is reopened, a chart loads only if the viewer's token is in that chart's Org. A chart from another Org cannot be rebuilt, so the Visual Embed SDK shows "This answer could not be loaded." in its place (SDK 1.54.1 or later; change the text with `unresolvedAnswerNoticeText`). Older SDKs instead reloaded the chart in a loop.
 
 #### Example: one chat, start to finish
 
@@ -720,7 +720,7 @@ init({
 | Only legacy tools (`getAnswer`, …) appear | You are on a `/bearer/*` URL; use `/token/mcp?api-version=2026-05-01`  |
 | `list_orgs` / `switch_org` missing        | Expected — they are OAuth-only and hidden on `/token/*`                |
 | `ImportError: streamable_http_client`     | Old `mcp` package; `pip install -r requirements.txt` (needs `mcp>=2.1.1`) |
-| Charts never appear                       | Check the browser console for the Visual Embed SDK, and that `npm install` picked up `@thoughtspot/visual-embed-sdk@1.53.0` |
+| Charts never appear                       | Check the browser console for the Visual Embed SDK, and that `npm install` picked up `@thoughtspot/visual-embed-sdk@1.54.1` |
 | Answers render twice                      | The model emitted its own `<iframe>` too — reinforce that rule in `SYSTEM_PROMPT` |
 | History sidebar missing                   | You are running `claude_agent_with_spotter3_mcp_server`; run `claude_agent_with_spotter3_mcp_server_and_chat_history` for history |
 | History empty after restart               | `CHAT_HISTORY_DB` points somewhere new, or the process cannot write to `server/` |
